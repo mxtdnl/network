@@ -13,6 +13,7 @@ import { ExplorePanel } from './ExplorePanel';
 import { MapView } from './MapView';
 import { MatrixTab } from './MatrixTab';
 import { MemberPanel } from './MemberPanel';
+import { MembersView } from './MembersView';
 import { StatusLine } from './StatusLine';
 import { TableView } from './TableView';
 import { TopBar } from './TopBar';
@@ -33,6 +34,7 @@ const centreItems: readonly TabItem<CentreView>[] = [
   { key: 'matrix', label: shellCopy.centreTabs.matrix, panel: <MatrixTab /> },
   { key: 'table', label: shellCopy.centreTabs.table, panel: <TableView /> },
   { key: 'compare', label: shellCopy.centreTabs.compare, panel: <CompareView /> },
+  { key: 'members', label: shellCopy.centreTabs.members, panel: <MembersView /> },
   {
     key: 'survey',
     label: shellCopy.centreTabs.survey,
@@ -66,9 +68,11 @@ export function Workspace() {
   useEffect(() => {
     document.documentElement.dataset.layout = mode;
   }, [mode]);
-  // The survey tools change the project, so the read-only phone layout leaves them out.
-  const centre = readOnly ? centreItems.filter((item) => item.key !== 'survey') : centreItems;
-  const centreView = readOnly && ui.centreView === 'survey' ? 'map' : ui.centreView;
+  // The roster editor and the survey tools change the project, so the read-only
+  // phone layout leaves them out.
+  const editing = (key: CentreView) => key === 'members' || key === 'survey';
+  const centre = readOnly ? centreItems.filter((item) => !editing(item.key)) : centreItems;
+  const centreView = readOnly && editing(ui.centreView) ? 'map' : ui.centreView;
   const showMapControls = hasProject && centreView === 'map';
 
   if (ui.presentation) {

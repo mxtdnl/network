@@ -24,7 +24,7 @@ import {
   type WeightState,
 } from './presets';
 
-export type CentreView = 'map' | 'matrix' | 'table' | 'compare' | 'survey';
+export type CentreView = 'map' | 'matrix' | 'table' | 'compare' | 'members' | 'survey';
 export type RightPanel = 'member' | 'explore' | 'insights' | 'views' | 'coverage';
 export type MatrixMode = 'explore' | 'enter';
 export type CompareMode = 'layers' | 'formalInformal';

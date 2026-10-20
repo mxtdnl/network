@@ -232,8 +232,14 @@
 
 .empty-state__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-3);
   margin-top: var(--s-2);
+}
+
+/* Four actions share the measure: they wrap as whole buttons, never mid-label. */
+.empty-state__actions .button {
+  white-space: nowrap;
 }
 
 .empty-state__note {

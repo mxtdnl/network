@@ -11,16 +11,17 @@ import { useReadOnly } from '../state/layoutMode';
 import { useAppStore } from '../state/store';
 import { useCoverage } from './CoveragePanel';
 import { savedViewsCopy } from '../copy/savedViews';
-import { setNamesHidden } from '../state/names';
+import { setNamesHidden, useMemberNames } from '../state/names';
 import { startPresentation } from '../state/presentation';
 import { exportCopy } from '../copy/export';
 import { ExportDialog } from './ExportDialog';
 import { helpCopy, type HelpDoc } from '../copy/help';
+import { startNewProject } from './MembersView';
 
 // The help documents are loaded with the dialog, on first use.
 const HelpDialog = lazy(() => import('./HelpDialog').then((m) => ({ default: m.HelpDialog })));
 
-type Pending = 'open' | 'demo' | null;
+type Pending = 'new' | 'open' | 'demo' | null;
 
 export function TopBar() {
   const anonymise = useAppStore((s) => s.ui.anonymise);
@@ -30,6 +31,7 @@ export function TopBar() {
   const project = useAppStore((s) => s.data.project);
   const persistence = useAppStore((s) => s.data.persistence);
   const coverage = useCoverage();
+  const names = useMemberNames();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Pending>(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -54,6 +56,10 @@ export function TopBar() {
     if (hasData) setPending('open');
     else chooseProjectFile();
   }
+  function onNew() {
+    if (hasData) setPending('new');
+    else startNewProject();
+  }
   function onDemo() {
     if (hasData) setPending('demo');
     else void loadDemo();
@@ -71,7 +77,10 @@ export function TopBar() {
   return (
     <header className="top-bar">
       <h1 className="top-bar__name">{shellCopy.appName}</h1>
-      <p className="top-bar__project">{project ? project.meta.title : shellCopy.noProject}</p>
+      {/* A title may name a member, so it goes through the names layer (D79). */}
+      <p className="top-bar__project">
+        {project ? names.text(project.meta.title) : shellCopy.noProject}
+      </p>
       {indicator && (
         <p className="top-bar__indicator">
           <Icon name={persistence === 'error' ? 'warning' : 'check'} />
@@ -110,6 +119,8 @@ export function TopBar() {
         <MenuButton
           label={projectCopy.menu}
           items={[
+            // Building a project changes it, so the read-only phone layout leaves it out.
+            ...(phone ? [] : [{ key: 'new', label: projectCopy.newProject, onSelect: onNew }]),
             { key: 'open', label: projectCopy.open, onSelect: onOpen },
             { key: 'save', label: projectCopy.save, onSelect: saveProjectFile, disabled: !project },
             ...(phone
@@ -182,7 +193,8 @@ export function TopBar() {
         onConfirm={() => {
           const action = pending;
           setPending(null);
-          if (action === 'open') chooseProjectFile();
+          if (action === 'new') startNewProject();
+          else if (action === 'open') chooseProjectFile();
           else if (action === 'demo') void loadDemo();
         }}
       />

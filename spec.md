@@ -109,6 +109,7 @@ The passphrase and the decrypted private key are never stored.
   - non-numeric values.
 
   Nothing is coerced silently. The user can import valid rows and skip invalid ones, and the report states how many were skipped.
+- **Roster entry.** The members of a project can be built and edited in the tool instead of imported: start an empty project, add people by name (one per line, or pasted from a spreadsheet column), edit each member's name and attributes, add attributes, and remove members. Ids are generated and never change. Removing a member removes the ratings they gave or received, after a confirmation that says how many. Like every other change to a project, it is not offered in the read-only phone layout.
 - **Matrix entry.** A rater × ratee grid for each layer. It is keyboard-navigable and accepts paste from spreadsheets.
 - **Survey responses.** Encrypted response files and text blocks from respondent mode are imported on the collection dashboard (section 15.5). The ratings they contain pass through the same validation report as a ties file.
 - **Local persistence.** Optional IndexedDB persistence, off by default, with a visible indicator when it is on. A single action clears all locally stored data.
@@ -459,7 +460,7 @@ The analyst runs a whole-network survey inside Graticule, with no backend. Each 
 - **Older versions:** responses to an earlier version are mapped to the current roster and layers by member id and layer key. Ratings of members or layers that are no longer in the survey, and colleagues or layers added since, are reported; nothing is guessed.
 - **Close:** closing a survey stops further imports until the analyst reopens it.
 - **After import:** the dashboard reminds the analyst to delete the received response files and the emails that carried them.
-- **Empty state.** The workspace's empty state offers "Run a survey", "Import survey data" (the existing CSV and XLSX import), "Enter as observer" (only if an observer mode is built; none is specified yet) and "Load demo".
+- **Empty state.** The workspace's empty state offers "Run a survey", "Add members" (roster entry, section 5), "Import survey data" (the existing CSV and XLSX import), "Enter as observer" (only if an observer mode is built; none is specified yet) and "Load demo".
 
 ### 15.6 Transport abstraction
 

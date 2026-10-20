@@ -8,6 +8,7 @@ export const percent = (rate: number) =>
 
 export const projectCopy = {
   menu: 'Project',
+  newProject: 'New project',
   open: 'Open project…',
   save: 'Save project',
   importData: 'Import survey data…',
@@ -18,14 +19,15 @@ export const projectCopy = {
   opened: (title: string) => `Opened ${title}.`,
   demoLoaded: 'Demo loaded. Everyone in it is fictional.',
   openFailed: (file: string, reason: string) => `${file} was not opened. ${reason}`,
-  noProjectToSave: 'There is no project to save. Import data or load the demo first.',
+  noProjectToSave: 'There is no project to save. Create one, import data or load the demo first.',
   replaceTitle: 'Replace the open project?',
   replaceBody:
     'The open project will be closed. Changes since you last saved it will be lost unless you save it first.',
   // The confirmation repeats the verb of the action that asked for it.
-  replaceConfirm: { open: 'Open project', demo: 'Load demo' },
+  replaceConfirm: { new: 'New project', open: 'Open project', demo: 'Load demo' },
   cancel: 'Cancel',
-  noMembers: 'This project has no members yet. Import a members file to add them.',
+  noMembers:
+    'This project has no members yet. Add them in the Members tab, or import a members file.',
 };
 
 export const persistenceCopy = {
@@ -81,7 +83,7 @@ export const layerCopy = {
     return signed ? `${sign(min)} to +${sign(max)}, signed` : `${sign(min)} to ${sign(max)}`;
   },
   categorical: (labels: string[]) => `Categories: ${labels.join(', ')}`,
-  noProject: 'Layers appear here once you import data or load the demo.',
+  noProject: 'Layers appear here once you start a project, import data or load the demo.',
 };
 
 export const matrixCopy = {

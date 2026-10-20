@@ -10,6 +10,7 @@ type Mode = { kind: 'dashboard' } | { kind: 'create' } | { kind: 'edit' };
 export function SurveyTab() {
   const project = useAppStore((s) => s.data.project);
   const setImportOpen = useAppStore((s) => s.setImportOpen);
+  const setCentreView = useAppStore((s) => s.setCentreView);
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>({ kind: 'dashboard' });
   const chooseId = useId();
@@ -19,15 +20,26 @@ export function SurveyTab() {
       <div className="survey">
         <h2 className="survey__heading">{surveyCopy.needMembers.heading}</h2>
         <p className="survey__text">{surveyCopy.needMembers.body}</p>
-        <button
-          type="button"
-          className="button button--primary"
-          onClick={() => {
-            setImportOpen(true);
-          }}
-        >
-          {surveyCopy.needMembers.action}
-        </button>
+        <div className="members__actions">
+          <button
+            type="button"
+            className="button button--primary"
+            onClick={() => {
+              setCentreView('members');
+            }}
+          >
+            {surveyCopy.needMembers.add}
+          </button>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => {
+              setImportOpen(true);
+            }}
+          >
+            {surveyCopy.needMembers.action}
+          </button>
+        </div>
       </div>
     );
   }

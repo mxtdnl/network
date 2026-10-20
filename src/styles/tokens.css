@@ -189,6 +189,9 @@
   --workspace-desktop: 1280px; /* three columns from here */
   --workspace-settle: 300ms; /* a width must hold this long before the layout changes (not motion) */
   --workspace-tablet: 720px; /* tablet from here: controls beside the view, details below; narrower is the read-only phone layout */
+
+  /* Roster editor (CLAUDE.md D124). Name fields use --matrix-label-width. */
+  --members-field-width: 144px; /* attribute fields in the members table */
 }
 
 @media (prefers-reduced-motion: reduce) {

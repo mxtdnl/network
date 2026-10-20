@@ -423,6 +423,9 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await check('compare two layers');
   await page.getByRole('radio', { name: 'Formal and informal' }).check();
   await check('compare formal and informal');
+  // The roster editor (D124): codes, no ids or email addresses.
+  await centreTab(page, 'Members').click();
+  await check('members');
   await centreTab(page, 'Map').click();
   for (const tab of ['Insights', 'Views', 'Coverage']) {
     await rightTab(page, tab).click();
