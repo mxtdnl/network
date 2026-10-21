@@ -88,6 +88,17 @@ Mitigations, because colour is never the only channel:
 
 The palette contains an indigo. The avoid list targets indigo and blue-violet *gradients and decorative washes*; a flat categorical data hue is neither. Flagged for your judgement.
 
+**Other categorical palettes considered (D127): none offered.** The analyst may choose only palettes that pass `tests/unit/contrast.test.ts`. For node fills the owner ruled on 2026-10-21 that 3:1 against the map ground is carried by the 1 px `ink` outline, not by the fill (as above; no 8-hue palette reaches 3:1 for every fill, this one included), so the test applies the ΔE00 floor: the worst pair over normal vision and the three simulations must be at least 11.8, this palette's own worst case. Both candidates fall below it, and the test checks that they still do:
+
+| Candidate | Hues | Worst pair (ΔE00, condition) | Other conditions' worst pairs | Fills below 3:1 on `paper` |
+|---|---|---|---|---|
+| Paul Tol "bright" (grey left out, as it is the "Other" colour) | `#4477AA` `#EE6677` `#228833` `#CCBB44` `#66CCEE` `#AA3377` | 8.7, blue / green, tritanopia | normal 23.7, deuteranopia 14.7, protanopia 14.0 | 2 of 6 (yellow 1.90, cyan 1.79) |
+| Okabe–Ito (black left out, as it is the outline colour, ink) | `#E69F00` `#56B4E9` `#009E73` `#F0E442` `#0072B2` `#D55E00` `#CC79A7` | 11.1, orange / reddish purple, tritanopia | normal 21.7, deuteranopia 11.5 (orange / yellow), protanopia 12.3 | 4 of 7 (orange 2.19, sky blue 2.25, yellow 1.29, reddish purple 2.98) |
+
+So Paul Tol "muted" is the only categorical palette, and the workspace offers no choice of categorical palette; `settings.palette.categorical` exists so that a palette that passes later needs no schema change.
+
+**Pinned group colours (D127).** The analyst may pin a value of an attribute to one hue of the palette (`settings.group_colours`: attribute key → value → hue index), so the group keeps its colour across views, filters and presentations. Pinned values present in the project take their hues; the other values take the free hues in category order, and values beyond the eighth hue are "Other". A hue is pinned to at most one value of an attribute. No colour is entered freely; pins are hue indices, never colours.
+
 ### 2.2 Diverging valence scale (edge colour)
 
 Seven steps, one per scale point of valence (−3…+3); energy uses the same scale. Negative is a burnt orange-brown, positive a steel blue, and the neutral midpoint a mid grey. Unlike print diverging schemes with a near-white midpoint, the midpoint here is a visible grey, because edges are drawn on a near-white ground and a neutral tie must still be seen. Lightness therefore peaks at the midpoint and falls towards both ends.
@@ -114,6 +125,50 @@ Distinguishability (ΔE00):
 | Tritanopia | 10.4, 13.1, 21.1, 22.0, 9.5, 11.0 | 9.5 (+1/+2) | 43.5, 48.8, 46.5 | yes |
 
 Assessment: the sign of a tie (the most important reading) is unambiguous under all conditions (≥ 30.7). Adjacent magnitudes are distinguishable side by side (≥ 10) except +1/+2 under tritanopia (9.5), which is at risk. Because edges are thin, magnitude is not read from colour alone: edge width carries strength, and the member panel and matrix give the exact rating.
+
+#### Other diverging palettes (D127)
+
+The analyst may replace this scale with one of two others (`settings.palette.diverging`); the choice applies to edge colour on every signed layer, the legend, the matrices and every export (PNG, SVG, PDF). Both keep this scale's grey midpoint and lightness profile (L* about 30, 44, 56 at the ends of each side), so they read the same way. `tests/unit/contrast.test.ts` admits a palette only if: every step reaches 3:1 on `paper`; `ink` text keeps 4.5:1 on each step mixed at 60 % into `paper` (the matrix shading); under normal vision and each simulation, steps of opposite sign are at least 30 apart and adjacent steps at least 9.45 (this table's 9.5 is the rounding of 9.46, the default's +1/+2 under tritanopia); and `graphite` (not rated, D113) and, for the negative steps, `stone` (neutral or positive in the negative-only colouring, D132) are more than 9 from every step. All three palettes pass; the default's figures under the same test are adjacent 9.46, opposite sign 30.7, `graphite` 9.7, `stone` 23.8.
+
+**Purple to green** (`div-pg-*`):
+
+| Value | Token | Hex | L* | Contrast vs `paper` | `ink` on the 60 % matrix shade |
+|---|---|---|---|---|---|
+| −3 | `div-pg-n3` | `#701B98` | 30.6 | 8.89 | 4.77 |
+| −2 | `div-pg-n2` | `#8F4CAE` | 44.3 | 5.36 | 6.23 |
+| −1 | `div-pg-n1` | `#A475B7` | 56.1 | 3.52 | 7.81 |
+| 0 | `div-pg-0` | `#919191` | 60.2 | 3.07 | 8.35 |
+| +1 | `div-pg-p1` | `#66915C` | 55.9 | 3.54 | 7.76 |
+| +2 | `div-pg-p2` | `#3A7530` | 44.0 | 5.42 | 6.23 |
+| +3 | `div-pg-p3` | `#005302` | 29.9 | 9.13 | 4.68 |
+
+| Condition | Adjacent steps (−3→−2, …, +2→+3) | Smallest adjacent | Same magnitude, opposite sign (±1, ±2, ±3) | `graphite` vs nearest step | `stone` vs nearest negative step |
+|---|---|---|---|---|---|
+| Normal vision | 12.1, 13.2, 23.3, 21.9, 12.6, 12.0 | 12.0 | 55.2, 69.3, 76.6 | 18.0 | 17.3 |
+| Deuteranopia | 11.8, 12.3, 16.9, 15.4, 12.7, 12.0 | 11.8 | 34.2, 42.6, 47.0 | 17.3 | 10.9 |
+| Protanopia | 11.0, 13.1, 19.1, 17.5, 12.4, 11.9 | 11.0 | 39.2, 48.2, 52.4 | 18.1 | 13.1 |
+| Tritanopia | 11.5, 12.1, 16.8, 16.6, 12.7, 11.5 | 11.5 | 35.7, 39.1, 38.5 | 14.2 | 25.0 |
+
+**Red to blue** (`div-rb-*`):
+
+| Value | Token | Hex | L* | Contrast vs `paper` | `ink` on the 60 % matrix shade |
+|---|---|---|---|---|---|
+| −3 | `div-rb-n3` | `#8E0B04` | 29.4 | 9.29 | 4.62 |
+| −2 | `div-rb-n2` | `#AC4731` | 43.5 | 5.52 | 6.15 |
+| −1 | `div-rb-n1` | `#BB7360` | 55.8 | 3.56 | 7.77 |
+| 0 | `div-rb-0` | `#919191` | 60.2 | 3.07 | 8.35 |
+| +1 | `div-rb-p1` | `#7685BF` | 56.5 | 3.48 | 7.85 |
+| +2 | `div-rb-p2` | `#4C66B1` | 44.5 | 5.32 | 6.28 |
+| +3 | `div-rb-p3` | `#144594` | 30.7 | 8.85 | 4.77 |
+
+| Condition | Adjacent steps (−3→−2, …, +2→+3) | Smallest adjacent | Same magnitude, opposite sign (±1, ±2, ±3) | `graphite` vs nearest step | `stone` vs nearest negative step |
+|---|---|---|---|---|---|
+| Normal vision | 12.3, 13.6, 22.1, 19.7, 12.5, 11.8 | 11.8 | 32.9, 39.4, 42.2 | 15.1 | 27.0 |
+| Deuteranopia | 11.7, 12.1, 16.3, 19.6, 13.1, 11.5 | 11.5 | 38.6, 47.9, 51.7 | 17.7 | 24.3 |
+| Protanopia | 12.5, 14.1, 14.8, 18.6, 11.6, 11.6 | 11.6 | 34.2, 42.8, 46.1 | 17.4 | 20.0 |
+| Tritanopia | 12.7, 13.6, 24.3, 15.3, 12.7, 10.7 | 10.7 | 43.3, 59.7, 54.4 | 11.2 | 26.5 |
+
+The two were built for this scale, not taken from a published scheme: published purple–green and red–blue schemes (for example ColorBrewer's PRGn and RdBu) have a near-white midpoint and light inner steps, which fall below 3:1 as edges on `paper`. The hue of each side was chosen by searching CIELAB hue angles (D50 LCh: purple 315°, green 135°; red 40°, blue 280°) and chroma for the largest margin over the floors above. Neither uses the UI accent, which the test checks. The unsigned edge ramp (§2.3) stays on `val-p3` whatever the diverging palette.
 
 ### 2.3 Other data encodings
 

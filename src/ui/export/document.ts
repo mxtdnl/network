@@ -221,6 +221,9 @@ export function legendPrimitives(
   const t = theme.map;
   const L = theme.legend;
   const sections = legendSections(model, t, extras);
+  // The project's palettes (D127), as on the canvas.
+  const categorical = t.palettes.categorical[model.palette.categorical];
+  const diverging = t.palettes.diverging[model.palette.diverging];
   const out: Primitive[] = [];
   let y = 0;
   const text = (
@@ -351,7 +354,7 @@ export function legendPrimitives(
               x: x + theme.legendDot / 2,
               y: cy,
               r: theme.legendDot / 2 - t.line / 2,
-              fill: item.hue >= 0 ? (t.categorical[item.hue] ?? t.other) : t.other,
+              fill: item.hue >= 0 ? (categorical[item.hue] ?? t.other) : t.other,
               stroke: t.ink,
               strokeWidth: t.line,
               dash: item.hue >= 0 ? [] : [t.dash / 2, t.dash / 2],
@@ -370,7 +373,7 @@ export function legendPrimitives(
       case 'colour': {
         const swatch = (sw: Swatch) =>
           sw.scale === 'valence'
-            ? (t.valence[sw.step + 3] ?? t.stone)
+            ? (diverging[sw.step + 3] ?? t.stone)
             : (t.ramp[sw.step - 1] ?? t.stone);
         const ramp = section.ramp;
         const rampItems: Item[] = [];

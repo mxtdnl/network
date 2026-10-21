@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { rampColours } from '../../src/ui/map/colour';
+import { PALETTE_TOKENS } from '../../src/ui/map/palettes';
 import { CVD, contrast, deltaE00, hex, mixLab, over, simulate, type Rgb } from './colour';
 
 const css = readFileSync(
@@ -127,7 +128,118 @@ describe('contrast of data marks and control boundaries', () => {
     );
     expect(min).toBeGreaterThan(9);
   });
+});
 
+// Palettes the analyst may choose (D127, docs/design-system.md §2). A palette
+// is offered only if it passes; a candidate that fails is listed under
+// REJECTED, with a test that it still fails, rather than the floor relaxed.
+const CONDITIONS = ['normal', ...Object.keys(CVD)] as const;
+const seen = (c: (typeof CONDITIONS)[number], x: Rgb) =>
+  c === 'normal' ? x : simulate(x, c as keyof typeof CVD);
+
+/** Smallest ΔE00 between any two colours, over normal vision and the three simulations. */
+function worstPair(colours: Rgb[]): number {
+  let min = Infinity;
+  for (const c of CONDITIONS)
+    for (let i = 0; i < colours.length; i++)
+      for (let j = i + 1; j < colours.length; j++)
+        min = Math.min(min, deltaE00(seen(c, colours[i] as Rgb), seen(c, colours[j] as Rgb)));
+  return min;
+}
+
+/** Smallest ΔE00 over all conditions between pairs picked by `pairs` (indices into the scale). */
+function worstOf(scale: Rgb[], pairs: [number, number][]): number {
+  let min = Infinity;
+  for (const c of CONDITIONS)
+    for (const [i, j] of pairs)
+      min = Math.min(min, deltaE00(seen(c, scale[i] as Rgb), seen(c, scale[j] as Rgb)));
+  return min;
+}
+
+// Floors from design-system §2.1 and §2.2, the default palettes' worst cases:
+// categorical 11.8 (indigo / wine under protanopia); diverging 30 between the
+// two signs and 9.5 between adjacent steps, where 9.5 is the table's rounding
+// of the default's 9.46 (+1 / +2 under tritanopia), so the floor is 9.45.
+const CATEGORICAL_FLOOR = 11.8;
+const OPPOSITE_FLOOR = 30;
+const ADJACENT_FLOOR = 9.45;
+// Not rated (graphite, D113) and neutral or positive in the negative-only
+// colouring (stone, D132) stay apart from the scale as graphite does now.
+const MARK_FLOOR = 9;
+
+const REJECTED: { name: string; colours: string[]; reason: (worst: number) => boolean }[] = [
+  {
+    name: 'Tol bright',
+    colours: ['#4477aa', '#ee6677', '#228833', '#ccbb44', '#66ccee', '#aa3377'],
+    reason: (worst) => worst < CATEGORICAL_FLOOR,
+  },
+  {
+    name: 'Okabe–Ito',
+    colours: ['#e69f00', '#56b4e9', '#009e73', '#f0e442', '#0072b2', '#d55e00', '#cc79a7'],
+    reason: (worst) => worst < CATEGORICAL_FLOOR,
+  },
+];
+
+describe('categorical palettes (D127)', () => {
+  it.each(Object.entries(PALETTE_TOKENS.categorical))('%s keeps the ΔE00 floor', (id, names) => {
+    const colours = names.map((n) => token(n.slice(2)));
+    expect(colours).toHaveLength(8);
+    const worst = worstPair(colours);
+    rows.push(`categorical ${id}: worst pair ΔE00 over all conditions ${worst.toFixed(1)}`);
+    expect(worst).toBeGreaterThanOrEqual(CATEGORICAL_FLOOR);
+    // Fills are not held to 3:1 on the ground (owner, 2026-10-21): the 1 px ink
+    // outline every node carries is the boundary, so that is what must reach 3:1.
+    check(`${id}: node outline (ink) on paper`, ink, paper, 3);
+    colours.forEach((c, k) => {
+      rows.push(`${id} hue ${String(k + 1)} fill on paper: ${contrast(c, paper).toFixed(2)}`);
+      expect(c, `${id} hue ${String(k + 1)} is not the accent`).not.toEqual(accent);
+    });
+  });
+
+  it.each(REJECTED)('rejected candidate $name still fails', ({ name, colours, reason }) => {
+    const worst = worstPair(colours.map(hex));
+    rows.push(
+      `rejected ${name}: worst pair ΔE00 ${worst.toFixed(1)}; fills below 3:1 on paper: ${String(colours.filter((c) => contrast(hex(c), paper) < 3).length)} of ${String(colours.length)}`,
+    );
+    expect(reason(worst)).toBe(true);
+  });
+});
+
+describe('diverging palettes (D127)', () => {
+  const adjacent: [number, number][] = [0, 1, 2, 3, 4, 5].map((i) => [i, i + 1]);
+  const opposite: [number, number][] = [
+    [2, 4],
+    [1, 5],
+    [0, 6],
+  ];
+  it.each(Object.entries(PALETTE_TOKENS.diverging))('%s passes every check', (id, names) => {
+    const scale = names.map((n) => token(n.slice(2)));
+    expect(scale).toHaveLength(7);
+    scale.forEach((c, k) => {
+      check(`${id} step ${String(k - 3)} edge on paper`, c, paper, 3);
+      check(`${id}: ink on matrix shade ${String(k - 3)}`, ink, mixLab(c, 0.6, paper), 4.5);
+      expect(c, `${id} step ${String(k - 3)} is not the accent`).not.toEqual(accent);
+    });
+    const adj = worstOf(scale, adjacent);
+    const opp = worstOf(scale, opposite);
+    let notRated = Infinity;
+    let neutral = Infinity;
+    for (const c of CONDITIONS) {
+      for (const v of scale) notRated = Math.min(notRated, deltaE00(seen(c, graphite), seen(c, v)));
+      for (const v of scale.slice(0, 3))
+        neutral = Math.min(neutral, deltaE00(seen(c, stone), seen(c, v)));
+    }
+    rows.push(
+      `diverging ${id}: adjacent ${adj.toFixed(2)}, opposite sign ${opp.toFixed(1)}, not rated (graphite) ${notRated.toFixed(1)}, negative vs stone ${neutral.toFixed(1)}`,
+    );
+    expect(adj).toBeGreaterThanOrEqual(ADJACENT_FLOOR);
+    expect(opp).toBeGreaterThanOrEqual(OPPOSITE_FLOOR);
+    expect(notRated).toBeGreaterThan(MARK_FLOOR);
+    expect(neutral).toBeGreaterThan(MARK_FLOOR);
+  });
+});
+
+describe('contrast report', () => {
   it('prints the table', () => {
     console.log(rows.join('\n'));
   });

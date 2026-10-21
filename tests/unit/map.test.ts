@@ -22,29 +22,39 @@ import { ForceLayout, groupBoxes } from '../../src/ui/map/layout';
 import { rankOf } from '../../src/ui/map/rank';
 import { buildScene, convexHull, highlightSet, type Point } from '../../src/ui/map/scene';
 import type { MapTheme } from '../../src/ui/map/theme';
+import { paletteChoice, pinnedHues, withPalette, withPin } from '../../src/ui/map/palettes';
 import { initialMapSettings, type MapSettings } from '../../src/ui/state/store';
 import { demoText } from './engineFixtures';
 
 const demo = parseProject(demoText);
 
 const VALENCE = ['#833110', '#9d5524', '#a67b55', '#919191', '#5188a1', '#156d8e', '#004d6e'];
+const CATEGORICAL = [
+  '#44aa99',
+  '#332288',
+  '#999933',
+  '#117733',
+  '#ddcc77',
+  '#cc6677',
+  '#88ccee',
+  '#882255',
+];
 const theme: MapTheme = {
   ink: '#1c2127',
   graphite: '#4e5761',
   stone: '#7a838e',
   paper: '#fbfcfc',
-  categorical: [
-    '#44aa99',
-    '#332288',
-    '#999933',
-    '#117733',
-    '#ddcc77',
-    '#cc6677',
-    '#88ccee',
-    '#882255',
-  ],
+  palettes: {
+    categorical: {
+      'tol-muted': CATEGORICAL,
+    },
+    diverging: {
+      'orange-blue': VALENCE,
+      'purple-green': ['#701b98', '#8f4cae', '#a475b7', '#919191', '#66915c', '#3a7530', '#005302'],
+      'red-blue': ['#8e0b04', '#ac4731', '#bb7360', '#919191', '#7685bf', '#4c66b1', '#144594'],
+    },
+  },
   other: '#b4b9bf',
-  valence: VALENCE,
   ramp: ['#6694a8', '#4c8098', '#336b85', '#195c79', '#004d6e'],
   nodeMin: 4,
   nodeMax: 16,
@@ -694,6 +704,93 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
     ]);
     expect(hull).toHaveLength(4);
     expect(hull).not.toContainEqual({ x: 1, y: 1 });
+  });
+});
+
+describe('palettes and pinned group colours (D127)', () => {
+  const t = { k: 1, x: 0, y: 0 };
+  const size = { width: 800, height: 600 };
+  const none = { hovered: null, focused: null, selected: null };
+  const spiral = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      x: Math.cos(i) * (50 + i * 5),
+      y: Math.sin(i) * (50 + i * 5),
+    }));
+  const teams = (m: MapModel) =>
+    new Map(m.fill.groups.filter((g) => g.kind === 'value').map((g) => [g.key, g.hue]));
+
+  it('assigns hues in category order when nothing is pinned', async () => {
+    const m = await model();
+    expect([...teams(m).values()]).toEqual([...teams(m).keys()].map((_, i) => i));
+    expect(m.palette).toEqual({ categorical: 'tol-muted', diverging: 'orange-blue' });
+  });
+
+  it('keeps a pinned value on its hue and gives the others the free hues in order', async () => {
+    const before = teams(await model());
+    const [first, second] = [...before.keys()];
+    const p = withPin(
+      { ...demo, meta: { ...demo.meta, title: 'pinned' } },
+      'team',
+      second ?? '',
+      0,
+    );
+    const after = teams(await model({}, p));
+    expect(after.get(second ?? '')).toBe(0);
+    expect(after.get(first ?? '')).toBe(1);
+    // Every hue is used once.
+    expect(new Set(after.values()).size).toBe(after.size);
+  });
+
+  it('colours a pinned value beyond the eighth, and makes an unpinned one "Other"', async () => {
+    const p0: Project = {
+      ...demo,
+      members: demo.members.map((x, i) => ({
+        ...x,
+        attributes: { ...x.attributes, team: `T${String(i % 11).padStart(2, '0')}` },
+      })),
+      meta: { ...demo.meta, title: 'eleven-teams-pinned' },
+    };
+    const p = withPin(p0, 'team', 'T10', 3);
+    const m = await model({}, p);
+    const hues = teams(m);
+    expect(hues.get('T10')).toBe(3);
+    expect(hues.has('T07')).toBe(false);
+    expect(hues.size).toBe(8);
+    const other = m.fill.groups.findIndex((g) => g.kind === 'other');
+    const t07 = demo.members.findIndex((_, i) => i % 11 === 7);
+    expect(m.nodes[t07]?.group).toBe(other);
+  });
+
+  it('moves a hue to the value pinned last, and releases a pin', () => {
+    const a = withPin(demo, 'team', 'X', 2);
+    const b = withPin(a, 'team', 'Y', 2);
+    expect(b.settings.group_colours).toEqual({ team: { Y: 2 } });
+    expect(withPin(b, 'team', 'Y', null).settings.group_colours).toBeUndefined();
+    expect(pinnedHues(b, 'team', 8)).toEqual(new Map([['Y', 2]]));
+    // A hue beyond the palette is ignored.
+    expect(pinnedHues(withPin(demo, 'team', 'X', 9), 'team', 8).size).toBe(0);
+  });
+
+  it('stores the default palettes as no setting', () => {
+    const p = withPalette(demo, { categorical: 'tol-muted', diverging: 'purple-green' });
+    expect(paletteChoice(p).diverging).toBe('purple-green');
+    expect(withPalette(p, paletteChoice(demo)).settings.palette).toBeUndefined();
+  });
+
+  it('draws fills and the diverging scale from the chosen palette', async () => {
+    const p = withPalette(
+      { ...demo, meta: { ...demo.meta, title: 'red-blue' } },
+      { categorical: 'tol-muted', diverging: 'red-blue' },
+    );
+    const s: Partial<MapSettings> = { signedScale: 'full' };
+    const m = await model(s, p);
+    const scene = buildScene(m, spiral(m.n), t, size, theme, none);
+    const strokes = new Set(scene.lines.map((b) => b.stroke));
+    const redBlue = theme.palettes.diverging['red-blue'];
+    expect(redBlue.filter((c) => c !== VALENCE[3]).some((c) => strokes.has(c))).toBe(true);
+    expect(VALENCE.filter((c) => c !== VALENCE[3] && strokes.has(c))).toEqual([]);
+    const fills = new Set(scene.nodes.map((x) => x.fill));
+    expect([...fills].every((c) => CATEGORICAL.includes(c) || c === theme.other)).toBe(true);
   });
 });
 

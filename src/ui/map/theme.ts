@@ -4,16 +4,20 @@
 // approach as the matrix, CLAUDE.md D31). No design value is written here.
 
 import { rampColours } from './colour';
+import { PALETTE_TOKENS, type CategoricalPalette, type DivergingPalette } from './palettes';
 
 export interface MapTheme {
   ink: string;
   graphite: string;
   stone: string;
   paper: string;
-  categorical: string[];
+  /** Every palette the analyst may choose (D127); the model picks the project's (`model.colours`). */
+  palettes: {
+    categorical: Record<CategoricalPalette, string[]>;
+    /** Diverging scales, −3 … +3. */
+    diverging: Record<DivergingPalette, string[]>;
+  };
   other: string;
-  /** Diverging valence scale, −3 … +3. */
-  valence: string[];
   /** Sequential ramp for edge colour by an unsigned layer, five steps from light to dark (D126). */
   ramp: string[];
   /** Node radius range in CSS pixels, and the radius of a member whose size metric is not defined. */
@@ -39,19 +43,14 @@ export interface MapTheme {
   swatch: number;
 }
 
-export const TOKEN_NAMES = {
-  categorical: [
-    '--cat-1',
-    '--cat-2',
-    '--cat-3',
-    '--cat-4',
-    '--cat-5',
-    '--cat-6',
-    '--cat-7',
-    '--cat-8',
-  ],
-  valence: ['--val-n3', '--val-n2', '--val-n1', '--val-0', '--val-p1', '--val-p2', '--val-p3'],
-} as const;
+function mapRecord<K extends string>(
+  names: Record<K, string[]>,
+  text: (name: string) => string,
+): Record<K, string[]> {
+  return Object.fromEntries(
+    Object.entries<string[]>(names).map(([id, list]) => [id, list.map(text)]),
+  ) as Record<K, string[]>;
+}
 
 /** Reads a token's value by custom-property name; the page's stylesheet, or tokens.css in tests. */
 export type TokenSource = (name: string) => string;
@@ -73,9 +72,11 @@ export function readMapTheme(source: Element | TokenSource = document.documentEl
     graphite: text('--graphite'),
     stone: text('--stone'),
     paper: text('--paper'),
-    categorical: TOKEN_NAMES.categorical.map(text),
+    palettes: {
+      categorical: mapRecord(PALETTE_TOKENS.categorical, text),
+      diverging: mapRecord(PALETTE_TOKENS.diverging, text),
+    },
     other: text('--cat-other'),
-    valence: TOKEN_NAMES.valence.map(text),
     ramp: rampColours(text('--val-p3'), text('--paper'), number('--map-ramp-low')),
     nodeMin: number('--map-node-min'),
     nodeMax: number('--map-node-max'),

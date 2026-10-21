@@ -36,6 +36,24 @@
   --val-p2: #156d8e;
   --val-p3: #004d6e;
 
+  /* 2.2 Diverging palettes the analyst may choose instead (D127): purple to green */
+  --div-pg-n3: #701b98;
+  --div-pg-n2: #8f4cae;
+  --div-pg-n1: #a475b7;
+  --div-pg-0: #919191;
+  --div-pg-p1: #66915c;
+  --div-pg-p2: #3a7530;
+  --div-pg-p3: #005302;
+
+  /* … and red to blue */
+  --div-rb-n3: #8e0b04;
+  --div-rb-n2: #ac4731;
+  --div-rb-n1: #bb7360;
+  --div-rb-0: #919191;
+  --div-rb-p1: #7685bf;
+  --div-rb-p2: #4c66b1;
+  --div-rb-p3: #144594;
+
   /* 3.1 Type families */
   --font-sans: 'Fira Sans', system-ui, sans-serif;
   --font-condensed: 'Fira Sans Condensed', 'Fira Sans', system-ui, sans-serif;
@@ -211,4 +229,40 @@
     --m-max-ui: 0ms;
     --m-layout: 0ms;
   }
+}
+
+/*
+ * The diverging palette in use (D127), for the legend and the matrices. The
+ * root element carries data-diverging when the project chooses a palette other
+ * than the default; the canvas and the exports resolve the palette in script
+ * (src/ui/map/palettes.ts).
+ */
+:root {
+  --scale-n3: var(--val-n3);
+  --scale-n2: var(--val-n2);
+  --scale-n1: var(--val-n1);
+  --scale-0: var(--val-0);
+  --scale-p1: var(--val-p1);
+  --scale-p2: var(--val-p2);
+  --scale-p3: var(--val-p3);
+}
+
+:root[data-diverging='purple-green'] {
+  --scale-n3: var(--div-pg-n3);
+  --scale-n2: var(--div-pg-n2);
+  --scale-n1: var(--div-pg-n1);
+  --scale-0: var(--div-pg-0);
+  --scale-p1: var(--div-pg-p1);
+  --scale-p2: var(--div-pg-p2);
+  --scale-p3: var(--div-pg-p3);
+}
+
+:root[data-diverging='red-blue'] {
+  --scale-n3: var(--div-rb-n3);
+  --scale-n2: var(--div-rb-n2);
+  --scale-n1: var(--div-rb-n1);
+  --scale-0: var(--div-rb-0);
+  --scale-p1: var(--div-rb-p1);
+  --scale-p2: var(--div-rb-p2);
+  --scale-p3: var(--div-rb-p3);
 }

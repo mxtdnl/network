@@ -7,7 +7,10 @@
 
 import { migrate, ProjectFileError } from './migrations';
 import {
+  CATEGORICAL_PALETTES,
+  DIVERGING_PALETTES,
   isCategorical,
+  PALETTE_HUES,
   PROJECT_FILE_EXTENSION,
   SCHEMA_VERSION,
   tieKey,
@@ -288,6 +291,28 @@ export function checkProject(file: Obj): string[] {
       s.anonymisation_scheme === 'role_team',
       'settings.anonymisation_scheme must be role_team.',
     );
+    if (s.palette !== undefined)
+      need(
+        isObj(s.palette) &&
+          (CATEGORICAL_PALETTES as readonly unknown[]).includes(s.palette.categorical) &&
+          (DIVERGING_PALETTES as readonly unknown[]).includes(s.palette.diverging),
+        `settings.palette must name a categorical palette (${CATEGORICAL_PALETTES.join(', ')}) and a diverging palette (${DIVERGING_PALETTES.join(', ')}).`,
+      );
+    if (s.group_colours !== undefined) {
+      const pins = s.group_colours;
+      need(
+        isObj(pins) &&
+          Object.values(pins).every((byValue) => {
+            if (!isObj(byValue)) return false;
+            const hues = Object.values(byValue);
+            return (
+              hues.every((h) => isNum(h) && Number.isInteger(h) && h >= 0 && h < PALETTE_HUES) &&
+              new Set(hues).size === hues.length
+            );
+          }),
+        `settings.group_colours must give each attribute value a different hue from 0 to ${String(PALETTE_HUES - 1)}.`,
+      );
+    }
   }
 
   return problems;

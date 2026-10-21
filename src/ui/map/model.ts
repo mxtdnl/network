@@ -23,9 +23,9 @@ import {
   type Project,
 } from '../../data/schema';
 import type { MapSettings, SizeMetric } from '../state/store';
+import { PALETTE_TOKENS, paletteChoice, pinnedHues, type PaletteChoice } from './palettes';
 
 export const NOT_RECORDED = '\u0000not-recorded';
-export const MAX_HUES = 8;
 
 export type EdgeStyle = 'plain' | 'formal' | 'informal' | 'both' | 'neither';
 
@@ -153,6 +153,8 @@ export interface MapModel {
   highlighted: Set<number> | null;
   /** Community per member on the selected layer, when communities are outlined (D136); -1 for none. */
   outlines: number[] | null;
+  /** The project's palettes (D127): renderers take their colours from the theme's palette of that id. */
+  palette: PaletteChoice;
 }
 
 export interface Radii {
@@ -300,6 +302,7 @@ function fillGroups(
   const n = project.members.length;
   const groups: FillGroup[] = [];
   const memberGroup = new Array<number>(n).fill(0);
+  const hues = PALETTE_TOKENS.categorical[paletteChoice(project).categorical].length;
 
   if (settings.fill.kind === 'community') {
     const c = result.refs[settings.layer]?.communities ?? null;
@@ -310,7 +313,7 @@ function fillGroups(
     }
     const sizes = new Array<number>(c.count).fill(0);
     for (const k of c.membership) sizes[k] = (sizes[k] ?? 0) + 1;
-    const coloured = Math.min(c.count, MAX_HUES);
+    const coloured = Math.min(c.count, hues);
     for (let k = 0; k < coloured; k++) {
       groups.push({
         key: String(k),
@@ -334,7 +337,6 @@ function fillGroups(
   const key = settings.fill.key;
   const def = project.attribute_definitions.find((a) => a.key === key);
   const values = attributeValues(project, key);
-  const coloured = values.length > MAX_HUES ? MAX_HUES : values.length;
   const position = new Map(values.map((v, i) => [v, i]));
   const counts = new Array<number>(values.length).fill(0);
   let missing = 0;
@@ -344,13 +346,32 @@ function fillGroups(
     if (p === undefined) missing += 1;
     else counts[p] = (counts[p] ?? 0) + 1;
   });
-  values.slice(0, coloured).forEach((v, i) => {
-    groups.push({ key: v, kind: 'value', label: v, hue: i, members: counts[i] ?? 0 });
+  // Pinned values keep their hue (D127); the others take the free hues in
+  // category order, and values beyond the palette are "Other".
+  const pins = pinnedHues(project, key, hues);
+  const hueOf = values.map((v) => pins.get(v) ?? -1);
+  const taken = new Set(hueOf.filter((h) => h >= 0));
+  let next = 0;
+  hueOf.forEach((h, i) => {
+    if (h >= 0) return;
+    while (next < hues && taken.has(next)) next += 1;
+    if (next < hues) {
+      hueOf[i] = next;
+      taken.add(next);
+      next += 1;
+    }
   });
-  const otherGroups = values.length - coloured;
+  const groupOf = new Array<number>(values.length).fill(-1);
+  values.forEach((v, i) => {
+    const hue = hueOf[i] ?? -1;
+    if (hue < 0) return;
+    groupOf[i] = groups.length;
+    groups.push({ key: v, kind: 'value', label: v, hue, members: counts[i] ?? 0 });
+  });
+  const otherGroups = groupOf.filter((g) => g < 0).length;
   const otherIndex = groups.length;
   if (otherGroups > 0) {
-    const members = counts.slice(coloured).reduce((s, x) => s + x, 0);
+    const members = counts.reduce((s, x, i) => ((groupOf[i] ?? -1) < 0 ? s + x : s), 0);
     groups.push({ key: 'other', kind: 'other', label: '', hue: -1, members });
   }
   const missingIndex = groups.length;
@@ -359,7 +380,8 @@ function fillGroups(
   project.members.forEach((m, i) => {
     const v = m.attributes[key];
     const p = v === null || v === undefined ? undefined : position.get(v);
-    memberGroup[i] = p === undefined ? missingIndex : p < coloured ? p : otherIndex;
+    const g = p === undefined ? -1 : (groupOf[p] ?? -1);
+    memberGroup[i] = p === undefined ? missingIndex : g >= 0 ? g : otherIndex;
   });
   return { kind: 'attribute', label: def?.label ?? key, groups, otherGroups, memberGroup };
 }
@@ -711,6 +733,7 @@ export function buildMapModel(
     searchMatches,
     highlighted,
     outlines,
+    palette: paletteChoice(project),
   };
 }
 
