@@ -166,6 +166,8 @@ test('the validation report lists every seeded error with its row', async ({ pag
 });
 
 test('demo, layer manager, coverage, project files and local persistence', async ({ page }) => {
+  // Runs about 32 s alone here, on main too, so the default 30 s timed it out near its end.
+  test.setTimeout(60_000);
   await start(page);
   await page.getByRole('button', { name: 'Load demo' }).click();
   // The map tab now shows the network (Phase 4) rather than a project summary.
