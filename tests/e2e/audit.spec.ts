@@ -17,7 +17,13 @@ import { seededMembersCsv, seededTiesCsv } from '../fixtures/validation/seeded-e
 const screenshotDir = process.env.SCREENSHOT_DIR ?? join('test-results', 'screenshots');
 const auditDir = process.env.AUDIT_OUT ?? 'test-results';
 
+// From --workspace-desktop, a window narrower than --workspace-wide or shorter
+// than --workspace-short gets the compact layout (D125): 1280, 1440 and the
+// three laptop sizes below are compact, 1920 and 2560 the full desktop layout.
 const SIZES = [
+  { name: 'compact-1280x720', width: 1280, height: 720 },
+  { name: 'compact-1366x768', width: 1366, height: 768 },
+  { name: 'compact-1536x864', width: 1536, height: 864 },
   { name: '1280', width: 1280, height: 800 },
   { name: '1440', width: 1440, height: 900 },
   { name: '1920', width: 1920, height: 1080 },
@@ -41,6 +47,10 @@ const right = (page: Page) =>
 const centreTab = (page: Page, name: string) =>
   page.getByRole('main').getByRole('tab', { name, exact: true });
 const rightTab = (page: Page, name: string) => right(page).getByRole('tab', { name });
+const drawerToggle = (page: Page) =>
+  right(page).getByRole('button', { name: 'Member, insights and coverage', exact: true });
+const leftToggle = (page: Page) =>
+  page.getByRole('button', { name: 'Weights and map settings', exact: true });
 
 async function settled(page: Page) {
   await page.waitForFunction(
@@ -380,6 +390,256 @@ test('phone: the workspace is read-only and usable at 390 px', async ({ page }) 
   );
   expect(serious).toEqual([]);
   expect(overflow).toEqual([]);
+});
+
+// The compact layout (D125) at common laptop sizes. Acceptance: the area the
+// map fits members into (clear of the legend, the notes and the drawer; the
+// canvas reports it as data-free-area) is at least 60 % of the canvas, and the
+// legend covers at most 20 % of it. Screenshots go to COMPACT_DIR
+// (docs/screenshots/compact) or SCREENSHOT_DIR.
+//
+//   COMPACT_DIR=docs/screenshots/compact npx playwright test tests/e2e/audit.spec.ts -g compact
+
+const compactDir = process.env.COMPACT_DIR ?? screenshotDir;
+const COMPACT_SIZES = [
+  { width: 1280, height: 720 },
+  { width: 1366, height: 768 },
+  { width: 1536, height: 864 },
+] as const;
+
+async function seriousViolations(page: Page, state: string): Promise<Finding[]> {
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => ({
+      state,
+      id: v.id,
+      impact: v.impact,
+      help: v.help,
+      targets: v.nodes.slice(0, 5).map((n) => n.target.join(' ')),
+    }));
+}
+
+async function openDemo(page: Page) {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Load demo' }).click();
+  await expect(nodes(page)).toHaveCount(40, { timeout: 60_000 });
+  await settled(page);
+}
+
+/** Shares of the map canvas: the free area fit to view uses, and the legend's cover. */
+async function mapShares(page: Page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas.map__canvas');
+    const legend = document.querySelector('.legend');
+    if (!canvas || !legend) throw new Error('no map');
+    const c = canvas.getBoundingClientRect();
+    const l = legend.getBoundingClientRect();
+    const overlap =
+      Math.max(0, Math.min(c.right, l.right) - Math.max(c.left, l.left)) *
+      Math.max(0, Math.min(c.bottom, l.bottom) - Math.max(c.top, l.top));
+    const [x, y, w, h] = (canvas.dataset.freeArea ?? '').split(' ').map(Number);
+    return {
+      layout: document.documentElement.dataset.layout,
+      canvas: { width: c.width, height: c.height },
+      freeArea: { x, y, w, h },
+      free: ((w ?? 0) * (h ?? 0)) / (c.width * c.height),
+      legend: overlap / (c.width * c.height),
+    };
+  });
+}
+
+for (const size of COMPACT_SIZES) {
+  const label = `${String(size.width)}x${String(size.height)}`;
+  test(`compact layout at ${label}: the network keeps the map`, async ({ page }) => {
+    test.setTimeout(120_000);
+    mkdirSync(compactDir, { recursive: true });
+    await page.setViewportSize(size);
+    await openDemo(page);
+    const findings: Finding[] = [];
+
+    const closed = await mapShares(page);
+    console.log(`compact ${label}, drawer closed: ${JSON.stringify(closed)}`);
+    expect(closed.layout).toBe('compact');
+    expect(closed.free).toBeGreaterThanOrEqual(0.6);
+    expect(closed.legend).toBeLessThanOrEqual(0.2);
+    // The status line is in the top bar; the selection tools are in the zoom group.
+    await expect(page.locator('.top-bar .status-line--inline')).toHaveCount(1);
+    await expect(
+      page.getByRole('group', { name: 'Map view' }).getByRole('button', { name: 'Lasso select' }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: join(compactDir, `after-${label}-map.jpg`),
+      type: 'jpeg',
+      quality: 85,
+    });
+    findings.push(...(await seriousViolations(page, 'map')));
+
+    // Selecting a member opens the drawer; fit to view then keeps clear of it.
+    await nodes(page)
+      .filter({ hasText: /^Lior Theodolite/ })
+      .focus();
+    await page.keyboard.press('Enter');
+    await expect(right(page).getByRole('heading', { name: 'Lior Theodolite' })).toBeVisible();
+    await expect(drawerToggle(page)).toHaveAttribute('aria-expanded', 'true');
+    await page.getByRole('button', { name: 'Fit to view' }).click();
+    await settled(page);
+    const open = await mapShares(page);
+    console.log(`compact ${label}, drawer open: ${JSON.stringify(open)}`);
+    const drawer = await page.locator('#workspace-drawer').boundingBox();
+    const canvas = await page.locator('canvas.map__canvas').boundingBox();
+    if (!drawer || !canvas) throw new Error('no drawer');
+    expect((open.freeArea.x ?? 0) + (open.freeArea.w ?? 0)).toBeLessThanOrEqual(
+      Math.ceil(drawer.x - canvas.x),
+    );
+    // The zoom controls move clear of the drawer.
+    const zoom = await page.getByRole('button', { name: 'Zoom in' }).boundingBox();
+    expect((zoom?.x ?? 0) + (zoom?.width ?? 0)).toBeLessThanOrEqual(drawer.x);
+    await page.screenshot({
+      path: join(compactDir, `after-${label}-member.jpg`),
+      type: 'jpeg',
+      quality: 85,
+    });
+    findings.push(...(await seriousViolations(page, 'drawer')));
+
+    // The controls column collapses to a rail.
+    await leftToggle(page).click();
+    await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
+    await settled(page);
+    await page.screenshot({
+      path: join(compactDir, `after-${label}-rail.jpg`),
+      type: 'jpeg',
+      quality: 85,
+    });
+    findings.push(...(await seriousViolations(page, 'rail')));
+    expect(findings).toEqual([]);
+  });
+}
+
+test('compact layout: the drawer and the rails by keyboard', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openDemo(page);
+  const key = (k: string) => page.keyboard.press(k);
+  const drawer = page.locator('#workspace-drawer');
+  await expect(drawer).toHaveCount(0);
+
+  // The toggle opens the drawer and moves focus to its selected tab; Escape
+  // closes it and returns focus to the toggle.
+  await drawerToggle(page).focus();
+  await key('Enter');
+  await expect(drawer).toBeVisible();
+  await expect(drawerToggle(page)).toHaveAttribute('aria-expanded', 'true');
+  await expect(drawerToggle(page)).toHaveAttribute('aria-controls', 'workspace-drawer');
+  await expect(rightTab(page, 'Member')).toBeFocused();
+  await key('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(drawerToggle(page)).toHaveAttribute('aria-expanded', 'false');
+  await expect(drawerToggle(page)).toBeFocused();
+
+  // The rail's tabs move with the up and down arrows, and choosing one opens
+  // the drawer; Escape from inside it returns focus to that tab.
+  await rightTab(page, 'Member').focus();
+  await key('ArrowDown');
+  await expect(rightTab(page, 'Explore')).toBeFocused();
+  await expect(drawer).toBeVisible();
+  await key('ArrowDown');
+  await expect(rightTab(page, 'Insights')).toHaveAttribute('aria-selected', 'true');
+  await drawerToggle(page).focus();
+  await key('Enter');
+  await expect(drawer).toHaveCount(0);
+  await expect(drawerToggle(page)).toBeFocused();
+  await rightTab(page, 'Coverage').focus();
+  await key('Enter');
+  await expect(drawer).toBeVisible();
+  await key('Tab');
+  await expect(page.locator('#workspace-drawer :focus')).toHaveCount(1);
+  await key('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(rightTab(page, 'Coverage')).toBeFocused();
+
+  // Opened by selecting a member on the map: Escape inside the member panel
+  // closes the panel and the drawer and returns focus to the member.
+  const lior = nodes(page).filter({ hasText: /^Lior Theodolite/ });
+  await lior.focus();
+  await key('Enter');
+  await expect(right(page).getByRole('heading', { name: 'Lior Theodolite' })).toBeVisible();
+  await expect(lior).toBeFocused();
+  await right(page).getByRole('button', { name: 'Show ego view' }).focus();
+  await key('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(lior).toBeFocused();
+  // …and Escape on the member itself does the same.
+  await key('Enter');
+  await expect(drawer).toBeVisible();
+  await key('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(lior).toBeFocused();
+
+  // The close button, by pointer.
+  await rightTab(page, 'Views').click();
+  await expect(drawer).toBeVisible();
+  await drawerToggle(page).click();
+  await expect(drawer).toHaveCount(0);
+
+  // The controls column: the toggle collapses it to a rail and focus follows.
+  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
+  await leftToggle(page).focus();
+  await key('Enter');
+  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
+  await expect(leftToggle(page)).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Weights', exact: true })).toHaveCount(0);
+  await key('Enter');
+  await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
+  await expect(leftToggle(page)).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Weights', exact: true })).toBeVisible();
+
+  // The legend's three forms; it is never removed.
+  const legend = page.getByRole('region', { name: 'Legend' });
+  await expect(legend).toHaveClass(/legend--condensed/);
+  await page.getByRole('combobox', { name: 'Legend' }).selectOption('beside');
+  await expect(legend).toHaveClass(/legend--beside/);
+  await settled(page);
+  const beside = await mapShares(page);
+  expect(beside.legend).toBe(0);
+  await page.getByRole('combobox', { name: 'Legend' }).selectOption('full');
+  await expect(legend).toHaveClass('legend');
+  expect(await seriousViolations(page, 'legend full')).toEqual([]);
+});
+
+test('layout preference: Help → Layout overrides the automatic choice and is remembered', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  const layout = () => page.evaluate(() => document.documentElement.dataset.layout);
+  expect(await layout()).toBe('compact');
+  const choose = async (name: string) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Help' }).click();
+    await page.getByRole('menuitemradio', { name }).click();
+  };
+  await choose('Layout: full');
+  await expect.poll(layout).toBe('desktop');
+  await page.reload();
+  await expect.poll(layout).toBe('desktop');
+  await page.getByRole('banner').getByRole('button', { name: 'Help' }).click();
+  await expect(page.getByRole('menuitemradio', { name: 'Layout: full' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.keyboard.press('Escape');
+  await choose('Layout: automatic');
+  await expect.poll(layout).toBe('compact');
+  expect(await page.evaluate(() => localStorage.getItem('graticule.layout'))).toBeNull();
+  // At 1920 × 1080 Automatic is the full layout; Compact can be chosen there too.
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect.poll(layout).toBe('desktop');
+  await choose('Layout: compact');
+  await expect.poll(layout).toBe('compact');
 });
 
 /**

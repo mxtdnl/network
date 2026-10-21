@@ -19,6 +19,7 @@ import { layerName } from '../map/legend';
 import { nextMember, type MapModel } from '../map/model';
 import { sharedLayout, useMapData, type MapData } from '../map/useMapModel';
 import type { MapTheme } from '../map/theme';
+import { DRAWER_ID, useLayout } from '../state/layoutMode';
 import { useAppStore } from '../state/store';
 import { clearPath, endSimulation } from '../state/tools';
 import { EmptyState } from './EmptyState';
@@ -101,8 +102,15 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
   const toggleGroupMember = useAppStore((s) => s.toggleGroupMember);
   const setMap = useAppStore((s) => s.setMap);
   const setRightPanel = useAppStore((s) => s.setRightPanel);
+  const setRightOpen = useAppStore((s) => s.setRightOpen);
   const running = useAppStore((s) => s.results.status === 'running');
   const coverage = result.coverage;
+  // The compact layout (D125): the legend condensed by default, the selection
+  // tools in the zoom group, and a drawer over the map's right edge.
+  const compact = useLayout() === 'compact';
+  const legendChoice = useAppStore((s) => s.ui.legend);
+  const legendMode = analyst ? (legendChoice ?? (compact ? 'condensed' : 'full')) : 'full';
+  const drawerOpen = useAppStore((s) => compact && s.ui.rightOpen);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -110,6 +118,7 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
   const noteRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<MapController | null>(null);
+  const measureRef = useRef<() => void>(() => undefined);
   const buttons = useRef(new Map<number, HTMLButtonElement>());
   const [focused, setFocused] = useState<number | null>(null);
   const [pinned, setPinned] = useState(0);
@@ -175,21 +184,34 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
     controller.setTool(useAppStore.getState().map.tool);
     controllerRef.current = controller;
     if (analyst) registerMapViewport(() => controller.viewport());
-    const observer = new ResizeObserver(() => {
+    const measure = () => {
       const rect = container.getBoundingClientRect();
-      // Fit to view keeps members clear of the legend.
-      const legend = legendRef.current?.getBoundingClientRect();
-      // …and below the notes and the selection tools along the top edge.
+      // Fit to view keeps members clear of the legend (unless it has its own column)…
+      const legend = legendRef.current?.classList.contains('legend--beside')
+        ? null
+        : legendRef.current?.getBoundingClientRect();
+      // …below the notes and the selection tools along the top edge…
       const top = [noteRef.current, toolsRef.current].reduce((m, el) => {
         const r = el?.getBoundingClientRect();
         return r && r.height > 0 ? Math.max(m, r.bottom - rect.top) : m;
       }, 0);
-      if (legend) controller.setReserved(legend.right - rect.left, legend.top - rect.top, top);
+      // …and left of the compact layout's drawer.
+      const drawer = document.getElementById(DRAWER_ID)?.getBoundingClientRect();
+      const end = drawer && drawer.width > 0 ? drawer.left - rect.left : Infinity;
+      controller.setReserved(
+        legend ? legend.right - rect.left : 0,
+        legend ? legend.top - rect.top : Infinity,
+        top,
+        end,
+      );
       controller.resize(rect.width, rect.height, window.devicePixelRatio || 1);
-    });
+    };
+    measureRef.current = measure;
+    const observer = new ResizeObserver(measure);
     observer.observe(container);
     if (legendRef.current) observer.observe(legendRef.current);
     if (noteRef.current) observer.observe(noteRef.current);
+    if (toolsRef.current) observer.observe(toolsRef.current);
     return () => {
       observer.disconnect();
       if (analyst) registerMapViewport(null);
@@ -201,6 +223,27 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
   useEffect(() => {
     controllerRef.current?.setModel(model, layout);
   }, [model, layout]);
+
+  // The drawer changes the free area without resizing the map; the view stays
+  // where it is, and a member selected under the drawer is revealed (below).
+  useEffect(() => {
+    measureRef.current();
+  }, [drawerOpen]);
+  // A new legend form moves the free area, so the members are fitted into it again.
+  const legendModeRef = useRef(legendMode);
+  useEffect(() => {
+    if (legendModeRef.current === legendMode) return;
+    legendModeRef.current = legendMode;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        measureRef.current();
+        controllerRef.current?.fit();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [legendMode]);
 
   const groupSet = useMemo(() => {
     const s = new Set<number>();
@@ -223,6 +266,20 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
       path: pathIndices,
     });
   }, [selectedIndex, groupSet, pathIndices]);
+  // A member selected under the drawer is brought into view beside it.
+  useEffect(() => {
+    if (!drawerOpen || selectedIndex === null) return;
+    const frame = requestAnimationFrame(() => {
+      controllerRef.current?.reveal(
+        selectedIndex,
+        legendRef.current?.getBoundingClientRect() ?? null,
+        containerRef.current?.getBoundingClientRect() ?? null,
+      );
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [drawerOpen, selectedIndex]);
   useEffect(() => {
     controllerRef.current?.setTool(settings.tool);
   }, [settings.tool]);
@@ -303,9 +360,11 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
         else open(index);
         return;
       case 'Escape':
-        if (selected !== null) {
+        // In the compact layout the member panel is in the drawer, which closes with it.
+        if (selected !== null || drawerOpen) {
           event.preventDefault();
-          open(null);
+          if (selected !== null) open(null);
+          if (drawerOpen) setRightOpen(false);
         }
         return;
       case '+':
@@ -333,8 +392,42 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
   const name = layerName(model);
   const visibleCount = visible.length;
 
+  const selectionTools = (
+    <>
+      <button
+        type="button"
+        className="map__tool"
+        aria-pressed={settings.tool === 'lasso'}
+        onClick={() => {
+          setMap({ tool: settings.tool === 'lasso' ? 'pan' : 'lasso' });
+        }}
+      >
+        {mapCopy.tools.lasso}
+      </button>
+      {group.length > 0 && (
+        <button
+          type="button"
+          className="map__tool"
+          onClick={() => {
+            setGroup([]);
+          }}
+        >
+          {mapCopy.tools.clearGroup(group.length)}
+        </button>
+      )}
+    </>
+  );
+
   return (
-    <div className={analyst ? 'map' : 'map map--presentation'}>
+    <div
+      className={
+        analyst
+          ? legendMode === 'beside'
+            ? 'map map--legend-beside'
+            : 'map'
+          : 'map map--presentation'
+      }
+    >
       <div ref={containerRef} className="map__stage">
         <canvas ref={canvasRef} className="map__canvas" aria-hidden="true" />
       </div>
@@ -409,29 +502,9 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
         </div>
       )}
 
-      {analyst && (
+      {analyst && !compact && (
         <div ref={toolsRef} className="map__tools" role="group" aria-label={mapCopy.tools.group}>
-          <button
-            type="button"
-            className="map__tool"
-            aria-pressed={settings.tool === 'lasso'}
-            onClick={() => {
-              setMap({ tool: settings.tool === 'lasso' ? 'pan' : 'lasso' });
-            }}
-          >
-            {mapCopy.tools.lasso}
-          </button>
-          {group.length > 0 && (
-            <button
-              type="button"
-              className="map__tool"
-              onClick={() => {
-                setGroup([]);
-              }}
-            >
-              {mapCopy.tools.clearGroup(group.length)}
-            </button>
-          )}
+          {selectionTools}
         </div>
       )}
 
@@ -485,12 +558,19 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
           ref={legendRef}
           model={model}
           theme={theme}
+          variant={legendMode}
           extras={legendExtras(data, groupSet.size, pathIndices !== null && pathIndices.length > 1)}
         />
       )}
 
       {analyst && (
         <div className="map__zoom" role="group" aria-label={mapCopy.zoom.group}>
+          {/* In the compact layout the selection tools join the zoom group, freeing the top edge. */}
+          {compact && (
+            <div className="map__zoom-tools" role="group" aria-label={mapCopy.tools.group}>
+              {selectionTools}
+            </div>
+          )}
           {pinned > 0 && (
             <button
               type="button"

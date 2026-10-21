@@ -11,6 +11,7 @@ import {
   writePersistenceEnabled,
 } from '../../data/persistence';
 import { persistenceCopy } from '../copy/data';
+import { refreshLayoutPreference } from './layoutMode';
 import { useAppStore } from './store';
 
 let enabled = false;
@@ -87,6 +88,8 @@ export async function clearAllLocalData(): Promise<void> {
   setPersistence('off');
   try {
     await clearLocalData();
+    // The layout preference was one of the keys removed (D125).
+    refreshLayoutPreference();
     setStatus({ text: persistenceCopy.cleared, tone: 'info' });
   } catch (e) {
     setStatus({ text: persistenceCopy.clearFailed(reason(e)), tone: 'error' });

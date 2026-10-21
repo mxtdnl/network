@@ -5,8 +5,10 @@ export interface MenuItem {
   key: string;
   label: string;
   onSelect: () => void;
-  /** Present for an on/off item (menuitemcheckbox). */
+  /** Present for an on/off item (menuitemcheckbox), or a choice of several with `radio`. */
   checked?: boolean;
+  /** One of a set of choices (menuitemradio). */
+  radio?: boolean;
   disabled?: boolean;
 }
 
@@ -113,7 +115,13 @@ export function MenuButton({ label, items }: MenuButtonProps) {
                 itemRefs.current[i] = el;
               }}
               type="button"
-              role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+              role={
+                item.checked === undefined
+                  ? 'menuitem'
+                  : item.radio
+                    ? 'menuitemradio'
+                    : 'menuitemcheckbox'
+              }
               aria-checked={item.checked}
               aria-disabled={item.disabled}
               tabIndex={-1}

@@ -1,6 +1,11 @@
 import { forwardRef, useId } from 'react';
 import { mapCopy } from '../copy/map';
-import { legendSections, type LegendExtras, type LegendSection } from '../map/legend';
+import {
+  condensedSections,
+  legendSections,
+  type LegendExtras,
+  type LegendSection,
+} from '../map/legend';
 import type { MapModel } from '../map/model';
 import type { MapTheme } from '../map/theme';
 
@@ -14,11 +19,19 @@ const VAL_CLASS: Record<number, string> = {
   3: 'p3',
 };
 
-function Sample({ section, theme }: { section: LegendSection; theme: MapTheme }) {
+function Sample({
+  section,
+  theme,
+  condensed,
+}: {
+  section: LegendSection;
+  theme: MapTheme;
+  condensed: boolean;
+}) {
   const box = theme.nodeMax * 2 + theme.line * 2;
-  // Line samples are one text line tall.
+  // Line samples are one text line tall; condensed, they are a swatch wide.
   const lineH = theme.labelSize + theme.labelGap;
-  const lineW = box * 1.5;
+  const lineW = condensed ? theme.swatch : box * 1.5;
   switch (section.kind) {
     case 'size':
       return (
@@ -279,16 +292,29 @@ function Sample({ section, theme }: { section: LegendSection; theme: MapTheme })
 
 // Persistent legend, overlaid at the lower left of the map (design-system
 // §5.1): one entry per encoding in use, rebuilt from the same model as the map.
+// Three forms (D125): full; condensed, one line per encoding; and beside the
+// map, in a column of its own. It is never removed (spec §8).
 export const MapLegend = forwardRef<
   HTMLElement,
-  { model: MapModel; theme: MapTheme; extras?: LegendExtras | null }
->(function MapLegend({ model, theme, extras = null }, ref) {
+  {
+    model: MapModel;
+    theme: MapTheme;
+    extras?: LegendExtras | null;
+    variant?: 'full' | 'condensed' | 'beside';
+  }
+>(function MapLegend({ model, theme, extras = null, variant = 'full' }, ref) {
   const headingId = useId();
-  const sections = legendSections(model, theme, extras);
+  const full = legendSections(model, theme, extras);
+  const sections = variant === 'condensed' ? condensedSections(full) : full;
   return (
-    // The legend scrolls when the map is short, so it can take focus and be scrolled by keyboard.
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-    <section ref={ref} className="legend" aria-labelledby={headingId} tabIndex={0}>
+    <section
+      ref={ref}
+      className={variant === 'full' ? 'legend' : `legend legend--${variant}`}
+      aria-labelledby={headingId}
+      // The legend scrolls when the map is short, so it can take focus and be scrolled by keyboard.
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+    >
       <h2 id={headingId} className="visually-hidden">
         {mapCopy.legend.heading}
       </h2>
@@ -298,7 +324,7 @@ export const MapLegend = forwardRef<
             <span className="legend__title">{section.title}</span>{' '}
             <span className="legend__variable">{section.variable}</span>
           </p>
-          <Sample section={section} theme={theme} />
+          <Sample section={section} theme={theme} condensed={variant === 'condensed'} />
           {section.kind === 'width' &&
             section.notes.map((note) => (
               <p key={note} className="legend__note num">

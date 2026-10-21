@@ -84,6 +84,13 @@ export const mapCopy = {
     filterChip: (attribute: string, value: string) => `${attribute}: ${value}`,
     search: 'Search',
     searchHelp: 'Type part of a name.',
+    legend: 'Legend',
+    legendModes: {
+      condensed: 'Condensed',
+      full: 'Full',
+      beside: 'Beside the map',
+    },
+    legendHelp: 'Condensed gives one line per encoding; beside the map keeps it off the network.',
     matches: (n: number) =>
       n === 0 ? 'No members match.' : `${count(n, 'member matches', 'members match')}.`,
     notRecorded: 'Not recorded',

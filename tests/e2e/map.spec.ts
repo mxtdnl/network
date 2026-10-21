@@ -205,7 +205,8 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   await expect(page.getByRole('article', { name: focusedName })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('article')).toHaveCount(0);
-  await expect(page.getByText('Select a member on the map')).toBeVisible();
+  // 1440 × 900 is the compact layout (D125): the member panel's drawer closes with it.
+  await expect(page.locator('#workspace-drawer')).toHaveCount(0);
   // Focus stays on the member's node, and is drawn on the map.
   expect(await page.evaluate(() => document.activeElement?.textContent ?? '')).toContain(
     focusedName,
