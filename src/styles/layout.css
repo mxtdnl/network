@@ -160,3 +160,221 @@
 :root[data-layout='phone'] .legend {
   max-height: 40%;
 }
+
+/* Compact layout (CLAUDE.md D125): desktop widths narrower than
+   --workspace-wide or shorter than --workspace-short. The status line moves
+   into the top bar; the controls column can collapse to a rail; the detail
+   column is a rail of tabs whose panels open as a drawer over the map's
+   right edge (an overlay, so it carries an elevation, spec §12); panels use
+   s-4 padding instead of s-5. */
+
+:root[data-layout='compact'] .workspace {
+  grid-template-columns: auto minmax(0, 1fr) var(--rail-width);
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+}
+
+:root[data-layout='compact'] .top-bar {
+  min-height: var(--bar-height);
+  gap: var(--s-4);
+  padding-inline: var(--s-4);
+}
+
+:root[data-layout='compact'] .top-bar__actions {
+  gap: var(--s-4);
+}
+
+:root[data-layout='compact'] .top-bar__name,
+:root[data-layout='compact'] .top-bar__indicator {
+  flex: none;
+}
+
+:root[data-layout='compact'] .top-bar__project {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The status line inline in the top bar: an action's message gives way to
+   the actions. */
+.status-line--inline {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: 0;
+  background: none;
+}
+
+.status-line--inline .status-line__message {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.status-line--inline .status-line__message:not(:empty) {
+  padding-block: 0;
+}
+
+.status-line--inline .status-line__message .icon {
+  vertical-align: text-bottom;
+  margin-inline-end: var(--s-1);
+}
+
+/* The coverage warning in the top bar: emphasised like the status line's. */
+:root[data-layout='compact'] .top-bar__coverage[role='note'] {
+  font-weight: var(--weight-medium);
+}
+
+/* Controls column: narrower, and collapsible to a rail. */
+:root[data-layout='compact'] .workspace__centre {
+  isolation: isolate; /* the views' own layers stay under the drawer */
+}
+
+:root[data-layout='compact'] .workspace__left {
+  position: relative;
+  width: var(--col-left-compact);
+  padding: var(--s-3) var(--s-4) var(--s-4);
+}
+
+:root[data-layout='compact'] .workspace__left > .workspace__collapse {
+  position: absolute;
+  top: var(--s-3);
+  inset-inline-end: var(--s-3);
+}
+
+:root[data-layout='compact'] .workspace__left.workspace__rail {
+  width: var(--rail-width);
+  padding: var(--s-2) 0;
+}
+
+.workspace__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  overflow: visible;
+}
+
+.workspace__collapse,
+.workspace__rail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--r-control);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.workspace__rail-button {
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-block: var(--s-2);
+  font-weight: var(--weight-medium);
+}
+
+.workspace__collapse:hover,
+.workspace__rail-button:hover {
+  background: var(--paper);
+}
+
+.workspace__rail-label {
+  writing-mode: vertical-rl;
+}
+
+/* Detail column: the rail holds the toggle and the tabs, set vertically. */
+:root[data-layout='compact'] .workspace__right {
+  position: relative;
+  padding-block: var(--s-2);
+}
+
+.tabs--vertical {
+  flex: none;
+}
+
+.workspace__right .tabs--vertical .tabs__list {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--s-4);
+  padding: 0;
+}
+
+.tabs--vertical .tabs__tab {
+  writing-mode: vertical-rl;
+  min-width: var(--control-height);
+  min-height: 0;
+  padding-block: var(--s-2);
+  border-bottom: 0;
+  border-left: var(--indicator-width) solid transparent;
+}
+
+.tabs--vertical .tabs__tab[aria-selected='true'] {
+  border-left-color: var(--accent);
+}
+
+/* The drawer: the panels, over the map beside the rail. */
+.tabs__drawer {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 100%;
+  z-index: 1;
+  width: var(--col-right-compact);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--field);
+  box-shadow: var(--e-2);
+}
+
+/* Panels: s-4 padding; the map still fills its panel edge to edge. */
+:root[data-layout='compact'] .tabs__panel {
+  padding: var(--s-4);
+}
+
+:root[data-layout='compact'] .workspace__centre .tabs__list {
+  padding-inline: var(--s-4);
+}
+
+:root[data-layout='compact'] .map {
+  height: calc(100% + var(--s-4) * 2);
+  margin: calc(var(--s-4) * -1);
+}
+
+/* While the drawer is open, the map's controls and a legend beside the map
+   move clear of it, so none is hidden under the drawer. */
+:root[data-layout='compact'] .workspace:has(.tabs__drawer) .map__zoom {
+  inset-inline-end: calc(var(--col-right-compact) + var(--s-4));
+}
+
+:root[data-layout='compact'] .workspace:has(.tabs__drawer) .legend--condensed {
+  max-width: calc(100% - var(--col-right-compact) - var(--map-zoom-button) * 2 - var(--s-4) * 3);
+}
+
+:root[data-layout='compact'] .workspace:has(.tabs__drawer) .legend--beside {
+  inset-inline-end: var(--col-right-compact);
+}
+
+:root[data-layout='compact'] .workspace:has(.tabs__drawer) .map--legend-beside .map__stage {
+  inset-inline-end: calc(var(--col-right-compact) + var(--map-legend-beside-width));
+}
+
+:root[data-layout='compact'] .workspace:has(.tabs__drawer) .map--legend-beside .map__zoom {
+  inset-inline-end: calc(var(--col-right-compact) + var(--map-legend-beside-width) + var(--s-4));
+}
+
+/* Presentation on a short screen: tighter spacing keeps the legend in its column. */
+:root[data-layout='compact'] .presentation__legend,
+:root[data-layout='compact'] .presentation__legend .legend {
+  gap: var(--s-3);
+}

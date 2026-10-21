@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState } from 'react';
+import { lazy, Suspense, useRef, useState, type ReactNode } from 'react';
 import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
 import { MenuButton } from '../components/MenuButton';
@@ -7,7 +7,12 @@ import { coverageCopy, percent, persistenceCopy, projectCopy } from '../copy/dat
 import { shellCopy } from '../copy/shell';
 import { clearAllLocalData, setPersistenceOn } from '../state/persistenceSync';
 import { loadDemo, openProjectFile, saveProjectFile } from '../state/projectActions';
-import { useReadOnly } from '../state/layoutMode';
+import {
+  setLayoutPreference,
+  useLayoutPreference,
+  useReadOnly,
+  type LayoutPreference,
+} from '../state/layoutMode';
 import { useAppStore } from '../state/store';
 import { useCoverage } from './CoveragePanel';
 import { savedViewsCopy } from '../copy/savedViews';
@@ -23,7 +28,12 @@ const HelpDialog = lazy(() => import('./HelpDialog').then((m) => ({ default: m.H
 
 type Pending = 'new' | 'open' | 'demo' | null;
 
-export function TopBar() {
+interface TopBarProps {
+  /** The compact layout's status line, inline in the bar (D125). */
+  status?: ReactNode;
+}
+
+export function TopBar({ status }: TopBarProps) {
   const anonymise = useAppStore((s) => s.ui.anonymise);
   const views = useAppStore((s) => s.data.project?.saved_views.length ?? 0);
   const openNotice = useAppStore((s) => s.openNotice);
@@ -49,6 +59,7 @@ export function TopBar() {
   const hasData = project !== null && project.members.length > 0;
   // Importing changes the project, so the read-only phone layout leaves it out.
   const phone = useReadOnly();
+  const layout = useLayoutPreference();
   function chooseProjectFile() {
     fileRef.current?.click();
   }
@@ -81,6 +92,7 @@ export function TopBar() {
       <p className="top-bar__project">
         {project ? names.text(project.meta.title) : shellCopy.noProject}
       </p>
+      {status}
       {indicator && (
         <p className="top-bar__indicator">
           <Icon name={persistence === 'error' ? 'warning' : 'check'} />
@@ -88,10 +100,16 @@ export function TopBar() {
         </p>
       )}
       <div className="top-bar__actions">
+        {/* In the compact layout the coverage warning is here, in its short form (D125). */}
         {coverage && Number.isFinite(coverage.rate) && (
-          <p className="top-bar__coverage num">
+          <p
+            className="top-bar__coverage num"
+            role={status && coverage.belowThreshold ? 'note' : undefined}
+          >
             {coverage.belowThreshold && <Icon name="warning" />}
-            {coverageCopy.topBar(percent(coverage.rate))}
+            {status && coverage.belowThreshold
+              ? coverageCopy.warningShort(percent(coverage.rate), percent(coverage.threshold))
+              : coverageCopy.topBar(percent(coverage.rate))}
           </p>
         )}
         <Switch label={shellCopy.hideNames} checked={anonymise} onChange={setNamesHidden} />
@@ -164,6 +182,18 @@ export function TopBar() {
                 },
               })),
               { key: 'notice', label: shellCopy.helpMenu.notice, onSelect: openNotice },
+              // Applies at desktop widths; tablet and phone follow the width (D125).
+              ...(['auto', 'compact', 'full'] as const satisfies readonly LayoutPreference[]).map(
+                (pref) => ({
+                  key: `layout-${pref}`,
+                  label: shellCopy.helpMenu.layout[pref],
+                  radio: true,
+                  checked: layout === pref,
+                  onSelect: () => {
+                    setLayoutPreference(pref);
+                  },
+                }),
+              ),
             ]}
           />
         </div>

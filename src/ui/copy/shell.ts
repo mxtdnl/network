@@ -9,6 +9,17 @@ export const shellCopy = {
   loadingSurvey: 'Loading the survey tools…',
   helpMenu: {
     notice: 'Data and consent notice',
+    layout: {
+      auto: 'Layout: automatic',
+      compact: 'Layout: compact',
+      full: 'Layout: full',
+    },
+  },
+  // Compact layout (D125): collapsible columns and the detail drawer.
+  compact: {
+    left: 'Weights and map settings',
+    right: 'Member, insights and coverage',
+    close: 'Close member, insights and coverage',
   },
   regions: {
     left: 'Layers and filters',

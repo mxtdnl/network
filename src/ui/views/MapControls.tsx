@@ -12,7 +12,14 @@ import {
   isToggledOn,
 } from '../map/model';
 import { drawableLayers, hierarchyAvailable, useMapData } from '../map/useMapModel';
-import { useAppStore, type LayoutKind, type MapSettings, type SizeMetric } from '../state/store';
+import { useLayout } from '../state/layoutMode';
+import {
+  useAppStore,
+  type LayoutKind,
+  type LegendMode,
+  type MapSettings,
+  type SizeMetric,
+} from '../state/store';
 
 const LAYOUTS: readonly LayoutKind[] = ['force', 'grouped', 'circular', 'hierarchy'];
 const LY = mapCopy.layouts;
@@ -29,6 +36,9 @@ export function MapControls() {
   const selectMember = useAppStore((s) => s.selectMember);
   const setRightPanel = useAppStore((s) => s.setRightPanel);
   const raw = useAppStore((s) => s.map);
+  const legendChoice = useAppStore((s) => s.ui.legend);
+  const setLegend = useAppStore((s) => s.setLegend);
+  const compact = useLayout() === 'compact';
   const ids = {
     layer: useId(),
     layerHelp: useId(),
@@ -45,6 +55,8 @@ export function MapControls() {
     layout: useId(),
     layoutHelp: useId(),
     groupBy: useId(),
+    legend: useId(),
+    legendHelp: useId(),
   };
   const [filterAttr, setFilterAttr] = useState<string>('');
   const [filterValue, setFilterValue] = useState<string>('');
@@ -438,6 +450,31 @@ export function MapControls() {
             })}
           </ul>
         )}
+      </div>
+
+      {/* The legend's form (D125): view state, not saved with the project. */}
+      <div className="field">
+        <label htmlFor={ids.legend} className="field__label">
+          {C.legend}
+        </label>
+        <select
+          id={ids.legend}
+          className="select"
+          aria-describedby={ids.legendHelp}
+          value={legendChoice ?? (compact ? 'condensed' : 'full')}
+          onChange={(e) => {
+            setLegend(e.currentTarget.value as LegendMode);
+          }}
+        >
+          {(['condensed', 'full', 'beside'] as const).map((m) => (
+            <option key={m} value={m}>
+              {C.legendModes[m]}
+            </option>
+          ))}
+        </select>
+        <p id={ids.legendHelp} className="field__help">
+          {C.legendHelp}
+        </p>
       </div>
     </div>
   );

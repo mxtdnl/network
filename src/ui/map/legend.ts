@@ -211,3 +211,23 @@ export function legendSections(
   }
   return sections;
 }
+
+/**
+ * The condensed legend (D125): one line per encoding, with its variable and
+ * the end points of a scale. Every section and note is kept, so nothing the
+ * map encodes goes unexplained (spec §8); only the scales' middle samples go.
+ */
+export function condensedSections(sections: readonly LegendSection[]): LegendSection[] {
+  const ends = <T>(xs: readonly T[]): T[] =>
+    xs.length > 2 ? [xs[0] as T, xs[xs.length - 1] as T] : [...xs];
+  return sections.map((section) => {
+    switch (section.kind) {
+      case 'size':
+        return { ...section, samples: ends(section.samples) };
+      case 'width':
+        return { ...section, samples: ends(section.samples) };
+      default:
+        return section;
+    }
+  });
+}

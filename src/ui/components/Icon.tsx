@@ -12,7 +12,9 @@ interface IconProps {
     | 'expand'
     | 'collapse'
     | 'chevron-up'
-    | 'chevron-down';
+    | 'chevron-down'
+    | 'chevron-left'
+    | 'chevron-right';
 }
 
 export function Icon({ name }: IconProps) {
@@ -76,6 +78,24 @@ export function Icon({ name }: IconProps) {
       {name === 'chevron-up' && (
         <path
           d="M3.5 10 8 5.5 12.5 10"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+      {name === 'chevron-left' && (
+        <path
+          d="M10 3.5 5.5 8 10 12.5"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
+      {name === 'chevron-right' && (
+        <path
+          d="M6 3.5 10.5 8 6 12.5"
           fill="none"
           stroke="currentColor"
           strokeLinecap="round"

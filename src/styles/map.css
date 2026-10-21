@@ -625,3 +625,76 @@
 .metric-info__flag {
   font-weight: var(--weight-medium);
 }
+
+/* Legend forms (CLAUDE.md D125). Condensed: one line per encoding, its title,
+   variable and the end points of a scale, as narrow as its longest line.
+   Beside the map: a column of its own at the right, so the network is drawn
+   in the rest of the map. */
+.legend--condensed {
+  inset-inline-end: auto;
+  max-width: calc(100% - var(--map-zoom-button) * 2 - var(--s-4) * 3);
+  max-height: 25%;
+  grid-template-columns: minmax(0, auto);
+  gap: 0; /* the rows' line height separates them */
+  padding: var(--s-2) var(--s-3);
+}
+
+.legend--condensed .legend__section {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s-3);
+}
+
+.legend--condensed .legend__note {
+  margin-top: 0;
+}
+
+.legend--condensed .legend__sample--ramp {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.legend--condensed .legend__ramp-labels {
+  display: contents;
+}
+
+/* The scale's end points either side of the ramp; its middle label is left out. */
+.legend--condensed .legend__ramp-labels > span:first-child {
+  order: -1;
+}
+
+.legend--condensed .legend__ramp-labels > span:nth-child(2) {
+  display: none;
+}
+
+.legend--condensed .legend__ramp-labels > span:last-child {
+  order: 1;
+}
+
+.map--legend-beside .map__stage {
+  inset-inline-end: var(--map-legend-beside-width);
+}
+
+.legend--beside {
+  inset: 0 0 0 auto;
+  width: var(--map-legend-beside-width);
+  max-height: none;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  border-width: 0 0 0 var(--line-width);
+  border-radius: var(--r-none);
+}
+
+.map--legend-beside .map__zoom {
+  inset-inline-end: calc(var(--map-legend-beside-width) + var(--s-4));
+}
+
+/* The selection tools in the zoom group (compact layout), beside the buttons. */
+.map__zoom-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s-2);
+}

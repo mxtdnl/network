@@ -41,7 +41,15 @@ export interface UiState {
   compareMode: CompareMode;
   /** Presentation mode: the saved view on screen, by position in the list; null in the workspace. */
   presentation: { index: number } | null;
+  /** Compact layout (D125): the controls column is expanded rather than a rail. */
+  leftOpen: boolean;
+  /** Compact layout: the detail column's drawer is open over the map. */
+  rightOpen: boolean;
+  /** The map legend's form; null follows the layout (condensed in compact, else full). */
+  legend: LegendMode | null;
 }
+
+export type LegendMode = 'full' | 'condensed' | 'beside';
 
 export interface StatusMessage {
   text: string;
@@ -145,6 +153,9 @@ export interface ResultsState {
 interface Actions {
   setCentreView: (view: CentreView) => void;
   setRightPanel: (panel: RightPanel) => void;
+  setLeftOpen: (open: boolean) => void;
+  setRightOpen: (open: boolean) => void;
+  setLegend: (legend: LegendMode | null) => void;
   setAnonymise: (on: boolean) => void;
   openNotice: () => void;
   closeNotice: () => void;
@@ -258,6 +269,9 @@ export function initialUiState(noticeSeen: boolean): UiState {
     matrixMode: 'explore',
     compareMode: 'layers',
     presentation: null,
+    leftOpen: true,
+    rightOpen: false,
+    legend: null,
   };
 }
 
@@ -313,9 +327,19 @@ export const useAppStore = create<AppState>()((set, get) => {
       setUi({ centreView });
       setData({ status: null });
     },
+    // Choosing a panel opens the compact layout's drawer (D125).
     setRightPanel: (rightPanel) => {
-      setUi({ rightPanel });
+      setUi({ rightPanel, rightOpen: true });
       setData({ status: null });
+    },
+    setLeftOpen: (leftOpen) => {
+      setUi({ leftOpen });
+    },
+    setRightOpen: (rightOpen) => {
+      setUi({ rightOpen });
+    },
+    setLegend: (legend) => {
+      setUi({ legend });
     },
     setAnonymise: (anonymise) => {
       setUi({ anonymise });
@@ -442,8 +466,12 @@ export const useAppStore = create<AppState>()((set, get) => {
         return { map: next };
       });
     },
+    // Selecting a member opens the compact layout's drawer on their panel's column.
     selectMember: (member) => {
-      set((s) => ({ selection: { ...s.selection, member } }));
+      set((s) => ({
+        selection: { ...s.selection, member },
+        ...(member !== null ? { ui: { ...s.ui, rightOpen: true } } : {}),
+      }));
     },
     setHovered: (hovered) => {
       if (get().selection.hovered === hovered) return;

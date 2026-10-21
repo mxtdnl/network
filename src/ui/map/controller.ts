@@ -118,7 +118,7 @@ export class MapController {
   private idleTimer = 0;
   private fitted = false;
   /** The legend's corner (lower left), kept clear by fit to view: its right and top edges. */
-  private reserved = { right: 0, top: Infinity, noteBottom: 0 };
+  private reserved = { right: 0, top: Infinity, noteBottom: 0, end: Infinity };
   private drag: { index: number; x: number; y: number; moved: boolean; id: number } | null = null;
   private down: { x: number; y: number } | null = null;
   private readonly widths = new Map<string, number>();
@@ -333,6 +333,7 @@ export class MapController {
       this.fit();
       this.fitted = true;
     }
+    this.publishFreeArea();
     this.invalidate();
   }
 
@@ -354,16 +355,28 @@ export class MapController {
     };
   }
 
-  /** The legend's right and top edges, and the bottom of the coverage note (0 when none). */
-  setReserved(right: number, top: number, noteBottom = 0): void {
-    this.reserved = { right, top, noteBottom };
+  /**
+   * The legend's right and top edges, the bottom of the coverage note (0 when
+   * none), and where a drawer over the map's right edge begins (Infinity when
+   * none, D125), in canvas pixels.
+   */
+  setReserved(right: number, top: number, noteBottom = 0, end = Infinity): void {
+    this.reserved = { right, top, noteBottom, end };
+    this.publishFreeArea();
+  }
+
+  /** The area fit to view uses, on the canvas as `data-free-area` ("x y w h") for tests. */
+  private publishFreeArea(): void {
+    const a = this.freeArea(1, 1);
+    this.canvas.dataset.freeArea = [a.x, a.y, a.w, a.h].map((v) => Math.round(v)).join(' ');
   }
 
   /** The free area beside or above the legend, whichever lets the members appear larger. */
-  private freeArea(bw: number, bh: number): { x: number; y: number; w: number; h: number } {
+  freeArea(bw = 1, bh = 1): { x: number; y: number; w: number; h: number } {
     const { right, top, noteBottom: y } = this.reserved;
-    const beside = { x: right, y, w: this.width - right, h: this.height - y };
-    const above = { x: 0, y, w: this.width, h: Math.min(top, this.height) - y };
+    const end = Math.max(0, Math.min(this.reserved.end, this.width));
+    const beside = { x: right, y, w: end - right, h: this.height - y };
+    const above = { x: 0, y, w: end, h: Math.min(top, this.height) - y };
     const scale = (a: { w: number; h: number }) => Math.min(a.w / bw, a.h / bh);
     return scale(beside) >= scale(above) ? beside : above;
   }
@@ -418,11 +431,12 @@ export class MapController {
     if (!p) return;
     const r = (this.model?.nodes[index]?.radius ?? 0) + this.theme.focusWidth * 2;
     const inView = p.x - r >= 0 && p.y - r >= 0 && p.x + r <= this.width && p.y + r <= this.height;
-    let covered = false;
+    // Under the drawer counts as out of view.
+    let covered = p.x + r > this.reserved.end;
     if (avoid && origin) {
       const ax = avoid.left - origin.left;
       const ay = avoid.top - origin.top;
-      covered =
+      covered ||=
         p.x + r > ax && p.x - r < ax + avoid.width && p.y + r > ay && p.y - r < ay + avoid.height;
     }
     if (inView && !covered) return;

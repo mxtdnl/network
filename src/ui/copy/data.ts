@@ -147,6 +147,9 @@ export const coverageCopy = {
   threshold: 'Warn below',
   thresholdHelp: 'Below this response rate, whole-network metrics may be unreliable.',
   thresholdInvalid: 'Enter a whole number from 0 to 100.',
+  /** The warning in the compact layout's top bar; the full text is in the Coverage panel. */
+  warningShort: (rate: string, threshold: string) =>
+    `Coverage ${rate} is below the ${threshold} threshold`,
   warning: (rate: string, threshold: string) =>
     `Coverage is ${rate}, below the ${threshold} threshold. Whole-network metrics may be unreliable. Collect the missing ratings, or lower the threshold in the Coverage panel if this is expected.`,
   columns: {
