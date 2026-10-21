@@ -422,7 +422,9 @@ test('palettes and pinned group colours (D127): legend, matrix, canvas and the p
   await expect(dot).toHaveCSS('background-color', 'rgb(136, 34, 85)');
   await expectNoAxeViolations(page);
 
-  // The canvas draws the pinned hue and the purple steps.
+  // The canvas draws the pinned hue and the purple steps; every tie is drawn, as the
+  // demo's most negative ties fall below the default threshold (D129).
+  await page.getByLabel('Tie strength at least').fill('0');
   await settled(page);
   const drawn = await page.locator('canvas.map__canvas').evaluate((c: HTMLCanvasElement) => {
     const ctx = c.getContext('2d');

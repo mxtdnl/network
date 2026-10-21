@@ -124,7 +124,7 @@ describe('valence colours', () => {
 
 describe('map model', () => {
   it('draws one edge per tie with weight above the threshold on the selected layer', async () => {
-    const all = await model({ layer: 'connection_strength' });
+    const all = await model({ layer: 'connection_strength', threshold: 0 });
     const r = await resultFor(demo, { ...initialMapSettings() });
     const w = r.refs.connection_strength?.weights ?? new Float64Array();
     const n = demo.members.length;
@@ -171,7 +171,7 @@ describe('map model', () => {
     const n = demo.members.length;
     for (const rule of ['mean', 'min', 'max'] as const) {
       // The rule only combines directions on the map; the directed analysis is the same.
-      const m = await model({ layer: 'connection_strength', symmetrise: rule });
+      const m = await model({ layer: 'connection_strength', symmetrise: rule, threshold: 0 });
       const pick = (a: number, b: number) =>
         Number.isNaN(a)
           ? b
@@ -274,7 +274,9 @@ describe('map model', () => {
     }
     const legend = legendSections(hide, theme).find((x) => x.kind === 'width');
     expect(legend?.kind === 'width' && legend.notes).toEqual([
+      'Ties below 0.30 hidden',
       'Ties on Formal collaboration hidden',
+      'Every metric uses all ties, hidden or not',
     ]);
   });
 
@@ -387,7 +389,15 @@ describe('legend', () => {
     expect(s.find((x) => x.kind === 'fill')?.variable).toBe('Team or function');
     const width = s.find((x) => x.kind === 'width');
     expect(width?.variable).toBe('Connection strength');
-    expect(width?.kind === 'width' && width.notes).toEqual(['Ties below 0.40 hidden']);
+    expect(width?.kind === 'width' && width.notes).toEqual([
+      'Ties below 0.40 hidden',
+      'Every metric uses all ties, hidden or not',
+    ]);
+    // With every tie drawn there is nothing hidden to explain.
+    const none = legendSections(await model({ threshold: 0 }), theme).find(
+      (x) => x.kind === 'width',
+    );
+    expect(none?.kind === 'width' && none.notes).toEqual([]);
   });
 
   it('shows the valence scale, and a separate entry for valence not rated', async () => {
@@ -612,6 +622,8 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
     });
     expect(legend?.kind === 'width' && legend.notes).toEqual([
       'Ties drawn from Composite of all layers',
+      'Ties below 0.30 hidden',
+      'Every metric uses all ties, hidden or not',
     ]);
     // The scene draws them in stone whatever the colour.
     const scene = buildScene(m, spiral(m.n), t, size, theme, none);

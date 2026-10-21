@@ -38,17 +38,20 @@ export const MIGRATIONS: readonly Migration[] = [
     from: 3,
     to: 4,
     description:
-      'Saved views choose their encodings: edge colour, width and style, the signed colour scale, node size by value or rank, and community outlines (CLAUDE.md D126, D128).',
+      'Saved views choose their encodings: edge colour, width and style, the signed colour scale, node size by value or rank, and community outlines (CLAUDE.md D126, D128). Signed layers whose treatment a view left unset keep "positive ratings", the version 3 default (D130).',
     up: (file) => {
       const layers = Array.isArray(file.layers) ? file.layers.map(obj) : [];
       const roles = {
         formal: layers.find((l) => l.role === 'formal' && l.signed !== true)?.key,
         informal: layers.find((l) => l.role === 'informal' && l.signed !== true)?.key,
       };
+      const signed = layers
+        .filter((l) => l.signed === true && typeof l.key === 'string')
+        .map((l) => l.key as string);
       return {
         ...file,
         saved_views: Array.isArray(file.saved_views)
-          ? file.saved_views.map((v) => savedViewV3toV4(v, roles))
+          ? file.saved_views.map((v) => savedViewV3toV4(v, roles, signed))
           : file.saved_views,
       };
     },
@@ -123,16 +126,33 @@ export function savedViewV1toV2(view: unknown): unknown {
  * line style, the valence scale was always shown in full and node size was by
  * value. Each new field takes its default, except where the version 3 view's
  * switches already decided it, so a migrated view draws what it drew before.
+ * For the same reason a signed layer whose treatment the view left unset is
+ * given version 3's default, positive ratings, since an unset treatment is now
+ * a multiplier (CLAUDE.md D130).
  * A view that is not an object, or has no map settings, is left as it is, so
  * the file check reports it.
  */
 export function savedViewV3toV4(
   view: unknown,
   roles: { formal?: unknown; informal?: unknown } = {},
+  signedLayers: readonly string[] = [],
 ): unknown {
   if (typeof view !== 'object' || view === null || Array.isArray(view)) return view;
   const v = view as Obj;
   if (typeof v.map !== 'object' || v.map === null || Array.isArray(v.map)) return view;
+  const weights = obj(v.weights);
+  const treatment = obj(weights.customTreatment);
+  const unset = signedLayers.filter((key) => !(key in treatment));
+  const migratedWeights =
+    unset.length > 0 && v.weights === weights && weights.customTreatment === treatment
+      ? {
+          ...weights,
+          customTreatment: {
+            ...treatment,
+            ...Object.fromEntries(unset.map((key) => [key, 'positive'])),
+          },
+        }
+      : v.weights;
   const map = v.map as Obj;
   const toggles = obj(map.layerToggles);
   const hideOff = map.hideOffLayers === true;
@@ -144,6 +164,7 @@ export function savedViewV3toV4(
   const style = on(roles.formal, true) && on(roles.informal, true);
   return {
     ...v,
+    ...(migratedWeights === undefined ? {} : { weights: migratedWeights }),
     map: {
       ...map,
       edgeColour:

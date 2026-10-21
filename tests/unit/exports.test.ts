@@ -297,7 +297,8 @@ const ENCODINGS: {
   },
   {
     name: 'formal and informal style',
-    map: { edgeStyle: 'formalInformal' },
+    // Every tie, so the composite's weaker formal-only ties are drawn too.
+    map: { edgeStyle: 'formalInformal', threshold: 0 },
     kept: ['Edge style', 'Formal only'],
     excluded: ['Edge style', 'Formal only'],
   },

@@ -16,7 +16,8 @@ export const weightsCopy = {
     informal: 'Informal collaboration, with advice and idea sharing.',
     health:
       'Connection strength, positive energy, benevolence-based trust and interpersonal safety, scaled by valence.',
-    custom: 'Your own weights. Moving a slider under a preset starts from its values.',
+    custom:
+      'Your own weights. Moving a slider under a preset starts from its values. A signed layer scales the composite unless you choose otherwise.',
   } satisfies Record<Preset, string>,
   share: 'Share',
   shareHelp: 'Each layer’s share of the composite. Weights are scaled to add up to 1.',

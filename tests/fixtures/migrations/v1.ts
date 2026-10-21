@@ -500,7 +500,7 @@ export const V1_VIEW_MIGRATED: SavedView = {
   weights: {
     preset: 'custom',
     custom: { connection_strength: 0.5, informal_collaboration: 0.5 },
-    customTreatment: { valence: 'multiplier' },
+    customTreatment: { valence: 'multiplier', energy: 'positive' },
   },
   map: {
     view: 'symmetrised',

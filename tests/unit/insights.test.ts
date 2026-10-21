@@ -23,6 +23,7 @@ import {
   type NetworkMetrics,
   type NodeMetricTable,
 } from '../../src/engine/types';
+import { effectiveWeights, initialWeightState } from '../../src/ui/state/presets';
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `m${String(i)}`);
 const table = (columns: NodeMetricTable['columns']): NodeMetricTable => ({
@@ -233,15 +234,21 @@ describe('the demo', () => {
     readFileSync(join(import.meta.dirname, '..', '..', 'src', 'demo', 'demo.ona.json'), 'utf8'),
   );
 
-  it.each(['directed', 'symmetrised'] as const)(
-    'finds the structures built into it (%s view)',
-    async (view) => {
+  // The engine's own defaults (valence as positive ratings) and the app's
+  // (valence as a multiplier, D130).
+  const engineDefaults = { weights: {}, signedTreatment: {} };
+  const appDefaults = effectiveWeights(project, initialWeightState());
+
+  it.each([
+    ['directed', 'engine', engineDefaults],
+    ['symmetrised', 'engine', engineDefaults],
+    ['directed', 'app', appDefaults],
+    ['symmetrised', 'app', appDefaults],
+  ] as const)(
+    'finds the structures built into it (%s view, %s default weights)',
+    async (view, _, weights) => {
       const result = await analyse(
-        buildAnalysisInput(
-          project,
-          { view, symmetrise: 'mean', weights: {}, signedTreatment: {} },
-          view,
-        ),
+        buildAnalysisInput(project, { view, symmetrise: 'mean', ...weights }, view),
       );
       const by = Object.fromEntries(result.insights.map((o) => [o.rule, o]));
       expect(by.brokers?.observations[0]?.members).toContain('OPE04');

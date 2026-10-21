@@ -291,10 +291,13 @@ Each is reported before, after and as the change.
 
 C_ij = Σ_l ω_l r_l(v_ijl) / Σ_l ω_l over the summed layers rated for (i, j),
 
-with ω_l = W_l / Σ_k W_k (the slider weights, normalised to sum to 1). Summed layers are unsigned layers (r = rescaled rating) and signed layers treated as "positive only" (r = w⁺). Signed layers can instead be treated as:
+with ω_l = W_l / Σ_k W_k (the slider weights, normalised to sum to 1). Summed layers are unsigned layers (r = rescaled rating) and signed layers treated as "positive only" (r = w⁺). Each signed layer has one of three treatments:
 
+- positive ratings, weighted: the layer is summed as above, so a positive rating adds to the composite and can create a tie on its own;
 - filter out negative ties: C_ij = 0 wherever the signed rating is negative;
 - multiplier: C_ij × (1 + 0.5 s_ij), with s on −1..1, so a neutral rating leaves the composite unchanged, the most positive raises it by half and the most negative halves it.
+
+A signed layer whose treatment neither the analyst nor a preset has chosen is a multiplier, so it adjusts the ties the other layers create and never creates one itself: with "positive ratings", a member who rated a colleague positively on valence but reported no connection, collaboration or other tie with them still had a composite tie to them (in the demo, Finance members rate many colleagues outside Finance positively without working with them). The engine on its own, when called without a treatment, still uses "positive ratings"; the reference fixtures record the composite under each of the three treatments.
 
 The result is capped at 1. If a pair is rated on some summed layers but not others, the weights are re-normalised over the layers that are rated; if it is rated on none, it is missing. A missing signed rating leaves the composite unchanged. A layer with weight 0 is left out entirely. The symmetrised composite combines the two directed composites by the chosen rule.
 
@@ -313,11 +316,11 @@ One rule applies to every preset: the layer that defines it has twice the raw we
 | Formal structure | formal collaboration 0.4, workflow dependency 0.2 | none used |
 | Informal network | informal collaboration 0.4, advice 0.2, idea sharing 0.2 | none used |
 | Relationship health | connection strength, benevolence-based trust, interpersonal safety and energy 0.2 each | valence as a multiplier, energy as positive ratings |
-| Custom | the analyst's own slider values; a layer never moved uses its default weight (1) | as chosen |
+| Custom | the analyst's own slider values; a layer never moved uses its default weight (1) | as chosen; a signed layer whose treatment was never chosen is a multiplier |
 
 Why these layers. Formal structure uses the ties created by role or process: formal collaboration (defined in spec §4.2 as required by role, process or reporting line) and workflow dependency. Informal network uses discretionary ties: informal collaboration, advice (a core ONA relation: Cross & Parker, 2004, *The Hidden Power of Social Networks*) and idea sharing. Neither uses connection strength, so the two presets differ only in what defines them. Relationship health sums relational layers and lets valence, the overall affective quality of the relationship, scale the result, so a negative relationship lowers the composite (by up to half) instead of being scored like a neutral one. It leaves out competence-based trust, which concerns expertise rather than the relationship, and the conflict layers, which are frequencies that the composite could only add, so frequent conflict would raise the score.
 
-With only the four core layers enabled, Formal structure is formal collaboration alone (1.00), Informal network is informal collaboration alone (1.00), and Relationship health is connection strength (1.00) scaled by valence.
+With only the four core layers enabled, Formal structure is formal collaboration alone (1.00), Informal network is informal collaboration alone (1.00), and Relationship health is connection strength (1.00) scaled by valence. Custom with no slider moved gives connection strength, formal and informal collaboration a third each, scaled by valence.
 
 **Caveats.** The presets are conventions chosen for this tool and approved by the owner, not published standards; the 2 : 1 ratio in particular is a convention. Moving a slider under a preset switches to Custom, starting from the preset's values.
 
@@ -552,7 +555,7 @@ These rules change what the map draws, never a metric.
 | Rule | Detail |
 |---|---|
 | Ties from | The layer (or the composite) that sets which pairs are drawn, edge width, layout attraction, node size, communities and ranks; the composite by default |
-| Tie strength threshold | "Tie strength at least" (0 to 1 in steps of 0.05, default 0) hides ties below it; the legend states it. Metrics always use every tie |
+| Tie strength threshold | "Tie strength at least" (0 to 1 in steps of 0.05, default 0.3) hides ties below it; the legend states it and that every metric uses all ties. Metrics always use every tie. The default was chosen by measurement (CLAUDE.md D129): on the demo it draws 241 of the 423 tied pairs, keeps every member connected and keeps half of the negatively rated ties, which 0.5 would all hide. An insight shown on the map sets it to 0, because the rule counted every tie; a saved view keeps its own |
 | Node size | By value (default): area linear between the smallest and largest defined value of the chosen metric, from 4 to 16 px radius. By rank: area linear in the rank instead, rank 1 (the highest value) largest, tied values at their average rank. Either way, a member whose value is not defined is drawn at 2 px and listed as "Not defined" |
 | Node fill | An attribute's values in category order, at most 8 colours; further values share "Other (n groups)" and missing values "Not recorded", both grey with a dashed outline. Or the Louvain community on the chosen layer |
 | Edge width | Linear in weight, from 1 px to 3 px at weight 1, on the Ties from layer (default) or another layer or the composite; Ties from still decides which pairs are drawn. A drawn tie with no rating on the width layer is drawn at 1 px in grey (stone) with its own legend entry, so it is never read as 0. Or the same width (2 px) for every tie |
