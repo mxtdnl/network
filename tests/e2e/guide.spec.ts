@@ -155,12 +155,20 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await expectNoNames(page);
   await shot(page, 'map');
   await shot(page, 'weights', page.locator('.weights'));
+  // At 1440 × 900 the layout is compact, so the legend starts condensed (D125).
+  await shot(page, 'legend-condensed', page.getByRole('region', { name: 'Legend' }));
+  const legendForm = page.getByRole('combobox', { name: 'Legend' });
+  await legendForm.selectOption({ label: 'Full' });
+  await settled(page);
   await shot(page, 'legend', page.getByRole('region', { name: 'Legend' }));
+  await legendForm.selectOption({ label: 'Condensed' });
+  await settled(page);
 
   await nodes(page).first().focus();
   await page.keyboard.press('Enter');
   await settled(page);
   await shot(page, 'member-panel', right(page));
+  await shot(page, 'compact-layout');
 
   await page.getByRole('radio', { name: 'Grouped' }).check();
   await settled(page);
