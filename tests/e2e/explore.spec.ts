@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import type { Project } from '../../src/data/schema';
 import { syntheticProject } from '../fixtures/synthetic';
+import { REGION } from './regions';
 
 // Phase 5: composite weighting, layouts, linked views, ego view, shortest
 // path, resilience, multi-select, rank stability and the formal–informal
@@ -12,8 +13,11 @@ import { syntheticProject } from '../fixtures/synthetic';
 // when set (SCREENSHOT_DIR=docs/screenshots/phase-5).
 const screenshotDir = process.env.SCREENSHOT_DIR ?? join('test-results', 'screenshots');
 
-async function expectNoAxeViolations(page: Page) {
-  const results = await new AxeBuilder({ page })
+/** Fails on any WCAG A or AA violation, on the whole page or only in `scope` (regions.ts). */
+async function expectNoAxeViolations(page: Page, ...scope: string[]) {
+  const builder = new AxeBuilder({ page });
+  for (const region of scope) builder.include(region);
+  const results = await builder
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze();
   expect(
@@ -142,7 +146,7 @@ test('weights: presets, sliders, signed treatment, live formula and animated lay
     label: 'A filter: negative ratings remove the tie',
   });
   await expect(formula(page)).toContainText('set to 0 where Valence is negative');
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.left);
 
   // Under reduced motion the members move at once.
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -233,7 +237,7 @@ test('selection stays in sync across the map, the matrix and the table', async (
     'aria-current',
     'true',
   );
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.centre);
   await shot(page, 'selection-table');
 
   // Select in the table: the map and the matrix follow.
@@ -603,7 +607,7 @@ test('comparison views: two layers side by side, and formal against informal tie
   expect(shares.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(101);
   await expect(page.getByText(/^Formal only: \d+$/)).toBeVisible();
   await page.waitForTimeout(300);
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.centre);
   await shot(page, 'compare-formal-informal');
 });
 

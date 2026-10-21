@@ -5,6 +5,11 @@ import { defineConfig, devices } from '@playwright/test';
 // PW_CHROMIUM_EXECUTABLE lets a machine with a preinstalled Chromium of another
 // revision use it instead of downloading the one Playwright pins.
 const executablePath = process.env.PW_CHROMIUM_EXECUTABLE;
+const browser = {
+  ...devices['Desktop Chrome'],
+  ...(executablePath ? { launchOptions: { executablePath } } : {}),
+};
+const SLOW = /(perf|guide|release)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -18,14 +23,13 @@ export default defineConfig({
     baseURL: 'http://localhost:4173/network/',
     trace: 'retain-on-failure',
   },
+  // The slow suites that change rarely (performance, user guide screenshots,
+  // release check) are a project of their own: pull requests run `chromium`
+  // only, and .github/workflows/e2e-nightly.yml runs `slow` every night and on
+  // request. A local `npm run test:e2e` runs both.
   projects: [
-    {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        ...(executablePath ? { launchOptions: { executablePath } } : {}),
-      },
-    },
+    { name: 'chromium', testIgnore: SLOW, use: browser },
+    { name: 'slow', testMatch: SLOW, use: browser },
   ],
   webServer: {
     command: 'npm run build && npm run preview',

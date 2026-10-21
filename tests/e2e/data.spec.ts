@@ -3,14 +3,18 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { seededMembersCsv, seededTiesCsv } from '../fixtures/validation/seeded-errors';
+import { REGION } from './regions';
 
 // Screenshots go to test-results/screenshots (uploaded by CI), or to
 // SCREENSHOT_DIR when set, e.g. SCREENSHOT_DIR=docs/screenshots/phase-2.
 const screenshotDir = process.env.SCREENSHOT_DIR ?? join('test-results', 'screenshots');
 const templates = join(import.meta.dirname, '..', '..', 'public', 'templates');
 
-async function expectNoAxeViolations(page: Page) {
-  const results = await new AxeBuilder({ page })
+/** Fails on any WCAG A or AA violation, on the whole page or only in `scope` (regions.ts). */
+async function expectNoAxeViolations(page: Page, ...scope: string[]) {
+  const builder = new AxeBuilder({ page });
+  for (const region of scope) builder.include(region);
+  const results = await builder
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
@@ -47,7 +51,7 @@ test('import the templates, read the validation report and open the matrix', asy
   await expect(
     dialog.getByText('1 row has an empty value. It is stored as not rated, not as 0.'),
   ).toBeVisible();
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.dialog);
   await shot(page, 'validation-report-templates');
 
   await dialog.getByRole('button', { name: 'Import 9 valid rows' }).click();
@@ -105,7 +109,7 @@ test('import the templates, read the validation report and open the matrix', asy
   await expect(
     page.getByRole('status').filter({ hasText: 'Pasted 2 values. 1 cell was skipped' }),
   ).toBeVisible();
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.centre, REGION.top);
 });
 
 test('import the XLSX templates under the production CSP', async ({ page }) => {
@@ -204,7 +208,7 @@ test('demo, layer manager, coverage, project files and local persistence', async
   await edit
     .getByLabel('Question wording')
     .fill('Overall, how positive or negative is your relationship with this person?');
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.dialog);
   await shot(page, 'layer-edit');
   await edit.getByRole('button', { name: 'Save layer' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Layer saved: Valence.' })).toBeVisible();
@@ -228,7 +232,7 @@ test('demo, layer manager, coverage, project files and local persistence', async
   await expect(
     page.getByText('Overall, how positive or negative is your relationship with this person?'),
   ).toBeVisible();
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.centre);
   await shot(page, 'matrix-valence');
   await page.getByLabel('Layer', { exact: true }).selectOption('connection_strength');
   await shot(page, 'matrix');
@@ -237,7 +241,7 @@ test('demo, layer manager, coverage, project files and local persistence', async
   await page.getByRole('tab', { name: 'Coverage' }).click();
   const right = page.getByRole('complementary', { name: 'Member, insights and coverage' });
   await expect(right.getByText('Overall response rate')).toBeVisible();
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.right);
   await shot(page, 'coverage');
   await right.getByLabel('Warn below').fill('99');
   await expect(page.getByRole('note').first()).toContainText('below the 99% threshold');

@@ -24,7 +24,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/4
+      # The slow suites run nightly instead (e2e-nightly.yml).
+      - run: npm run test:e2e -- --project=chromium --shard=${{ matrix.shard }}/4
       - name: Upload screenshots
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

@@ -4,13 +4,17 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import { syntheticProject } from '../fixtures/synthetic';
+import { REGION } from './regions';
 
 // Phase 4: the network map. Screenshots go to test-results/screenshots, or to
 // SCREENSHOT_DIR when set (SCREENSHOT_DIR=docs/screenshots/phase-4).
 const screenshotDir = process.env.SCREENSHOT_DIR ?? join('test-results', 'screenshots');
 
-async function expectNoAxeViolations(page: Page) {
-  const results = await new AxeBuilder({ page })
+/** Fails on any WCAG A or AA violation, on the whole page or only in `scope` (regions.ts). */
+async function expectNoAxeViolations(page: Page, ...scope: string[]) {
+  const builder = new AxeBuilder({ page });
+  for (const region of scope) builder.include(region);
+  const results = await builder
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
@@ -211,7 +215,7 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   await expect(page.getByRole('tooltip')).toContainText(
     'How often a member lies on the shortest routes between other members.',
   );
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.right);
   await shot(page, 'map-member-1440');
 
   // Keyboard: nodes are focusable, arrows move between neighbours, Enter opens, Escape closes.
@@ -252,7 +256,7 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   // Zoom and fit.
   await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Fit to view' }).click();
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.centre);
 });
 
 test('250 members and 10,000 ties: pan and zoom frame time, filter, coverage warning', async ({

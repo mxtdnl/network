@@ -1,0 +1,33 @@
+name: Slow end-to-end tests
+
+# The performance, user guide screenshot and release-check suites (the
+# Playwright project `slow`) change rarely and take about 90 s of test time, so
+# they run every night on main and on request (Run workflow, any branch)
+# rather than on every pull request.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  slow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- --project=slow
+      - name: Upload blob report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: blob-report-slow
+          path: blob-report/
+          if-no-files-found: ignore
