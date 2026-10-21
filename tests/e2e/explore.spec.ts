@@ -104,11 +104,12 @@ test('weights: presets, sliders, signed treatment, live formula and animated lay
   await loadDemo(page);
   await settled(page);
 
-  // Custom with default weights: four equal shares, valence as positive ratings.
+  // Custom with default weights: three equal shares, valence as a multiplier (D130).
   await expect(page.getByLabel('Preset')).toHaveValue('custom');
   await expect(formula(page).getByRole('listitem')).toHaveCount(5);
-  await expect(formula(page)).toContainText('0.25×Connection strength');
-  await expect(formula(page)).toContainText('Valence, positive ratings');
+  await expect(formula(page)).toContainText('0.33×Connection strength');
+  await expect(formula(page)).toContainText('× (1 + 0.5 × Valence)');
+  await expect(page.getByLabel('Use Valence as')).toHaveValue('multiplier');
   await expectNoAxeViolations(page);
 
   // A preset re-weights the composite; the shares by the sliders and the formula follow the engine.
