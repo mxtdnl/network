@@ -95,16 +95,20 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   await settled(page);
   expect(await inkShare(page)).toBeGreaterThan(0.02);
   const legend = page.getByRole('region', { name: 'Legend' });
-  for (const title of [
-    'Node size',
-    'Node fill',
-    'Edge width',
-    'Edge colour',
-    'Edge style',
-    'Arrowheads',
-  ]) {
+  for (const title of ['Node size', 'Node fill', 'Edge width', 'Edge colour', 'Direction']) {
     await expect(legend.getByText(title, { exact: true })).toBeVisible();
   }
+  // A pair rated both ways is one line; only one-way ties carry arrowheads (D131).
+  await expect(legend.getByText('One way, from rater to rated member')).toBeVisible();
+  await expect(legend.getByText('Both ways: one line, the two directions averaged')).toBeVisible();
+  // Edge style is off until both collaboration layers are switched on (D133).
+  await expect(legend.getByText('Edge style', { exact: true })).toHaveCount(0);
+  for (const name of ['Formal collaboration', 'Informal collaboration']) {
+    const toggle = page.getByRole('switch', { name: `${name} on the map`, exact: true });
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await toggle.click();
+  }
+  await expect(legend.getByText('Edge style', { exact: true })).toBeVisible();
   await expect(legend.getByText('Bridging', { exact: true })).toBeVisible();
   await expect(map.getByRole('table')).toHaveCount(1);
   await expect(map.getByRole('table').getByRole('row')).toHaveCount(41);
@@ -114,12 +118,12 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
 
   // The legend follows the encodings: mutual view drops arrowheads, a metric renames node size.
   await page.getByRole('radio', { name: 'Mutual' }).check();
-  await expect(legend.getByText('Arrowheads', { exact: true })).toHaveCount(0);
+  await expect(legend.getByText('Direction', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Combine the two directions by')).toBeVisible();
   await page.getByLabel('Node size').selectOption({ label: 'Local clustering' });
   await expect(legend.getByText('Local clustering', { exact: true })).toBeVisible();
   await page.getByRole('radio', { name: 'Directed', exact: true }).check();
-  await expect(legend.getByText('Arrowheads', { exact: true })).toBeVisible();
+  await expect(legend.getByText('Direction', { exact: true })).toBeVisible();
   await page.getByRole('switch', { name: 'Valence on the map' }).click();
   await expect(legend.getByText('Not used: valence is hidden')).toBeVisible();
   await page.getByRole('switch', { name: 'Valence on the map' }).click();

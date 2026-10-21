@@ -22,8 +22,6 @@ export interface MapTheme {
   dash: number;
   gap: number;
   dot: number;
-  /** Offset between the two directions of a reciprocated tie, and between the lines of a "both" tie. */
-  pairOffset: number;
   line: number;
   focusWidth: number;
   fade: number;
@@ -83,7 +81,6 @@ export function readMapTheme(source: Element | TokenSource = document.documentEl
     dash: number('--map-dash'),
     gap: number('--map-gap'),
     dot: number('--map-dot'),
-    pairOffset: number('--map-pair-offset'),
     line: number('--line-width'),
     focusWidth: number('--focus-width'),
     fade: number('--map-fade'),

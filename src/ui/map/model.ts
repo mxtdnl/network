@@ -8,8 +8,9 @@
 //   node fill   → the chosen attribute, or the community on the selected layer
 //   edge width  → the tie's weight (0–1) on the selected layer
 //   edge colour → valence of the pair, on the diverging scale
-//   edge style  → formal versus informal, when both layers are shown
-//   arrowheads  → directed view only
+//   edge style  → formal versus informal, when both layers are switched on
+//   arrowheads  → directed view only, on ties rated one way; a pair rated
+//                 both ways is one line, its two directions combined
 
 import { FI_CLASS, type AnalysisResult } from '../engineClient';
 import {
@@ -45,7 +46,11 @@ export interface MapEdge {
   /** Valence on the palette scale −3…+3; NaN when not rated or not shown. */
   valence: number;
   style: EdgeStyle;
-  /** Directed view: the reverse tie is also drawn, so the two are offset. */
+  /**
+   * Directed view: the pair is tied both ways and drawn as one line without
+   * arrowheads; weight, width, valence and style combine the two directions
+   * by the symmetrisation rule (CLAUDE.md D131). Source is the lower index.
+   */
   reciprocated: boolean;
 }
 
@@ -97,6 +102,10 @@ export interface MapModel {
   anyValenceMissing: boolean;
   styleShown: boolean;
   stylesPresent: EdgeStyle[];
+  /** Directed view: which kinds of tie are drawn, for the legend (D131). */
+  directions: { oneWay: boolean; bothWays: boolean };
+  /** How the two directions of a pair are combined. */
+  symmetrise: MapSettings['symmetrise'];
   threshold: number;
   /** Layers switched off whose ties are hidden (keys). */
   hiddenLayers: string[];
@@ -145,7 +154,7 @@ function hiddenLayerWeights(
 ): { key: string; weights: Float64Array[] }[] {
   if (!settings.hideOffLayers) return [];
   return toggleLayers(project, true)
-    .filter((l) => !isToggledOn(settings, l.key))
+    .filter((l) => !isToggledOn(settings, l))
     .map((l) => ({
       key: l.key,
       weights: (l.signed ? [`${l.key}+`, `${l.key}-`] : [l.key])
@@ -154,8 +163,26 @@ function hiddenLayerWeights(
     }));
 }
 
-export function isToggledOn(settings: MapSettings, key: string): boolean {
-  return settings.layerToggles[key] ?? true;
+/**
+ * Whether a layer's map toggle is on. Edge style is off until the analyst
+ * switches it on (CLAUDE.md D133), so the formal and informal layers start
+ * off while their toggles set the line style; when switched-off layers hide
+ * their ties (D59), every layer starts on, so nothing is hidden by default.
+ */
+export function isToggledOn(
+  settings: MapSettings,
+  layer: Pick<LayerDefinition, 'key' | 'role'>,
+): boolean {
+  return settings.layerToggles[layer.key] ?? (settings.hideOffLayers || !layer.role);
+}
+
+/** Combines the two directions of a pair as the engine does (engine/aggregate.ts `combine`). */
+export function combineDirections(a: number, b: number, rule: MapSettings['symmetrise']): number {
+  if (Number.isNaN(a)) return b;
+  if (Number.isNaN(b)) return a;
+  if (rule === 'mean') return (a + b) / 2;
+  if (rule === 'min') return Math.min(a, b);
+  return Math.max(a, b);
 }
 
 /** Attributes that can colour nodes or filter them (not member references). */
@@ -200,14 +227,11 @@ export function valenceMatrix(project: Project, settings: MapSettings): Float64A
   const out = new Float64Array(n * n).fill(NaN);
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      const a = raw[i * n + j] as number;
-      const b = raw[j * n + i] as number;
-      let v: number;
-      if (Number.isNaN(a)) v = b;
-      else if (Number.isNaN(b)) v = a;
-      else if (settings.symmetrise === 'mean') v = (a + b) / 2;
-      else if (settings.symmetrise === 'min') v = Math.min(a, b);
-      else v = Math.max(a, b);
+      const v = combineDirections(
+        raw[i * n + j] as number,
+        raw[j * n + i] as number,
+        settings.symmetrise,
+      );
       out[i * n + j] = v;
       out[j * n + i] = v;
     }
@@ -297,6 +321,15 @@ function fillGroups(
     memberGroup[i] = p === undefined ? missingIndex : p < coloured ? p : otherIndex;
   });
   return { kind: 'attribute', label: def?.label ?? key, groups, otherGroups, memberGroup };
+}
+
+/** The engine's formal–informal class of a pair from its two weights (engine/metrics/multiplex.ts). */
+function classOf(f: number, g: number): number {
+  if (Number.isNaN(f) || Number.isNaN(g)) return FI_CLASS.notClassified;
+  if (f > 0 && g > 0) return FI_CLASS.both;
+  if (f > 0) return FI_CLASS.formalOnly;
+  if (g > 0) return FI_CLASS.informalOnly;
+  return FI_CLASS.neither;
 }
 
 function edgeStyle(cls: number, f: number, g: number): EdgeStyle {
@@ -402,7 +435,8 @@ export function buildMapModel(
     };
   });
   const weights = result.refs[edgeLayer]?.weights;
-  const valenceOn = isToggledOn(settings, 'valence');
+  const valenceDef = valenceLayer(project);
+  const valenceOn = valenceDef !== undefined && isToggledOn(settings, valenceDef);
   const valence = valenceOn ? valenceMatrix(project, settings) : null;
   const formal = roleLayer(project, 'formal');
   const informal = roleLayer(project, 'informal');
@@ -411,8 +445,8 @@ export function buildMapModel(
     fi !== null &&
     formal !== undefined &&
     informal !== undefined &&
-    isToggledOn(settings, formal.key) &&
-    isToggledOn(settings, informal.key);
+    isToggledOn(settings, formal) &&
+    isToggledOn(settings, informal);
   const fW = formal ? result.refs[formal.key]?.weights : undefined;
   const gW = informal ? result.refs[informal.key]?.weights : undefined;
 
@@ -431,22 +465,30 @@ export function buildMapModel(
     present.clear();
     anyValenceMissing = false;
     if (!weights) return { edges, neighbours };
+    const rule = settings.symmetrise;
+    const at = (m: Float64Array | null | undefined, k: number) => (m ? (m[k] as number) : NaN);
     for (let i = 0; i < n; i++) {
       if (!nodes[i]?.visible) continue;
       for (let j = directed ? 0 : i + 1; j < n; j++) {
         if (i === j || !nodes[j]?.visible) continue;
         const k = i * n + j;
         if (!shown(k)) continue;
-        const w = weights[k] as number;
-        const v = valence ? (valence[k] as number) : NaN;
+        // Directed view: a pair shown both ways is one line, drawn once from
+        // the lower index, its two directions combined (CLAUDE.md D131).
+        const back = j * n + i;
+        const both = directed && shown(back);
+        if (both && j < i) continue;
+        const pick = (m: Float64Array | null | undefined) =>
+          both ? combineDirections(at(m, k), at(m, back), rule) : at(m, k);
+        const w = pick(weights);
+        const v = valence ? pick(valence) : NaN;
         if (valence && Number.isNaN(v)) anyValenceMissing = true;
-        const style: EdgeStyle = styleShown
-          ? edgeStyle(
-              fi.classes[k] as number,
-              fW ? (fW[k] as number) : NaN,
-              gW ? (gW[k] as number) : NaN,
-            )
-          : 'plain';
+        let style: EdgeStyle = 'plain';
+        if (styleShown) {
+          const f = pick(fW);
+          const g = pick(gW);
+          style = edgeStyle(both ? classOf(f, g) : (fi.classes[k] as number), f, g);
+        }
         present.add(style);
         edges.push({
           source: i,
@@ -455,7 +497,7 @@ export function buildMapModel(
           width: radii.edgeMin + (radii.edgeMax - radii.edgeMin) * w,
           valence: v,
           style,
-          reciprocated: directed && shown(j * n + i),
+          reciprocated: both,
         });
         const ni = neighbours[i] as number[];
         const nj = neighbours[j] as number[];
@@ -526,6 +568,11 @@ export function buildMapModel(
     anyValenceMissing,
     styleShown,
     stylesPresent: order.filter((s) => present.has(s)),
+    directions: {
+      oneWay: directed && edges.some((e) => !e.reciprocated),
+      bothWays: edges.some((e) => e.reciprocated),
+    },
+    symmetrise: settings.symmetrise,
     threshold: settings.threshold,
     hiddenLayers: hidden.map((h) => h.key),
     hiddenLabels: hidden.map((h) => project.layers.find((l) => l.key === h.key)?.label ?? h.key),

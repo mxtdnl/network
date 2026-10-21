@@ -307,7 +307,7 @@ export function buildScene(
         y: (1 - t) ** 2 * a.y + 2 * (1 - t) * t * cy + t * t * b.y,
       });
       let end = 1;
-      if (model.directed) {
+      if (model.directed && !e.reciprocated) {
         const tip = (model.nodes[e.target]?.radius ?? 0) + theme.line;
         const head = theme.arrow + e.width;
         const away = (t: number) => Math.hypot(at(t).x - b.x, at(t).y - b.y);
@@ -359,13 +359,13 @@ export function buildScene(
       curve(e, a, b, stroke, alpha);
       continue;
     }
-    const off = e.reciprocated ? theme.pairOffset + e.width / 2 : 0;
-    let x1 = a.x + px * off;
-    let y1 = a.y + py * off;
-    let x2 = b.x + px * off;
-    let y2 = b.y + py * off;
+    let x1 = a.x;
+    let y1 = a.y;
+    let x2 = b.x;
+    let y2 = b.y;
 
-    if (model.directed) {
+    // A pair tied both ways is one line without arrowheads (CLAUDE.md D131).
+    if (model.directed && !e.reciprocated) {
       const target = model.nodes[e.target];
       const head = theme.arrow + e.width;
       const tip = (target?.radius ?? 0) + theme.line;

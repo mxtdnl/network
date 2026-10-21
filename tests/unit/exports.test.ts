@@ -338,6 +338,29 @@ describe('export files', () => {
     expect(svg).not.toMatch(/https?:\/\/(?!www\.w3\.org\/2000\/svg)/);
   });
 
+  it('draws ties as on screen: one line per pair, arrowheads on one-way ties, no style by default', async () => {
+    const ctx = await contextFor(project, { anonymise: true, excludeSigned: false });
+    const { map } = mapExport(ctx, mapState, deps, '');
+    expect(map.model.directed).toBe(true);
+    const oneWay = map.model.edges.filter((e) => !e.reciprocated).length;
+    expect(map.model.edges.some((e) => e.reciprocated)).toBe(true);
+    expect(oneWay).toBeGreaterThan(0);
+    const pairs = new Set(
+      map.model.edges.map(
+        (e) => `${String(Math.min(e.source, e.target))}-${String(Math.max(e.source, e.target))}`,
+      ),
+    );
+    expect(pairs.size).toBe(map.model.edges.length);
+    const heads = map.scene.arrows.reduce((s, a) => s + a.coords.length / 6, 0);
+    expect(heads).toBeGreaterThan(0);
+    expect(heads).toBeLessThanOrEqual(oneWay);
+    expect(map.model.styleShown).toBe(false);
+    const svg = (await svgExport(ctx, mapState, deps, '')).text;
+    expect(svg).toContain('One way, from rater to rated member');
+    expect(svg).toContain('Both ways: one line, the two directions averaged');
+    expect(svg).not.toContain('Edge style');
+  });
+
   it('sizes the print PNG to the printable width of A4 landscape at 300 dpi', async () => {
     const ctx = await contextFor(project, { anonymise: true, excludeSigned: false });
     const { doc } = mapExport(ctx, mapState, deps, '');

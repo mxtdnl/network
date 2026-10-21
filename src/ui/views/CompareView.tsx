@@ -353,6 +353,9 @@ function classModel(data: MapData, classes: Uint8Array, cls: number, style: Edge
     if (!model.nodes[i]?.visible) continue;
     for (let j = directed ? 0 : i + 1; j < n; j++) {
       if (i === j || !model.nodes[j]?.visible || classes[i * n + j] !== cls) continue;
+      // A pair in this class both ways is one line, as on the map (CLAUDE.md D131).
+      const both = directed && classes[j * n + i] === cls;
+      if (both && j < i) continue;
       edges.push({
         source: i,
         target: j,
@@ -360,7 +363,7 @@ function classModel(data: MapData, classes: Uint8Array, cls: number, style: Edge
         width,
         valence: NaN,
         style,
-        reciprocated: directed && classes[j * n + i] === cls,
+        reciprocated: both,
       });
       if (!(neighbours[i] as number[]).includes(j)) (neighbours[i] as number[]).push(j);
       if (!(neighbours[j] as number[]).includes(i)) (neighbours[j] as number[]).push(i);
@@ -374,6 +377,10 @@ function classModel(data: MapData, classes: Uint8Array, cls: number, style: Edge
     valenceAvailable: false,
     styleShown: true,
     stylesPresent: [style],
+    directions: {
+      oneWay: directed && edges.some((e) => !e.reciprocated),
+      bothWays: edges.some((e) => e.reciprocated),
+    },
   };
 }
 

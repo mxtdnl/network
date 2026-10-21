@@ -205,15 +205,15 @@ The legend explains every encoding on the map, and is always shown:
 - **Node fill**: an attribute such as team, or detected communities.
 - **Edge width**: tie strength on the layer chosen under Ties from.
 - **Edge colour**: valence, from orange-brown (negative) through grey (neutral) to blue (positive). Ties with no valence rating are dark grey, so they are never read as neutral.
-- **Edge style**: formal only (solid), informal only (dashed), both (solid with a dashed line), or neither (dotted), when both collaboration layers are shown.
-- **Arrowheads**: in the directed view, from the rater to the person rated.
+- **Edge style**: formal only (solid), informal only (dashed), both (solid with a dashed line), or neither (dotted). It is off until you switch both collaboration layers on under Show on the map.
+- **Direction**: in the directed view, a tie rated one way has an arrowhead from the rater to the person rated; a pair rated both ways is one line without arrowheads, whose width and colour combine the two directions by the rule chosen under Direction.
 
 ![The map legend: node size, node fill, edge width, edge colour, edge style and arrowheads](user-guide/legend.jpg)
 
 **Map settings** (left column, under Map):
 
 - **Ties from** chooses the layer, or the composite, that sets which ties are drawn, their width, the layout, node size, communities and ranks.
-- **Show on the map** switches the encodings of valence and the two collaboration layers on and off. "When a layer is switched off" chooses whether its ties stay or are hidden.
+- **Show on the map** switches the encodings of valence and the two collaboration layers on and off; the collaboration layers start off, so lines are plain until you switch both on. "When a layer is switched off" chooses whether its ties stay or are hidden (with "Hide its ties", every layer starts on).
 - **Direction.** Directed shows each person's ratings separately. Mutual combines the two directions of each pair, by their average, the weaker or the stronger of the two. The choice changes the metrics, so it is stated in every export.
 - **Tie strength at least** hides weaker ties from the drawing only; the metrics still use every tie.
 - **Node size**, **Node fill**, **Filter** (by any attribute) and **Search**.
