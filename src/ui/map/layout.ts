@@ -5,7 +5,10 @@
 //              layer: strength = ATTRACTION × w / min(degree of either end),
 //              d3's own degree scaling times the weight
 //   grouped    members pulled towards one centre per value of an attribute,
-//              with weak attraction along ties inside the pull
+//              with weak attraction along ties inside the pull; each member
+//              keeps a box clear for itself and its name below it, and the
+//              boxes of a group grow until the group fills its share of the
+//              cell, so names do not overlap (CLAUDE.md D135)
 //   circular   members on a circle, in contiguous arcs per group
 //   hierarchy  members placed by formal reporting line (manager ids); the
 //              ties drawn over it are the informal ones (see useMapModel)
@@ -81,6 +84,15 @@ const ROW = 60;
 /** Children that are all leaves, this many or more, stack in a column below their manager. */
 const COLUMN_FROM = 4;
 const COLUMN_INDENT = 28;
+/**
+ * Grouped layout: estimated size of a member's name in layout units (a layout
+ * unit is a screen pixel at zoom 1), the clearance around each member's box,
+ * and the share of a group's cell its boxes fill.
+ */
+const LABEL_CHAR = 6.5;
+const LABEL_HEIGHT = 18;
+const LABEL_CLEARANCE = 6;
+const GROUP_FILL = 0.25;
 
 /** Unit square positions spread on a spiral, a deterministic starting point. */
 function initialPosition(i: number): { x: number; y: number } {
@@ -337,7 +349,8 @@ function configureSimulation(
       .force('x', forceX<LayoutNode>((d) => targets.x[d.index] ?? 0).strength(1))
       .force('y', forceY<LayoutNode>((d) => targets.y[d.index] ?? 0).strength(1));
   } else if (spec.kind === 'grouped') {
-    const centres = groupCentres(spec.group, spec.groups.length);
+    const { boxes, cell } = groupBoxes(nodes, spec);
+    const centres = groupCentres(spec.groups.length, cell);
     sim
       .force(
         'link',
@@ -357,6 +370,7 @@ function configureSimulation(
         'collide',
         forceCollide<LayoutNode>((d) => d.radius + SPACING / 4),
       )
+      .force('labels', labelCollide(boxes, spec.group))
       .force(
         'x',
         forceX<LayoutNode>((d) => centres[spec.group[d.index] ?? 0]?.x ?? 0).strength(0.3),
@@ -701,12 +715,97 @@ export class ForceLayout {
   }
 }
 
-/** Group centres on a grid, far enough apart for the largest group. */
-function groupCentres(group: readonly number[], count: number): { x: number; y: number }[] {
-  const sizes = new Array<number>(Math.max(count, 1)).fill(0);
-  for (const g of group) sizes[g] = (sizes[g] ?? 0) + 1;
+/** A member's box in the grouped layout: half its width, and its extent above and below it. */
+interface LabelBox {
+  half: number;
+  up: number;
+  down: number;
+}
+
+/**
+ * Boxes for the grouped layout and the size of a grid cell. Each member's box
+ * holds the member and its name below it, with a clearance. The cell is large
+ * enough for the group whose boxes take the most area to fill GROUP_FILL of
+ * it; the boxes of smaller groups grow by the same rule, so every group spreads
+ * over its cell instead of packing tightly at its centre.
+ */
+export function groupBoxes(
+  nodes: readonly LayoutNode[],
+  spec: { group: readonly number[]; groups: readonly string[]; names: readonly string[] },
+): { boxes: LabelBox[]; cell: number } {
+  const base = nodes.map((node, i): LabelBox => {
+    const label = (spec.names[i] ?? '').length * LABEL_CHAR;
+    return {
+      half: Math.max(node.radius, label / 2) + LABEL_CLEARANCE,
+      up: node.radius + LABEL_CLEARANCE,
+      down: node.radius + LABEL_HEIGHT + LABEL_CLEARANCE,
+    };
+  });
+  const count = Math.max(spec.groups.length, 1);
+  const area = new Array<number>(count).fill(0);
+  const sizes = new Array<number>(count).fill(0);
+  base.forEach((b, i) => {
+    const g = spec.group[i] ?? 0;
+    area[g] = (area[g] ?? 0) + 2 * b.half * (b.up + b.down);
+    sizes[g] = (sizes[g] ?? 0) + 1;
+  });
   const largest = Math.max(1, ...sizes);
-  const cell = 2 * Math.sqrt(largest) * SPACING * 0.9 + SPACING * 1.5;
+  const cell = Math.max(
+    2 * Math.sqrt(largest) * SPACING * 0.9 + SPACING * 1.5,
+    Math.sqrt(Math.max(0, ...area) / GROUP_FILL),
+  );
+  const grow = area.map((a) => (a > 0 ? Math.sqrt((cell * cell * GROUP_FILL) / a) : 1));
+  const boxes = base.map((b, i) => {
+    const f = grow[spec.group[i] ?? 0] ?? 1;
+    return { half: b.half * f, up: b.up * f, down: b.down * f };
+  });
+  return { boxes, cell };
+}
+
+/**
+ * Keeps the boxes of members of one group from overlapping: each overlapping
+ * pair is pushed apart along the axis that separates them soonest, as
+ * d3's collision force does for circles (on the positions the next tick
+ * would reach). Deterministic, so the layout worker settles identically.
+ */
+function labelCollide(boxes: readonly LabelBox[], group: readonly number[]) {
+  let nodes: LayoutNode[] = [];
+  const force = () => {
+    const n = nodes.length;
+    for (let i = 0; i < n; i++) {
+      const a = nodes[i] as LayoutNode;
+      const ba = boxes[i] as LabelBox;
+      for (let j = i + 1; j < n; j++) {
+        if (group[i] !== group[j]) continue;
+        const b = nodes[j] as LayoutNode;
+        const bb = boxes[j] as LabelBox;
+        const dx = (b.x ?? 0) + (b.vx ?? 0) - ((a.x ?? 0) + (a.vx ?? 0));
+        const dy = (b.y ?? 0) + (b.vy ?? 0) - ((a.y ?? 0) + (a.vy ?? 0));
+        const ox = ba.half + bb.half - Math.abs(dx);
+        // b below a: a's lower extent meets b's upper one, and the reverse.
+        const oy = (dy >= 0 ? ba.down + bb.up : ba.up + bb.down) - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        if (ox / (2 * ba.half + 2 * bb.half) < oy / (ba.up + ba.down + bb.up + bb.down)) {
+          // Members at the same place part by index, so nothing depends on chance.
+          const s = (dx >= 0 ? 1 : -1) * ox * 0.5;
+          a.vx = (a.vx ?? 0) - s;
+          b.vx = (b.vx ?? 0) + s;
+        } else {
+          const s = (dy >= 0 ? 1 : -1) * oy * 0.5;
+          a.vy = (a.vy ?? 0) - s;
+          b.vy = (b.vy ?? 0) + s;
+        }
+      }
+    }
+  };
+  force.initialize = (all: LayoutNode[]) => {
+    nodes = all;
+  };
+  return force;
+}
+
+/** Group centres on a grid of square cells. */
+function groupCentres(count: number, cell: number): { x: number; y: number }[] {
   const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
   const rows = Math.ceil(count / columns);
   return Array.from({ length: count }, (_, g) => ({

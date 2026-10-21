@@ -135,7 +135,6 @@
   --map-dash: 4px; /* informal ties: 4px dash, 3px gap (design-system §2.3) */
   --map-gap: 3px;
   --map-dot: 1px; /* ties that are neither formal nor informal: dotted */
-  --map-pair-offset: 1.5px; /* separation of a reciprocated pair's two directions */
   --map-fade: 0.3; /* opacity of members outside a highlight (design-system §2.3) */
   --map-legend-swatch: 24px; /* legend line and colour samples */
   --map-legend-column: 180px; /* narrowest legend column */

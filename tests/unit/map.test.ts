@@ -17,6 +17,7 @@ import {
   valenceMatrix,
   type MapModel,
 } from '../../src/ui/map/model';
+import { ForceLayout, groupBoxes } from '../../src/ui/map/layout';
 import { rankOf } from '../../src/ui/map/rank';
 import { buildScene, highlightSet, type Point } from '../../src/ui/map/scene';
 import type { MapTheme } from '../../src/ui/map/theme';
@@ -52,7 +53,6 @@ const theme: MapTheme = {
   dash: 4,
   gap: 3,
   dot: 1,
-  pairOffset: 1.5,
   line: 1,
   focusWidth: 2,
   fade: 0.3,
@@ -116,8 +116,11 @@ describe('map model', () => {
     const r = await resultFor(demo, { ...initialMapSettings() });
     const w = r.refs.connection_strength?.weights ?? new Float64Array();
     const n = demo.members.length;
+    // One edge per pair tied in either direction (CLAUDE.md D131).
     let expected = 0;
-    for (let k = 0; k < n * n; k++) if ((w[k] as number) > 0) expected += 1;
+    for (let i = 0; i < n; i++)
+      for (let j = i + 1; j < n; j++)
+        if ((w[i * n + j] as number) > 0 || (w[j * n + i] as number) > 0) expected += 1;
     expect(all.edges.length).toBe(expected);
     const strong = await model({ layer: 'connection_strength', threshold: 0.6 });
     expect(strong.edges.length).toBeLessThan(all.edges.length);
@@ -128,15 +131,60 @@ describe('map model', () => {
     }
   });
 
-  it('draws arrows and both directions in the directed view, one edge per pair when mutual', async () => {
+  it('draws one edge per pair in both views, a one-way tie in its direction', async () => {
     const directed = await model({ layer: 'connection_strength' });
     const mutual = await model({ layer: 'connection_strength', view: 'symmetrised' });
     expect(directed.directed).toBe(true);
     expect(mutual.directed).toBe(false);
     expect(mutual.edges.every((e) => e.source < e.target)).toBe(true);
-    expect(directed.edges.some((e) => e.source > e.target)).toBe(true);
-    expect(directed.edges.some((e) => e.reciprocated)).toBe(true);
     expect(mutual.edges.some((e) => e.reciprocated)).toBe(false);
+    const pairs = directed.edges.map((e) =>
+      [Math.min(e.source, e.target), Math.max(e.source, e.target)].join('-'),
+    );
+    expect(new Set(pairs).size).toBe(pairs.length);
+    expect(directed.edges.some((e) => e.reciprocated)).toBe(true);
+    expect(directed.edges.some((e) => !e.reciprocated)).toBe(true);
+    expect(directed.edges.filter((e) => e.reciprocated).every((e) => e.source < e.target)).toBe(
+      true,
+    );
+    // A one-way tie keeps its direction, so some run from a higher index to a lower one.
+    expect(directed.edges.some((e) => !e.reciprocated && e.source > e.target)).toBe(true);
+    expect(directed.directions).toEqual({ oneWay: true, bothWays: true });
+  });
+
+  it('combines the two directions of a pair by the chosen rule', async () => {
+    const r = await resultFor(demo, initialMapSettings());
+    const w = r.refs.connection_strength?.weights ?? new Float64Array();
+    const v = valenceMatrix(demo, initialMapSettings()) ?? new Float64Array();
+    const n = demo.members.length;
+    for (const rule of ['mean', 'min', 'max'] as const) {
+      // The rule only combines directions on the map; the directed analysis is the same.
+      const m = await model({ layer: 'connection_strength', symmetrise: rule });
+      const pick = (a: number, b: number) =>
+        Number.isNaN(a)
+          ? b
+          : Number.isNaN(b)
+            ? a
+            : rule === 'mean'
+              ? (a + b) / 2
+              : rule === 'min'
+                ? Math.min(a, b)
+                : Math.max(a, b);
+      for (const e of m.edges) {
+        const k = e.source * n + e.target;
+        const back = e.target * n + e.source;
+        if (e.reciprocated) {
+          expect(e.weight).toBeCloseTo(pick(w[k] as number, w[back] as number), 12);
+          const valence = pick(v[k] as number, v[back] as number);
+          if (Number.isNaN(valence)) expect(e.valence).toBeNaN();
+          else expect(e.valence).toBeCloseTo(valence, 12);
+          expect(e.width).toBeCloseTo(theme.edgeMin + (theme.edgeMax - theme.edgeMin) * e.weight);
+        } else {
+          expect(e.weight).toBe(w[k]);
+          expect((w[back] as number) > 0).toBe(false);
+        }
+      }
+    }
   });
 
   it('keeps a valence of 0 distinct from a valence that was not rated', async () => {
@@ -151,13 +199,27 @@ describe('map model', () => {
     expect(off.edges.every((e) => Number.isNaN(e.valence))).toBe(true);
   });
 
-  it('styles ties by formal and informal only when both layers are shown', async () => {
-    const both = await model();
+  it('styles ties by formal and informal only when both layers are switched on', async () => {
+    // Edge style is off until the analyst switches it on (CLAUDE.md D133).
+    const initial = await model();
+    expect(initial.styleShown).toBe(false);
+    expect(initial.edges.every((e) => e.style === 'plain')).toBe(true);
+    const on = { formal_collaboration: true, informal_collaboration: true };
+    const both = await model({ layerToggles: on });
     expect(both.styleShown).toBe(true);
     expect(both.stylesPresent).toEqual(expect.arrayContaining(['formal', 'informal', 'both']));
-    const one = await model({ layerToggles: { informal_collaboration: false } });
+    const one = await model({ layerToggles: { ...on, informal_collaboration: false } });
     expect(one.styleShown).toBe(false);
     expect(one.edges.every((e) => e.style === 'plain')).toBe(true);
+    // A pair styled in the directed view combines its two directions' ratings.
+    const directed = await model({ layerToggles: on, layer: 'connection_strength' });
+    expect(directed.edges.some((e) => e.reciprocated && e.style !== 'plain')).toBe(true);
+  });
+
+  it('starts every layer switched on when switched-off layers hide their ties', async () => {
+    const hide = await model({ hideOffLayers: true });
+    expect(hide.hiddenLayers).toEqual([]);
+    expect(hide.styleShown).toBe(true);
   });
 
   it('hides the ties of a switched-off layer only when asked to', async () => {
@@ -265,17 +327,35 @@ describe('map model', () => {
 describe('legend', () => {
   it('explains every encoding in use, and only those', async () => {
     const kinds = (m: MapModel) => legendSections(m, theme).map((s) => s.kind);
-    expect(kinds(await model())).toEqual(['size', 'fill', 'width', 'colour', 'style', 'arrows']);
-    expect(kinds(await model({ view: 'symmetrised' }))).toEqual([
+    const on = { formal_collaboration: true, informal_collaboration: true };
+    expect(kinds(await model())).toEqual(['size', 'fill', 'width', 'colour', 'arrows']);
+    expect(kinds(await model({ layerToggles: on }))).toEqual([
+      'size',
+      'fill',
+      'width',
+      'colour',
+      'style',
+      'arrows',
+    ]);
+    expect(kinds(await model({ view: 'symmetrised', layerToggles: on }))).toEqual([
       'size',
       'fill',
       'width',
       'colour',
       'style',
     ]);
-    expect(kinds(await model({ layerToggles: { formal_collaboration: false } }))).not.toContain(
-      'style',
-    );
+    expect(
+      kinds(await model({ layerToggles: { ...on, formal_collaboration: false } })),
+    ).not.toContain('style');
+  });
+
+  it('explains one-way and both-way ties in the directed view', async () => {
+    const direction = (m: MapModel) => legendSections(m, theme).find((x) => x.kind === 'arrows');
+    const d = direction(await model({ symmetrise: 'min' }));
+    expect(d?.kind === 'arrows' && d.items).toEqual([
+      { arrow: true, label: 'One way, from rater to rated member' },
+      { arrow: false, label: 'Both ways: one line, the weaker direction' },
+    ]);
   });
 
   it('names the chosen metric, attribute and layer, and states the threshold', async () => {
@@ -349,10 +429,86 @@ describe('scene', () => {
     }
   });
 
+  it('draws arrowheads on one-way ties only, and one line per pair', async () => {
+    const m = await model({ layer: 'connection_strength' });
+    const scene = buildScene(
+      m,
+      spiral(m.n),
+      { ...t, k: 4 },
+      { width: 4000, height: 4000 },
+      theme,
+      none,
+    );
+    const heads = scene.arrows.reduce((s, a) => s + a.coords.length / 6, 0);
+    const oneWay = m.edges.filter((e) => !e.reciprocated).length;
+    expect(heads).toBe(oneWay);
+    const segments = scene.lines.reduce((s, b) => s + b.coords.length / 4, 0);
+    expect(segments).toBe(m.edges.length);
+    // A pair tied both ways runs from member to member, without an offset.
+    const pos = spiral(m.n).map((p) => ({ x: p.x * 4 + t.x, y: p.y * 4 + t.y }));
+    const e = m.edges.find((x) => x.reciprocated);
+    const a = pos[e?.source ?? 0] as Point;
+    const b = pos[e?.target ?? 0] as Point;
+    const found = scene.lines.some((batch) => {
+      for (let k = 0; k < batch.coords.length; k += 4)
+        if (
+          Math.hypot((batch.coords[k] as number) - a.x, (batch.coords[k + 1] as number) - a.y) <
+            1e-9 &&
+          Math.hypot((batch.coords[k + 2] as number) - b.x, (batch.coords[k + 3] as number) - b.y) <
+            1e-9
+        )
+          return true;
+      return false;
+    });
+    expect(found).toBe(true);
+  });
+
   it('draws the selection and focus rings', async () => {
     const m = await model();
     const scene = buildScene(m, spiral(m.n), t, size, theme, { ...none, selected: 2, focused: 5 });
     expect(scene.rings).toHaveLength(2);
+  });
+});
+
+describe('grouped layout', () => {
+  it('keeps names inside a group apart and spreads each group over its cell', async () => {
+    const r = await resultFor(demo, initialMapSettings());
+    const teams = [...new Set(demo.members.map((m) => m.attributes.team ?? ''))];
+    const group = demo.members.map((m) => teams.indexOf(m.attributes.team ?? ''));
+    const radii = demo.members.map((_, i) => theme.nodeMin + (i % 13));
+    for (const names of [
+      demo.members.map((m) => m.display_name),
+      demo.members.map((_, i) => `ABC-L2-${String(i).padStart(2, '0')}`),
+    ]) {
+      const spec = { kind: 'grouped' as const, group, groups: teams, names };
+      const layout = new ForceLayout();
+      layout.update('a', demo.members.length, r.refs.composite?.weights, radii, spec);
+      const { boxes, cell } = groupBoxes(layout.nodes, spec);
+      const at = layout.settled;
+      // No two boxes of one group (member and the name below it) overlap by more than a fraction of a unit.
+      for (let i = 0; i < at.length; i++) {
+        for (let j = i + 1; j < at.length; j++) {
+          if (group[i] !== group[j]) continue;
+          const a = at[i] as Point;
+          const b = at[j] as Point;
+          const ba = boxes[i];
+          const bb = boxes[j];
+          if (!ba || !bb) continue;
+          const dy = b.y - a.y;
+          const ox = ba.half + bb.half - Math.abs(b.x - a.x);
+          const oy = (dy >= 0 ? ba.down + bb.up : ba.up + bb.down) - Math.abs(dy);
+          expect(Math.min(ox, oy)).toBeLessThan(0.5);
+        }
+      }
+      // Every group, small ones included, spreads over a good part of its cell.
+      teams.forEach((_, g) => {
+        const xs = at.filter((_, i) => group[i] === g);
+        const w = Math.max(...xs.map((p) => p.x)) - Math.min(...xs.map((p) => p.x));
+        const h = Math.max(...xs.map((p) => p.y)) - Math.min(...xs.map((p) => p.y));
+        expect(Math.max(w, h)).toBeGreaterThan(cell * 0.3);
+        expect(Math.max(w, h)).toBeLessThan(cell);
+      });
+    }
   });
 });
 
