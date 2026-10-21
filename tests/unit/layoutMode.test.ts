@@ -205,7 +205,15 @@ describe('condensed legend', () => {
       ],
       notes: ['Ties below 0.20 are hidden.'],
     },
-    { kind: 'arrows', title: 'Arrowheads', variable: 'Point from rater to rated member' },
+    {
+      kind: 'arrows',
+      title: 'Direction',
+      variable: '',
+      items: [
+        { arrow: true, label: 'One way' },
+        { arrow: false, label: 'Both ways' },
+      ],
+    },
   ];
 
   it('keeps every encoding and note, and only the end points of a scale', () => {
