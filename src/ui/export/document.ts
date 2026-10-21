@@ -442,28 +442,32 @@ export function legendPrimitives(
         });
       case 'arrows': {
         const head = t.arrow + t.edgeMax / 2;
-        return [
+        return section.items.map((item) =>
           labelled(
             lineW,
             L.line,
-            '',
-          )((x, cy) => [
-            edge(x, cy, x + lineW - head, cy, t.stone, t.edgeMax / 2),
-            {
-              kind: 'polygon',
-              fill: t.stone,
-              alpha: 1,
-              points: [
-                x + lineW,
-                cy,
-                x + lineW - head,
-                cy - head / 2,
-                x + lineW - head,
-                cy + head / 2,
-              ],
-            },
-          ]),
-        ];
+            item.label,
+          )((x, cy) =>
+            item.arrow
+              ? [
+                  edge(x, cy, x + lineW - head, cy, t.stone, t.edgeMax / 2),
+                  {
+                    kind: 'polygon',
+                    fill: t.stone,
+                    alpha: 1,
+                    points: [
+                      x + lineW,
+                      cy,
+                      x + lineW - head,
+                      cy - head / 2,
+                      x + lineW - head,
+                      cy + head / 2,
+                    ],
+                  },
+                ]
+              : [edge(x, cy, x + lineW, cy, t.stone, t.edgeMax / 2)],
+          ),
+        );
       }
       case 'position':
         if (!section.reportingLines) return [];
@@ -517,7 +521,11 @@ export function legendPrimitives(
     if (k > 0) y += theme.legendSectionGap;
     lines(section.title, 'medium', t.ink);
     if (section.variable !== '') lines(section.variable, 'regular', t.graphite);
-    const list = section.kind === 'fill' || section.kind === 'style' || section.kind === 'marks';
+    const list =
+      section.kind === 'fill' ||
+      section.kind === 'style' ||
+      section.kind === 'marks' ||
+      section.kind === 'arrows';
     flow(samples(section), list);
     if (section.kind === 'width')
       for (const note of section.notes) lines(note, 'regular', t.graphite);

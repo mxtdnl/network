@@ -40,7 +40,13 @@ export type LegendSection =
       notRated: string | null;
     }
   | { kind: 'style'; title: string; variable: string; items: { style: EdgeStyle; label: string }[] }
-  | { kind: 'arrows'; title: string; variable: string }
+  | {
+      kind: 'arrows';
+      title: string;
+      variable: string;
+      /** One way: a line with an arrowhead; both ways: a plain line (CLAUDE.md D131). */
+      items: { arrow: boolean; label: string }[];
+    }
   | { kind: 'position'; title: string; variable: string; reportingLines: string | null }
   | {
       kind: 'marks';
@@ -161,7 +167,19 @@ export function legendSections(
     });
   }
 
-  if (model.directed) sections.push({ kind: 'arrows', title: L.arrows, variable: L.arrowsText });
+  if (model.directed && (model.directions.oneWay || model.directions.bothWays)) {
+    sections.push({
+      kind: 'arrows',
+      title: L.arrows,
+      variable: '',
+      items: [
+        ...(model.directions.oneWay ? [{ arrow: true, label: L.oneWay }] : []),
+        ...(model.directions.bothWays
+          ? [{ arrow: false, label: L.bothWays(L.combinedBy[model.symmetrise]) }]
+          : []),
+      ],
+    });
+  }
 
   if (extras && extras.layout !== 'force') {
     sections.push({

@@ -185,7 +185,7 @@ export function MapControls() {
                 <Switch
                   label={layer.label}
                   hiddenSuffix={C.onMap}
-                  checked={isToggledOn(settings, layer.key)}
+                  checked={isToggledOn(settings, layer)}
                   onChange={(on) => {
                     setMap({ layerToggles: { ...raw.layerToggles, [layer.key]: on } });
                   }}

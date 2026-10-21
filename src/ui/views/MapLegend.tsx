@@ -254,23 +254,33 @@ function Sample({ section, theme }: { section: LegendSection; theme: MapTheme })
       const y = lineH / 2;
       const head = theme.arrow + theme.edgeMax / 2;
       return (
-        <ul className="legend__samples">
-          <li className="legend__sample">
-            <svg className="legend__svg" width={w} height={lineH} aria-hidden="true">
-              <line
-                className="legend__edge"
-                x1={0}
-                y1={y}
-                x2={w - head}
-                y2={y}
-                strokeWidth={theme.edgeMax / 2}
-              />
-              <polygon
-                className="legend__arrow"
-                points={`${String(w)},${String(y)} ${String(w - head)},${String(y - head / 2)} ${String(w - head)},${String(y + head / 2)}`}
-              />
-            </svg>
-          </li>
+        <ul className="legend__samples legend__samples--list">
+          {section.items.map((item) => (
+            <li key={String(item.arrow)} className="legend__sample">
+              <svg
+                className="legend__svg legend__svg--wide"
+                width={w}
+                height={lineH}
+                aria-hidden="true"
+              >
+                <line
+                  className="legend__edge"
+                  x1={0}
+                  y1={y}
+                  x2={item.arrow ? w - head : w}
+                  y2={y}
+                  strokeWidth={theme.edgeMax / 2}
+                />
+                {item.arrow && (
+                  <polygon
+                    className="legend__arrow"
+                    points={`${String(w)},${String(y)} ${String(w - head)},${String(y - head / 2)} ${String(w - head)},${String(y + head / 2)}`}
+                  />
+                )}
+              </svg>
+              <span>{item.label}</span>
+            </li>
+          ))}
         </ul>
       );
     }
