@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import { syntheticProject } from '../fixtures/synthetic';
@@ -392,4 +392,76 @@ test('screenshots of the demo map at 1440 and 2560 px, and on a simulated projec
   await page.getByRole('button', { name: 'Fit to view' }).click();
   await settled(page);
   await shot(page, 'map-2560');
+});
+
+test('palettes and pinned group colours (D127): legend, matrix, canvas and the project file', async ({
+  page,
+}) => {
+  await start(page);
+  await loadDemo(page);
+  const legend = page.locator('section.legend');
+  const step = legend.locator('.legend__step--n3').first();
+  // The default scale: orange-brown at −3.
+  await expect(step).toHaveCSS('background-color', 'rgb(131, 49, 16)');
+
+  const scale = page.getByLabel('Scale from negative to positive');
+  await scale.selectOption({ label: 'Purple to green' });
+  await expect(page.locator('html')).toHaveAttribute('data-diverging', 'purple-green');
+  await expect(step).toHaveCSS('background-color', 'rgb(112, 27, 152)');
+
+  // Pin the second team to the eighth hue, wine.
+  const pins = page.getByRole('group', { name: /Colour of each value of / });
+  const rows = pins.locator('.pin-list__row');
+  const team = (await rows.nth(1).locator('label').textContent()) ?? '';
+  await rows.nth(1).getByRole('combobox').selectOption({ label: 'Wine' });
+  const dot = legend.locator('.legend__sample', { hasText: team }).locator('.legend__dot');
+  await expect(dot).toHaveCSS('background-color', 'rgb(136, 34, 85)');
+  await expectNoAxeViolations(page);
+
+  // The canvas draws the pinned hue and the purple steps.
+  await settled(page);
+  const drawn = await page.locator('canvas.map__canvas').evaluate((c: HTMLCanvasElement) => {
+    const ctx = c.getContext('2d');
+    if (!ctx) return [];
+    const { data } = ctx.getImageData(0, 0, c.width, c.height);
+    const seen = new Set<string>();
+    for (let i = 0; i < data.length; i += 4)
+      seen.add(`${String(data[i])},${String(data[i + 1])},${String(data[i + 2])}`);
+    return [...seen];
+  });
+  expect(drawn).toContain('136,34,85');
+  expect(drawn).toContain('112,27,152');
+
+  // The matrix's signed shading follows the palette.
+  await page.getByRole('tab', { name: 'Matrix' }).click();
+  const shade = await page.evaluate(() => {
+    const el = document.createElement('div');
+    el.className = 'shade-signed-n3';
+    document.body.append(el);
+    const colour = getComputedStyle(el).backgroundColor;
+    el.remove();
+    return colour;
+  });
+  expect(shade).not.toBe('');
+  const defaultShade = await page.evaluate(() => {
+    document.documentElement.removeAttribute('data-diverging');
+    const el = document.createElement('div');
+    el.className = 'shade-signed-n3';
+    document.body.append(el);
+    const colour = getComputedStyle(el).backgroundColor;
+    el.remove();
+    document.documentElement.dataset.diverging = 'purple-green';
+    return colour;
+  });
+  expect(shade).not.toBe(defaultShade);
+
+  // Both are saved with the project.
+  const save = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Project' }).click();
+  await page.getByRole('menuitem', { name: 'Save project' }).click();
+  const saved = JSON.parse(readFileSync(await (await save).path(), 'utf8')) as {
+    settings: { palette?: unknown; group_colours?: Record<string, Record<string, number>> };
+  };
+  expect(saved.settings.palette).toEqual({ categorical: 'tol-muted', diverging: 'purple-green' });
+  expect(saved.settings.group_colours?.team?.[team]).toBe(7);
 });

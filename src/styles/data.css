@@ -745,7 +745,8 @@ a {
 
 /* Matrix shading. Unsigned layers: a ramp from paper towards val-p3, capped at
    60 % so ink text keeps at least 4.5:1. Signed layers: the valence scale at the
-   same 60 % strength. Colours come from the data tokens, never the accent. */
+   same 60 % strength, in the diverging palette in use (D127). Colours come from
+   the data tokens, never the accent. */
 .shade-0 {
   background-color: var(--paper);
 }
@@ -765,23 +766,23 @@ a {
   background-color: color-mix(in lab, var(--val-p3) 60%, var(--paper));
 }
 .shade-signed-n3 {
-  background-color: color-mix(in lab, var(--val-n3) 60%, var(--paper));
+  background-color: color-mix(in lab, var(--scale-n3) 60%, var(--paper));
 }
 .shade-signed-n2 {
-  background-color: color-mix(in lab, var(--val-n2) 60%, var(--paper));
+  background-color: color-mix(in lab, var(--scale-n2) 60%, var(--paper));
 }
 .shade-signed-n1 {
-  background-color: color-mix(in lab, var(--val-n1) 60%, var(--paper));
+  background-color: color-mix(in lab, var(--scale-n1) 60%, var(--paper));
 }
 .shade-signed-0 {
-  background-color: color-mix(in lab, var(--val-0) 60%, var(--paper));
+  background-color: color-mix(in lab, var(--scale-0) 60%, var(--paper));
 }
 .shade-signed-p1 {
-  background-color: color-mix(in lab, var(--val-p1) 60%, var(--paper));
+  background-color: color-mix(in lab, var(--scale-p1) 60%, var(--paper));
 }
 .shade-signed-p2 {
-  background-color: color-mix(in lab, var(--val-p2) 60%, var(--paper));
+  background-color: color-mix(in lab, var(--scale-p2) 60%, var(--paper));
 }
 .shade-signed-p3 {
-  background-color: color-mix(in lab, var(--val-p3) 60%, var(--paper));
+  background-color: color-mix(in lab, var(--scale-p3) 60%, var(--paper));
 }

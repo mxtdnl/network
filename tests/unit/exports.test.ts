@@ -25,6 +25,7 @@ import {
   networkMetricsCsv,
 } from '../../src/ui/export/tables';
 import { readExportTheme } from '../../src/ui/export/theme';
+import { withPalette, withPin } from '../../src/ui/map/palettes';
 import { DIRECTED_METRICS } from '../../src/ui/copy/metrics';
 import { effectiveWeights, type WeightState } from '../../src/ui/state/presets';
 import type { MapSettings } from '../../src/ui/state/store';
@@ -47,7 +48,7 @@ const EXCLUDED_LABELS = project.layers
 const HEALTH: WeightState = { preset: 'health', custom: {}, customTreatment: {} };
 const tokens = tokensCss();
 const theme = readExportTheme(tokens);
-const VALENCE_COLOURS = theme.map.valence.map((c) => c.toLowerCase());
+const VALENCE_COLOURS = theme.map.palettes.diverging['orange-blue'].map((c) => c.toLowerCase());
 const CAPTION = `Prepared with ${NAMES[0] ?? ''} and ${NAMES[1] ?? ''}.`;
 
 const deps: ExportDeps = {
@@ -413,6 +414,64 @@ describe('map encodings in exports', () => {
     };
     expect(await lines(true)).toBeGreaterThan(await lines(false));
   });
+});
+
+describe('palettes and pinned colours in exports (D127)', () => {
+  const PURPLE_GREEN = theme.map.palettes.diverging['purple-green'].map((c) => c.toLowerCase());
+  const MID = PURPLE_GREEN[3] ?? '';
+  const MUTED = theme.map.palettes.categorical['tol-muted'].map((c) => c.toLowerCase());
+  const teams = [...new Set(project.members.map((m) => m.attributes.team ?? ''))].filter(Boolean);
+  const pinnedTeam = teams[0] ?? '';
+  // The first team takes hue 1 unless pinned; wine (hue 8) is beyond the demo's teams.
+  const WINE = 7;
+  const chosen = withPin(
+    withPalette(project, { categorical: 'tol-muted', diverging: 'purple-green' }),
+    'team',
+    pinnedTeam,
+    WINE,
+  );
+  const map: Partial<MapSettings> = {
+    signedScale: 'full',
+    fill: { kind: 'attribute', key: 'team' },
+  };
+
+  it('has fewer teams than hues, so the pinned hue is drawn only when pinned', () => {
+    expect(teams.length).toBeLessThan(WINE + 1);
+  });
+
+  it.each(['png', 'svg', 'pdf'] as const)(
+    '%s draws the chosen diverging palette and the pinned hue, and no default steps',
+    async (type) => {
+      const ctx = await contextFor(chosen, { anonymise: true, excludeSigned: false, map });
+      const out = await produce(type, ctx);
+      const colours = out.colours ?? new Set<string>();
+      expect(PURPLE_GREEN.filter((c) => !colours.has(c))).toEqual([]);
+      expect(VALENCE_COLOURS.filter((c) => c !== MID && colours.has(c))).toEqual([]);
+      expect(colours.has(MUTED[WINE] ?? '')).toBe(true);
+      const group = mapExport(ctx, mapState, deps, '').map.model.fill.groups.find(
+        (g) => g.key === pinnedTeam,
+      );
+      expect(group?.hue).toBe(WINE);
+      // Counter-check: the default palettes draw neither.
+      const plain = await produce(
+        type,
+        await contextFor(project, { anonymise: true, excludeSigned: false, map }),
+      );
+      expect(plain.colours?.has(MUTED[WINE] ?? '')).toBe(false);
+      expect(PURPLE_GREEN.filter((c) => c !== MID && plain.colours?.has(c))).toEqual([]);
+    },
+    30_000,
+  );
+
+  it.each(['png', 'svg', 'pdf'] as const)(
+    '%s draws none of the chosen scale when signed layers are left out',
+    async (type) => {
+      const ctx = await contextFor(chosen, { anonymise: true, excludeSigned: true, map });
+      const out = await produce(type, ctx);
+      expect(PURPLE_GREEN.filter((c) => c !== MID && out.colours?.has(c))).toEqual([]);
+    },
+    30_000,
+  );
 });
 
 describe('signed-layer exclusion recalculates every figure', () => {

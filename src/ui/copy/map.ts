@@ -92,6 +92,24 @@ export const mapCopy = {
     outlines: 'Outline communities',
     outlinesHelp: (layer: string) => `Communities detected on ${layer}, around their members.`,
     outlinesUnavailable: 'Node fill already shows communities.',
+    colours: 'Colours',
+    coloursHelp:
+      'Saved with the project. Every palette offered stays distinguishable under the common colour-vision deficiencies.',
+    divergingPalette: 'Scale from negative to positive',
+    paletteNames: {
+      'tol-muted': 'Muted (Paul Tol)',
+      'orange-blue': 'Orange-brown to blue',
+      'purple-green': 'Purple to green',
+      'red-blue': 'Red to blue',
+    },
+    hueNames: {
+      'tol-muted': ['Teal', 'Indigo', 'Olive', 'Green', 'Sand', 'Rose', 'Cyan', 'Wine'],
+    },
+    pins: (attribute: string) => `Colour of each value of ${attribute}`,
+    pinsHelp:
+      'A pinned value keeps its colour in every view and presentation; the others take the free colours in order.',
+    pinAutomatic: 'Automatic',
+    pinnedOther: 'Other (no colour left)',
     direction: 'Direction',
     directed: 'Directed',
     symmetrised: 'Mutual',

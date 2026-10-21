@@ -179,6 +179,14 @@ export interface SavedView {
   selection: { member: MemberId | null; group: MemberId[] };
 }
 
+/** Palettes the analyst may choose (D127): only those that pass tests/unit/contrast.test.ts. */
+export const CATEGORICAL_PALETTES = ['tol-muted'] as const;
+export const DIVERGING_PALETTES = ['orange-blue', 'purple-green', 'red-blue'] as const;
+export type CategoricalPalette = (typeof CATEGORICAL_PALETTES)[number];
+export type DivergingPalette = (typeof DIVERGING_PALETTES)[number];
+/** Hues in a categorical palette (spec §12: at most 8). */
+export const PALETTE_HUES = 8;
+
 export interface ProjectSettings {
   /** Share of possible ratings below which whole-network metrics are flagged. */
   coverage_threshold: number;
@@ -187,6 +195,11 @@ export interface ProjectSettings {
   random_seed: number;
   bootstrap: { replicates: number; drop_fraction: number };
   anonymisation_scheme: 'role_team';
+  /** Palettes for node fill and the diverging edge scale (D127); absent means the defaults. */
+  palette?: { categorical: CategoricalPalette; diverging: DivergingPalette };
+  /** Hues pinned to attribute values (D127): attribute key → value → hue index (0-based) in the
+   *  categorical palette. A hue is pinned to at most one value of an attribute. */
+  group_colours?: Record<string, Record<string, number>>;
 }
 
 export interface ProjectMeta {

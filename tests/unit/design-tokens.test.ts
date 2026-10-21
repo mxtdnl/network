@@ -108,7 +108,7 @@ describe('tokens.css matches docs/design-system.md', () => {
   );
 
   it('parses every colour table', () => {
-    expect(colours.length).toBe(6 + 9 + 7);
+    expect(colours.length).toBe(6 + 9 + 7 + 7 + 7);
   });
 
   it.each(colours)('--%s is %s', (name, hex) => {

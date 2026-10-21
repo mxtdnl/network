@@ -443,3 +443,43 @@ describe('saved views: every encoding field is checked on load', () => {
     ).not.toThrow();
   });
 });
+
+describe('palettes and pinned colours (D127) are checked on load', () => {
+  const withSettings = (patch: Record<string, unknown>) => {
+    const file = JSON.parse(serialiseProject(richProject())) as Record<string, unknown>;
+    Object.assign(file.settings as Record<string, unknown>, patch);
+    return JSON.stringify(file);
+  };
+
+  it('round-trips a chosen palette and pins, and a project with neither', () => {
+    const p = richProject();
+    const chosen: Project = {
+      ...p,
+      settings: {
+        ...p.settings,
+        palette: { categorical: 'tol-muted', diverging: 'red-blue' },
+        group_colours: { team: { Sales: 7, Finance: 0 } },
+      },
+    };
+    expect(parseProject(serialiseProject(chosen))).toEqual(chosen);
+    expect(parseProject(serialiseProject(p)).settings.palette).toBeUndefined();
+  });
+
+  it.each([
+    [
+      'an unknown diverging palette',
+      { palette: { categorical: 'tol-muted', diverging: 'rainbow' } },
+    ],
+    [
+      'an unknown categorical palette',
+      { palette: { categorical: 'okabe-ito', diverging: 'red-blue' } },
+    ],
+    ['a palette that is not an object', { palette: 'red-blue' }],
+    ['a hue beyond the palette', { group_colours: { team: { Sales: 8 } } }],
+    ['a hue that is not a whole number', { group_colours: { team: { Sales: 1.5 } } }],
+    ['one hue pinned to two values', { group_colours: { team: { Sales: 2, Finance: 2 } } }],
+    ['pins that are not by attribute', { group_colours: { Sales: 2 } }],
+  ])('refuses %s', (_name, patch) => {
+    expect(() => parseProject(withSettings(patch))).toThrow(/settings\.(palette|group_colours)/);
+  });
+});

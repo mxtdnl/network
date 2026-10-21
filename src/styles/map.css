@@ -244,25 +244,25 @@
 }
 
 .legend__step--n3 {
-  background: var(--val-n3);
+  background: var(--scale-n3);
 }
 .legend__step--n2 {
-  background: var(--val-n2);
+  background: var(--scale-n2);
 }
 .legend__step--n1 {
-  background: var(--val-n1);
+  background: var(--scale-n1);
 }
 .legend__step--0 {
-  background: var(--val-0);
+  background: var(--scale-0);
 }
 .legend__step--p1 {
-  background: var(--val-p1);
+  background: var(--scale-p1);
 }
 .legend__step--p2 {
-  background: var(--val-p2);
+  background: var(--scale-p2);
 }
 .legend__step--p3 {
-  background: var(--val-p3);
+  background: var(--scale-p3);
 }
 
 /* Edge colour by an unsigned layer (D126): val-p3 into paper, from --map-ramp-low to full. */
@@ -372,6 +372,26 @@
 .map-controls__group > legend {
   padding: 0;
   margin-bottom: var(--s-1);
+}
+
+/* Pinned group colours (D127): swatch, value, hue. */
+.pin-list {
+  display: grid;
+  gap: var(--s-1);
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pin-list__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.pin-list__label {
+  overflow-wrap: anywhere;
 }
 
 .map-controls .select,

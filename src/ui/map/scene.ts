@@ -244,12 +244,15 @@ export function buildScene(
     b.coords.push(x1, y1, x2, y2);
   };
 
+  // The project's palettes (D127).
+  const diverging = theme.palettes.diverging[model.palette.diverging];
+  const categorical = theme.palettes.categorical[model.palette.categorical];
   const valenceCache = new Map<number, string>();
   const signed = (v: number) => {
     const q = Math.round(v * 10) / 10;
     let c = valenceCache.get(q);
     if (c === undefined) {
-      c = valenceColour(theme.valence, q);
+      c = valenceColour(diverging, q);
       valenceCache.set(q, c);
     }
     return c;
@@ -535,7 +538,7 @@ export function buildScene(
       x: p.x,
       y: p.y,
       r: node.radius,
-      fill: hue >= 0 ? (theme.categorical[hue] ?? theme.other) : theme.other,
+      fill: hue >= 0 ? (categorical[hue] ?? theme.other) : theme.other,
       stroke: theme.ink,
       strokeWidth: theme.line,
       dashed: hue < 0,

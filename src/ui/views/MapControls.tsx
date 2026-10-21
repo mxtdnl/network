@@ -13,8 +13,16 @@ import {
   toggleLayers,
   isToggledOn,
 } from '../map/model';
-import { drawableLayers, hierarchyAvailable, useMapData } from '../map/useMapModel';
-import { useLayout } from '../state/layoutMode';
+import {
+  DIVERGING_PALETTES,
+  paletteChoice,
+  pinnedHues,
+  withPalette,
+  withPin,
+  type DivergingPalette,
+} from '../map/palettes';
+import { drawableLayers, hierarchyAvailable, useMapData, type MapData } from '../map/useMapModel';
+import { useLayout, useReadOnly } from '../state/layoutMode';
 import {
   useAppStore,
   type EdgeColourChoice,
@@ -61,6 +69,8 @@ export function MapControls() {
   const legendChoice = useAppStore((s) => s.ui.legend);
   const setLegend = useAppStore((s) => s.setLegend);
   const compact = useLayout() === 'compact';
+  // Palettes and pins change the project, so the phone's read-only layout leaves them out (D112).
+  const readOnly = useReadOnly();
   const ids = {
     layer: useId(),
     layerHelp: useId(),
@@ -530,6 +540,8 @@ export function MapControls() {
         )}
       </div>
 
+      {!readOnly && <ColourControls data={data} />}
+
       {attrs.length > 0 && (
         <fieldset className="map-controls__group">
           <legend className="field__label">{C.filter}</legend>
@@ -666,5 +678,123 @@ export function MapControls() {
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * Palettes and pinned group colours (D127): project settings, saved with
+ * updateProjectViews, so nothing is recalculated or laid out again. Only one
+ * categorical palette passes the checks (docs/design-system.md §2.1), so there
+ * is no choice of categorical palette to offer.
+ */
+function ColourControls({ data }: { data: MapData }) {
+  const updateProjectViews = useAppStore((s) => s.updateProjectViews);
+  const ids = { help: useId(), diverging: useId(), pinsHelp: useId() };
+  const { project, settings, model } = data;
+  const choice = paletteChoice(project);
+  const hueNames = C.hueNames[choice.categorical];
+  const fillKey = settings.fill.kind === 'attribute' ? settings.fill.key : null;
+  const fillLabel = groupAttributes(project).find((a) => a.key === fillKey)?.label ?? '';
+  const values = fillKey ? attributeValues(project, fillKey) : [];
+  const pins = fillKey ? pinnedHues(project, fillKey, hueNames.length) : new Map<string, number>();
+  const hueOf = new Map(
+    model.fill.groups.filter((g) => g.kind === 'value').map((g) => [g.key, g.hue]),
+  );
+  return (
+    <fieldset className="map-controls__group" aria-describedby={ids.help}>
+      <legend className="field__label">{C.colours}</legend>
+      <p id={ids.help} className="field__help">
+        {C.coloursHelp}
+      </p>
+      <div className="field">
+        <label htmlFor={ids.diverging} className="field__label">
+          {C.divergingPalette}
+        </label>
+        <select
+          id={ids.diverging}
+          className="select"
+          value={choice.diverging}
+          onChange={(e) => {
+            const diverging = e.currentTarget.value as DivergingPalette;
+            updateProjectViews((p) => withPalette(p, { ...paletteChoice(p), diverging }));
+          }}
+        >
+          {DIVERGING_PALETTES.map((id) => (
+            <option key={id} value={id}>
+              {C.paletteNames[id]}
+            </option>
+          ))}
+        </select>
+      </div>
+      {fillKey && values.length > 0 && (
+        <fieldset className="map-controls__subgroup" aria-describedby={ids.pinsHelp}>
+          <legend className="field__label">{C.pins(fillLabel)}</legend>
+          <p id={ids.pinsHelp} className="field__help">
+            {C.pinsHelp}
+          </p>
+          <ul className="pin-list">
+            {values.map((value) => (
+              <PinRow
+                key={value}
+                value={value}
+                pinned={pins.get(value) ?? null}
+                shown={hueOf.get(value) ?? -1}
+                hueNames={hueNames}
+                onChange={(hue) => {
+                  updateProjectViews((p) => withPin(p, fillKey, value, hue));
+                }}
+              />
+            ))}
+          </ul>
+        </fieldset>
+      )}
+    </fieldset>
+  );
+}
+
+function PinRow({
+  value,
+  pinned,
+  shown,
+  hueNames,
+  onChange,
+}: {
+  value: string;
+  pinned: number | null;
+  /** The hue the map draws the value in, or -1 for "Other". */
+  shown: number;
+  hueNames: readonly string[];
+  onChange: (hue: number | null) => void;
+}) {
+  const id = useId();
+  return (
+    <li className="pin-list__row">
+      <span
+        className={`legend__dot ${shown >= 0 ? `legend__dot--cat-${String(shown + 1)}` : 'legend__dot--other'}`}
+        aria-hidden="true"
+      />
+      <label htmlFor={id} className="pin-list__label">
+        {value}
+      </label>
+      <select
+        id={id}
+        className="select pin-list__select"
+        value={pinned === null ? '' : String(pinned)}
+        onChange={(e) => {
+          const v = e.currentTarget.value;
+          onChange(v === '' ? null : Number(v));
+        }}
+      >
+        <option value="">
+          {C.pinAutomatic}
+          {pinned === null ? ` (${shown >= 0 ? (hueNames[shown] ?? '') : C.pinnedOther})` : ''}
+        </option>
+        {hueNames.map((name, k) => (
+          <option key={name} value={String(k)}>
+            {name}
+          </option>
+        ))}
+      </select>
+    </li>
   );
 }

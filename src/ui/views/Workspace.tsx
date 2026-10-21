@@ -25,6 +25,7 @@ import { InsightsPanel } from './InsightsPanel';
 import { PresentationView } from './PresentationView';
 import { SavedViewsPanel } from './SavedViewsPanel';
 import { weightsCopy } from '../copy/weights';
+import { DEFAULT_DIVERGING } from '../map/palettes';
 import { DRAWER_ID, LayoutContext, ReadOnlyContext, useLayoutMode } from '../state/layoutMode';
 
 // The survey tools are loaded when the Survey tab is first opened.
@@ -76,6 +77,13 @@ export function Workspace() {
   useEffect(() => {
     document.documentElement.dataset.layout = mode;
   }, [mode]);
+  // The project's diverging palette (D127) for the legend and the matrices (tokens.css --scale-*).
+  const diverging = useAppStore((s) => s.data.project?.settings.palette?.diverging);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (diverging && diverging !== DEFAULT_DIVERGING) root.dataset.diverging = diverging;
+    else delete root.dataset.diverging;
+  }, [diverging]);
 
   // Focus moves with the column toggles, which replace each other, and the
   // drawer returns focus to where it was opened from when it closes.
