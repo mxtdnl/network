@@ -2,7 +2,8 @@
   "size": {
     "name": "2560",
     "width": 2560,
-    "height": 1440
+    "height": 1440,
+    "nightly": true
   },
   "states": [
     "01-first-run-notice",

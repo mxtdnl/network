@@ -2,7 +2,8 @@
   "size": {
     "name": "tablet-landscape-1024",
     "width": 1024,
-    "height": 768
+    "height": 768,
+    "nightly": true
   },
   "states": [
     "01-first-run-notice",
