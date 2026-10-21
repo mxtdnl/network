@@ -368,7 +368,7 @@ On 2026-09-26 the owner approved `docs/plan.md` §6 Q1–Q17 with their proposed
 
 Q35 (the release check against the live site), under Phase 9.
 
-Q36 (map labels, D125–D136). In the dense centre of the demo map several members are left unlabelled, because a label that would collide is dropped (D53, D80). Review once D125–D136 are built: count unlabelled members at 1280 × 720, 1440 × 900 and 1920 × 1080 under the new defaults, and propose options with their measured effect before any change.
+Q36 (map labels, D125–D136). In the dense centre of the demo map several members are left unlabelled, because a label that would collide is dropped (D53, D80). Review once D125–D136 are built: count unlabelled members at 1280 × 720, 1440 × 900 and 1920 × 1080 under the new defaults, and propose options with their measured effect before any change. Measured 2026-10-21 (`docs/screenshots/readability/labels.md`): 9 / 3 / 2 members unlabelled with names and 5 / 1 / 0 with codes; the label width cache holds widths measured before the map font loads. Recommended: measure widths in the loaded font and give every label the four places highlighted labels use, without covering a member (3 / 0 / 0 and 1 / 0 / 0). Awaiting the owner's choice; no code changed.
 
 ## Phase status
 
