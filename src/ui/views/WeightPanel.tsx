@@ -2,7 +2,13 @@ import { useId } from 'react';
 import type { CompositeFormula } from '../engineClient';
 import { formatWeight } from '../copy/map';
 import { weightsCopy } from '../copy/weights';
-import { PRESETS, effectiveWeights, weightedLayers, type Preset } from '../state/presets';
+import {
+  DEFAULT_SIGNED_TREATMENT,
+  PRESETS,
+  effectiveWeights,
+  weightedLayers,
+  type Preset,
+} from '../state/presets';
 import { useAppStore } from '../state/store';
 import type { SignedTreatment } from '../state/presets';
 import { formulaLines } from './formula';
@@ -77,7 +83,7 @@ export function WeightPanel() {
           const id = `${baseId}-${layer.key}`;
           const raw = current.weights[layer.key] ?? 0;
           const share = shareOf(layer.key);
-          const treatment = current.signedTreatment[layer.key] ?? 'positive';
+          const treatment = current.signedTreatment[layer.key] ?? DEFAULT_SIGNED_TREATMENT;
           return (
             <div key={layer.key} className="field weights__layer">
               <div className="field__row">

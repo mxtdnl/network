@@ -113,7 +113,7 @@ describe('presets', () => {
   it('Custom uses each layer’s default weight until a slider moves', () => {
     const w = effectiveWeights(demo, initialWeightState());
     expect(Object.values(w.weights).every((v) => v === 1)).toBe(true);
-    expect(w.signedTreatment.valence).toBe('positive');
+    expect(w.signedTreatment.valence).toBe('multiplier');
   });
 
   it('a preset leaves unlisted layers out with weight 0', () => {

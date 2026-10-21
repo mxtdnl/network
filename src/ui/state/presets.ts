@@ -3,7 +3,8 @@
 // enabled layer gets 0 and is left out of the composite. The engine
 // normalises the weights of the summed layers to 1 (docs/method-notes.md §6),
 // so only the proportions matter. Under Custom the analyst's own slider
-// values apply, and a layer without one uses its default weight.
+// values apply, and a layer without one uses its default weight; a signed
+// layer without a chosen treatment is a multiplier on the composite.
 
 import { isCategorical, type LayerKey, type Project } from '../../data/schema';
 
@@ -11,6 +12,11 @@ export type Preset = 'formal' | 'informal' | 'health' | 'custom';
 export type SignedTreatment = 'positive' | 'filterNegative' | 'multiplier';
 
 export const PRESETS: readonly Preset[] = ['formal', 'informal', 'health', 'custom'];
+
+// A signed layer whose treatment neither the analyst nor a preset chose
+// adjusts the composite's ties rather than adding ties of its own, so a
+// positive valence rating alone does not create a tie (CLAUDE.md D130).
+export const DEFAULT_SIGNED_TREATMENT: SignedTreatment = 'multiplier';
 
 interface PresetDefinition {
   weights: Record<LayerKey, number>;
@@ -76,7 +82,8 @@ export function effectiveWeights(
       : (state.custom[layer.key] ?? layer.default_weight);
     if (layer.signed) {
       signedTreatment[layer.key] =
-        (preset ? preset.treatment[layer.key] : state.customTreatment[layer.key]) ?? 'positive';
+        (preset ? preset.treatment[layer.key] : state.customTreatment[layer.key]) ??
+        DEFAULT_SIGNED_TREATMENT;
     }
   }
   return { weights, signedTreatment };

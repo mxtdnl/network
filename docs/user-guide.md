@@ -217,7 +217,7 @@ The legend explains every encoding on the map, and is always shown:
 - **Show on the map**: with "Hide its ties", a switch for each layer hides the pairs tied on it; every layer starts on. With "Keep its ties" (the default) every layer's ties are drawn.
 - **Edges**: Edge colour, Edge width and Edge style, as in the legend above. Each line encoding shows one thing at a time.
 - **Direction.** Directed shows each person's ratings separately. Mutual combines the two directions of each pair, by their average, the weaker or the stronger of the two. The choice changes the metrics, so it is stated in every export.
-- **Tie strength at least** hides weaker ties from the drawing only; the metrics still use every tie.
+- **Tie strength at least** hides weaker ties from the drawing only; the metrics still use every tie. The map opens at 0.3, so the weakest ties are hidden, and the legend says so; set it to 0 to draw every tie. Showing an insight on the map draws every tie.
 - **Node size**, with **Node size scale** by value (area in proportion to the value) or by rank (area in proportion to the rank, so one member with a very high value does not leave everyone else small), **Node fill**, **Outline communities** (a grey outline round each community found on Ties from, while the fill shows an attribute, so communities that cross teams are visible), **Filter** (by any attribute) and **Search**.
 - **Layout**: force-directed (ties pull people together in proportion to their strength), grouped by an attribute, circular by group, or formal hierarchy (managers above their reports, with informal ties drawn over it; it needs a `manager_id` column).
 
@@ -297,7 +297,7 @@ Different questions need different relationships. The weight panel at the top of
 
 - **Presets.** Formal structure (formal collaboration, with workflow dependency), Informal network (informal collaboration, with advice and idea sharing) and Relationship health (connection strength, positive energy, benevolence-based trust and interpersonal safety, scaled by valence). Layers a preset does not use get weight 0. The preset values are in the [method notes](method-notes.md#presets).
 - **Sliders.** One per enabled layer. Each layer is first rescaled to 0–1, and the weights are scaled to add up to 1, so only their proportions matter; each slider shows its share. Moving a slider switches to Custom, starting from the preset's values.
-- **Signed layers** (valence, energy) can be used as positive ratings only, as a filter (a negative rating removes the tie), or as a multiplier (a negative rating reduces the composite by up to half, a positive one raises it by up to half).
+- **Signed layers** (valence, energy) can be used as positive ratings only, as a filter (a negative rating removes the tie), or as a multiplier (a negative rating reduces the composite by up to half, a positive one raises it by up to half). Unless you or a preset choose otherwise, a signed layer is a multiplier, so a positive rating alone does not create a tie.
 - **The formula** beneath the sliders shows exactly what is being calculated, in plain notation.
 
 When the weights change, members move smoothly to their new positions so you can see what moved (unless your system asks for reduced motion). The composite is a statement of priorities, not a measurement: say which weights you used whenever you show it. The formula is in the [method notes](method-notes.md#composite).

@@ -283,4 +283,10 @@ describe('an insight shown on the map', () => {
     const one = insightMapPatch({ ...view, show: ['formal_collaboration'] }, s.map, s.data.project);
     expect(one.edgeStyle).toBeUndefined();
   });
+
+  it('draws every tie, since the rule counted every tie (D129)', () => {
+    const s = state();
+    expect(s.map.threshold).toBe(0.3);
+    expect(insightMapPatch({ ...view, show: [] }, s.map, s.data.project).threshold).toBe(0);
+  });
 });

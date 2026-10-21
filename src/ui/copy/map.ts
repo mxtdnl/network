@@ -209,6 +209,7 @@ export const mapCopy = {
     tiesFrom: (layer: string) => `Ties drawn from ${layer}`,
     threshold: (value: string) => `Ties below ${value} hidden`,
     hiddenLayers: (labels: string[]) => `Ties on ${labels.join(' and ')} hidden`,
+    metricsUseAllTies: 'Every metric uses all ties, hidden or not',
     colour: 'Edge colour',
     signedFull: (layer: string) => `${layer}, −3 to +3`,
     signedNegative: (layer: string) => `${layer}: negative ratings only`,

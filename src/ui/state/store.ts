@@ -233,6 +233,9 @@ export function initialToolsState(): ToolsState {
   return { path: null, removal: [], resilience: null, showRemoval: true, bootstrap: null };
 }
 
+/** The tie strength below which the map hides ties when it opens (D129). */
+export const DEFAULT_THRESHOLD = 0.3;
+
 export function initialMapSettings(): MapSettings {
   return {
     view: 'directed',
@@ -240,7 +243,8 @@ export function initialMapSettings(): MapSettings {
     layer: 'composite',
     sizeMetric: 'betweenness',
     fill: { kind: 'attribute', key: 'team' },
-    threshold: 0,
+    // Display only: the map opens with ties below 0.3 hidden (CLAUDE.md D129).
+    threshold: DEFAULT_THRESHOLD,
     layerToggles: {},
     hideOffLayers: false,
     filters: [],

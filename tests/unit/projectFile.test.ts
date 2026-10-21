@@ -75,7 +75,7 @@ export function richProject(): Project {
       weights: {
         preset: 'custom',
         custom: { connection_strength: 0.5, informal_collaboration: 0.5 },
-        customTreatment: { valence: 'multiplier' },
+        customTreatment: { valence: 'multiplier', energy: 'positive' },
       },
       map: {
         view: 'symmetrised',
@@ -206,6 +206,16 @@ describe('schema versions and migrations', () => {
     );
     // A project without the two layers had no style.
     expect(map(savedViewV3toV4(view({}), {})).edgeStyle).toBe('none');
+    // An unset signed treatment was "positive ratings" in version 3 (D130).
+    const weighted = {
+      id: 'x',
+      map: {},
+      weights: { preset: 'custom', custom: {}, customTreatment: { energy: 'filterNegative' } },
+    };
+    expect(
+      (savedViewV3toV4(weighted, {}, ['valence', 'energy']) as typeof weighted).weights
+        .customTreatment,
+    ).toStrictEqual({ energy: 'filterNegative', valence: 'positive' });
     expect(savedViewV3toV4('not a view')).toBe('not a view');
     expect(savedViewV3toV4({ id: 'x' })).toStrictEqual({ id: 'x' });
   });

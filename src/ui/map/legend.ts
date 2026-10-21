@@ -161,6 +161,7 @@ export function legendSections(
       ...(width.kind === 'tiesFrom' ? [] : [L.tiesFrom(tiesFrom)]),
       ...(model.threshold > 0 ? [L.threshold(formatWeight(model.threshold))] : []),
       ...(model.hiddenLayers.length > 0 ? [L.hiddenLayers(model.hiddenLabels)] : []),
+      ...(model.threshold > 0 || model.hiddenLayers.length > 0 ? [L.metricsUseAllTies] : []),
     ],
   });
 
