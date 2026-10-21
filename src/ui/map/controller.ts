@@ -124,15 +124,35 @@ export class MapController {
   private readonly widths = new Map<string, number>();
   /** Label positions of the last full picture, so highlighted names are drawn over their faded copies. */
   private anchors: Map<number, LabelAnchor> = new Map();
+  /** Labels whose font was not loaded when first measured: loading, or tried once. */
+  private readonly fontLoads = new Map<string, 'loading' | 'tried'>();
+  private disposed = false;
+  // Widths are cached per font, and only once the font has loaded: measured in
+  // the fallback face, names are about 10 % wider and crowd each other out (Q36).
+  // The picture is redrawn when the font arrives; a font that still does not
+  // load after one try is measured as it falls back.
   private readonly measure = (text: string): number => {
-    let w = this.widths.get(text);
+    const font = this.theme.labelFont;
+    const key = `${font}|${text}`;
+    let w = this.widths.get(key);
     if (w === undefined) {
-      this.ctx.font = this.theme.labelFont;
+      this.ctx.font = font;
       w = this.ctx.measureText(text).width;
-      this.widths.set(text, w);
+      const load = this.fontLoads.get(key);
+      if (load === 'tried' || document.fonts.check(font, text)) this.widths.set(key, w);
+      else if (load === undefined) this.loadFont(key, font, text);
     }
     return w;
   };
+
+  private loadFont(key: string, font: string, text: string): void {
+    this.fontLoads.set(key, 'loading');
+    const done = () => {
+      this.fontLoads.set(key, 'tried');
+      if (!this.disposed) this.invalidate();
+    };
+    document.fonts.load(font, text).then(done, done);
+  }
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -206,6 +226,7 @@ export class MapController {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.worker?.terminate();
     this.worker = null;
     this.layoutWorker?.terminate();

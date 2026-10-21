@@ -199,10 +199,11 @@ Requested by the owner on 2026-10-21: the workspace works on large screens but b
 | D134 | 2026-10-21 | Node size by rank (amends D53): the size scale is "By value" (default, area linear in the value) or "By rank" (area linear in rank, highest largest, ties at their average rank, undefined values drawn as now). The legend names the scale. On the demo, Bridging runs from 0 to 0.44 and one member dominates, so most members are near the minimum size by value **Built 2026-10-21.** `sizeScale` (`value` by default, or `rank`), a "Node size scale" choice under Node size. By rank: t = (m − rank) / (m − 1) over the m defined values, average ranks for ties; the legend reads "<metric>, by rank" with samples "Rank m", the middle rank and "Rank 1" | Approved | `src/ui/map/model.ts`, `legend.ts`, `MapControls.tsx` |
 | D135 | 2026-10-21 | Grouped layout spacing (amends D62): the space inside each group grows with the cell available to it, and collisions account for members' labels, so names inside a group no longer overlap while large areas between groups stay empty. The layout worker (D111) must still give the same result as the main thread. Built 2026-10-21: each member has a box for itself and its name below it (width estimated at 6.5 layout units per character, a layout unit being a screen pixel at zoom 1, 18 units for the name's height, 6 units clearance); a deterministic collision force keeps boxes of one group apart along the axis that separates them soonest; the grid cell is large enough for the group whose boxes take most area to fill a quarter of it (`GROUP_FILL`), and every other group's boxes grow to fill the same share. Measured on the demo: overlap between boxes of one group at most 0.1 units, with names and with codes; `phase8.test.ts` still finds the worker identical | Approved | `src/ui/map/layout.ts` |
 | D136 | 2026-10-21 | Community outlines: an optional `stone` outline around each detected community on the "Ties from" layer, drawn under the members, unfilled (spec §12 data-ink), while node fill shows an attribute, so communities that cross teams are visible (on the demo at threshold 0.5, Product and Sales form one community). Explained in the legend under "Marks"; carried into exports **Built 2026-10-21.** `communityOutlines`, an "Outline communities" switch under Node fill (with a community fill the control says that the fill already shows them). The outline is the convex hull of 16-point circles round each visible member (radius + 1 px + `s-1` × 2), drawn in the scene's first line batch, so under the ties and in every export without new primitives. Legend: "Community outline, detected on <layer>" under Marks | Approved | `src/ui/map/scene.ts`, `legend.ts`, `MapControls.tsx` |
+| D137 | 2026-10-21 | Map labels (owner, resolves Q36; amends D53 and D80). Label widths are cached per font and text only once the font has loaded (`document.fonts.check`); before that the controller measures without caching, loads the font for that text and redraws on arrival, trying once. On the first picture names had been measured in the fallback face, about 10 % wider, for the whole session. Outside the circular layout every label tries below, above, right and left, as only highlighted labels did, and refuses a place that overlaps a placed label or covers another visible member; places after the first must lie on the canvas. A highlighted, hovered or focused member whose places all cover a member still takes the first place clear of other labels (D80). Measured on the built demo, names shown / hidden, unlabelled members before → after: 1280 × 720 9 → 3 / 5 → 1; 1440 × 900 3 → 0 / 1 → 0; 1920 × 1080 2 → 0 / 0 → 0; no label covers a member (5 did at 1280 × 720). Exports follow the scene. Details and screenshots: `docs/screenshots/readability/labels.md`. Tests: `tests/unit/map.test.ts` | Proposed | `src/ui/map/controller.ts`, `src/ui/map/scene.ts` |
 
-Open: Q36 (map labels), below.
+Q36 (map labels) is resolved by D137.
 
-Build order: D125; D131, D133 and D135 (no schema change); D128 with D126, D132, D134 and D136 (built 2026-10-21); D127; D129 and D130 (built 2026-10-21); then the user guide and screenshots; then Q36.
+Build order: D125; D131, D133 and D135 (no schema change); D128 with D126, D132, D134 and D136 (built 2026-10-21); D127; D129 and D130 (built 2026-10-21); then the user guide and screenshots; then Q36 (D137).
 
 ## Respondent mode (spec §15)
 
@@ -336,6 +337,8 @@ should, must, fix, wrong
 
 ## Resolved questions
 
+Q36 (map labels, D125–D136). In the dense centre of the demo map several members are left unlabelled, because a label that would collide is dropped (D53, D80). Review once D125–D136 are built: count unlabelled members at 1280 × 720, 1440 × 900 and 1920 × 1080 under the new defaults, and propose options with their measured effect before any change. Measured 2026-10-21 (`docs/screenshots/readability/labels.md`): 9 / 3 / 2 members unlabelled with names and 5 / 1 / 0 with codes; the label width cache holds widths measured before the map font loads. Recommended: measure widths in the loaded font and give every label the four places highlighted labels use, without covering a member (3 / 0 / 0 and 1 / 0 / 0). The owner chose it the same day; built as D137.
+
 Q28 (signed-layer exclusion) is built in Phase 7 as D105, applied to every analysis export including the Phase 5 table export. Plan Q14 (PDF library) is decided as D106.
 
 Q33 (coverage under selection): on 2026-09-27 the owner chose to leave "not applicable" pairs out of coverage, and noted that 0 could mean neutral, not rated or not applicable. Built as D102 (a distinct "does not apply" state), D103 (colleagues everyone is asked about) and D104 (answers required).
@@ -367,8 +370,6 @@ On 2026-09-26 the owner approved `docs/plan.md` §6 Q1–Q17 with their proposed
 ## Open questions
 
 Q35 (the release check against the live site), under Phase 9.
-
-Q36 (map labels, D125–D136). In the dense centre of the demo map several members are left unlabelled, because a label that would collide is dropped (D53, D80). Review once D125–D136 are built: count unlabelled members at 1280 × 720, 1440 × 900 and 1920 × 1080 under the new defaults, and propose options with their measured effect before any change.
 
 ## Phase status
 

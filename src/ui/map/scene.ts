@@ -523,6 +523,7 @@ export function buildScene(
     index: number;
     priority: number;
     alternatives: LabelPlace[];
+    important: boolean;
   })[] = [];
   const visibleCount = model.nodes.filter((n) => n.visible).length;
   const order = model.nodes.filter((n) => n.visible && (!onlyLit || lit.has(n.index)));
@@ -570,19 +571,18 @@ export function buildScene(
           place = { x: p.x, y: p.y - node.radius - theme.labelGap * 2, align: 'center' };
         }
       }
-      // A highlighted member's name matters most: if its first place is taken,
-      // it may go above, right or left of the member instead.
+      // If a name's first place (below) is taken, it may go above, right or
+      // left of the member instead (D80, Q36).
       const important = own || (lit?.has(node.index) === true && alpha === 1);
       const mid = p.y + theme.labelSize / 3;
       const side = node.radius + theme.labelGap * 2;
-      const alternatives: LabelPlace[] =
-        important && !circle
-          ? [
-              { x: p.x, y: p.y - node.radius - theme.labelGap * 2, align: 'center' },
-              { x: p.x + side, y: mid, align: 'left' },
-              { x: p.x - side, y: mid, align: 'right' },
-            ]
-          : [];
+      const alternatives: LabelPlace[] = !circle
+        ? [
+            { x: p.x, y: p.y - node.radius - theme.labelGap * 2, align: 'center' },
+            { x: p.x + side, y: mid, align: 'left' },
+            { x: p.x - side, y: mid, align: 'right' },
+          ]
+        : [];
       // Over the faded picture, a name goes where the picture already has it.
       const anchor = onlyLit ? anchors?.get(node.index) : undefined;
       if (anchor) {
@@ -592,6 +592,7 @@ export function buildScene(
       candidates.push({
         ...place,
         alternatives,
+        important,
         text: node.name,
         alpha,
         index: node.index,
@@ -607,27 +608,53 @@ export function buildScene(
   }
 
   // Labels never overlap: each is placed only if it clears those already placed.
-  const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  // Outside the circular layout a name also never covers another member, and a
+  // place other than its first stays on the canvas (Q36). A highlighted or
+  // focused member's name that finds no such place may still cover a member.
+  type Box = { x0: number; y0: number; x1: number; y1: number };
+  const placed: Box[] = [];
   const labels: LabelMark[] = [];
+  const discs = circle
+    ? []
+    : model.nodes.flatMap((n) => {
+        const p = screen[n.index];
+        return n.visible && p ? [{ index: n.index, x: p.x, y: p.y, r: n.radius + theme.line }] : [];
+      });
+  const coversMember = (box: Box, own: number) =>
+    discs.some((d) => {
+      if (d.index === own) return false;
+      const dx = d.x - Math.min(Math.max(d.x, box.x0), box.x1);
+      const dy = d.y - Math.min(Math.max(d.y, box.y0), box.y1);
+      return dx * dx + dy * dy < d.r * d.r;
+    });
   candidates.sort((a, b) => b.priority - a.priority);
   for (const c of candidates) {
     const w = measure(c.text) + theme.labelGap * 2;
-    for (const at of [{ x: c.x, y: c.y, align: c.align ?? 'center' }, ...c.alternatives]) {
+    const places = [{ x: c.x, y: c.y, align: c.align ?? 'center' }, ...c.alternatives];
+    const boxes = places.map((at): Box => {
       const x0 = at.align === 'left' ? at.x : at.align === 'right' ? at.x - w : at.x - w / 2;
-      const box = { x0, y0: at.y - theme.labelSize, x1: x0 + w, y1: at.y + theme.labelGap };
-      if (placed.some((b) => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0))
-        continue;
-      placed.push(box);
-      labels.push({
-        x: at.x,
-        y: at.y,
-        text: c.text,
-        alpha: c.alpha,
-        align: at.align,
-        index: c.index,
-      });
-      break;
-    }
+      return { x0, y0: at.y - theme.labelSize, x1: x0 + w, y1: at.y + theme.labelGap };
+    });
+    const clear = (box: Box) =>
+      !placed.some((b) => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0);
+    const onCanvas = (box: Box) =>
+      box.x0 >= 0 && box.y0 >= 0 && box.x1 <= size.width && box.y1 <= size.height;
+    let k = boxes.findIndex(
+      (box, i) => clear(box) && (i === 0 || onCanvas(box)) && !coversMember(box, c.index),
+    );
+    if (k < 0 && c.important) k = boxes.findIndex(clear);
+    const at = places[k];
+    const box = boxes[k];
+    if (!at || !box) continue;
+    placed.push(box);
+    labels.push({
+      x: at.x,
+      y: at.y,
+      text: c.text,
+      alpha: c.alpha,
+      align: at.align,
+      index: c.index,
+    });
   }
 
   const rings: RingMark[] = [];
