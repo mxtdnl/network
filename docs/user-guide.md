@@ -22,6 +22,14 @@ The empty workspace offers four ways in: run a survey, add members by hand (see 
 
 The workspace has three columns: settings on the left (weights, map settings and layers), views in the centre (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Coverage). The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
 
+### Compact and full layouts
+
+On a laptop-sized window (narrower than 1600 px or shorter than 900 px, and at least 1280 px wide) Graticule uses the compact layout so the map has room. The left column (weights and map settings) collapses to a rail with a button named "Weights and map settings". The right column is always a rail: choosing one of its tabs, selecting a member, or pressing its toggle opens a drawer over the map's right edge, and Escape or the close button shuts it and returns focus to where it was opened. Status messages appear in the top bar, and Lasso select sits with the zoom buttons. On larger windows the full layout shows both columns at once.
+
+Help offers "Layout: automatic" (the default), "Layout: compact" and "Layout: full" to override the choice. The preference is kept in this browser and removed by Clear local data. It does not apply below 1280 px: tablets and phones follow the window's width alone.
+
+![The compact layout: the map with a rail on each side and the member drawer open over its right edge](user-guide/compact-layout.jpg)
+
 ### Projects and local storage
 
 A project is saved as a single file ending in `.ona.json`, which holds the members, layers, ratings, saved views, surveys and settings. Use Project → New project to start an empty one, Project → Save project to download it and Project → Open project… to open it again. Keep project files as you would any personal data; never commit them to a public repository.
@@ -199,7 +207,11 @@ Once a project has ratings, the Map tab draws the network: each person is a node
 
 ![The network map of the demo with names hidden: nodes coloured by team, ties coloured by valence, and the legend below](user-guide/map.jpg)
 
-The legend explains every encoding on the map, and is always shown:
+The legend explains every encoding on the map, and is always present. Choose its form with Legend, at the end of the map settings: Condensed (one line per encoding, with the end points of each scale; the default in the compact layout), Full, or Beside the map (its own column, so it never covers the network). Changing the form fits the map to the space left.
+
+![The condensed legend, with one line per encoding](user-guide/legend-condensed.jpg)
+
+The legend shows:
 
 - **Node size**: the metric you choose under Node size, by value or by rank.
 - **Node fill**: an attribute such as team, or detected communities.
@@ -209,7 +221,7 @@ The legend explains every encoding on the map, and is always shown:
 - **Marks**: community outlines, when switched on, and the subgroup, a shortest path or highlighted members.
 - **Direction**: in the directed view, a tie rated one way has an arrowhead from the rater to the person rated; a pair rated both ways is one line without arrowheads, whose width and colour combine the two directions by the rule chosen under Direction.
 
-![The map legend: node size, node fill, edge width, edge colour, edge style and arrowheads](user-guide/legend.jpg)
+![The full legend: node size, node fill, edge width, edge colour, edge style and arrowheads](user-guide/legend.jpg)
 
 **Map settings** (left column, under Map):
 
@@ -219,6 +231,7 @@ The legend explains every encoding on the map, and is always shown:
 - **Direction.** Directed shows each person's ratings separately. Mutual combines the two directions of each pair, by their average, the weaker or the stronger of the two. The choice changes the metrics, so it is stated in every export.
 - **Tie strength at least** hides weaker ties from the drawing only; the metrics still use every tie. The map opens at 0.3, so the weakest ties are hidden, and the legend says so; set it to 0 to draw every tie. Showing an insight on the map draws every tie.
 - **Node size**, with **Node size scale** by value (area in proportion to the value) or by rank (area in proportion to the rank, so one member with a very high value does not leave everyone else small), **Node fill**, **Outline communities** (a grey outline round each community found on Ties from, while the fill shows an attribute, so communities that cross teams are visible), **Filter** (by any attribute) and **Search**.
+- **Colours**: the scale for signed layers (orange-brown to blue, the default; purple to green; or red to blue), and a colour for each value of the node-fill attribute. Pinning a value to one of the eight colours keeps it the same in every view and presentation; values left on Automatic take the free colours in order. Only palettes that stay distinguishable under the common colour-vision deficiencies are offered, which is why there is no free colour choice. The choices are saved with the project and followed by every export.
 - **Layout**: force-directed (ties pull people together in proportion to their strength), grouped by an attribute, circular by group, or formal hierarchy (managers above their reports, with informal ties drawn over it; it needs a `manager_id` column).
 
 ![The grouped layout, with members pulled together by team](user-guide/layout-grouped.jpg)

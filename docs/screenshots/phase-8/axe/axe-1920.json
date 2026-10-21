@@ -2,7 +2,8 @@
   "size": {
     "name": "1920",
     "width": 1920,
-    "height": 1080
+    "height": 1080,
+    "nightly": false
   },
   "states": [
     "01-first-run-notice",

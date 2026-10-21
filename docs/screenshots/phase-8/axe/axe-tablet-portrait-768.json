@@ -2,7 +2,8 @@
   "size": {
     "name": "tablet-portrait-768",
     "width": 768,
-    "height": 1024
+    "height": 1024,
+    "nightly": false
   },
   "states": [
     "01-first-run-notice",

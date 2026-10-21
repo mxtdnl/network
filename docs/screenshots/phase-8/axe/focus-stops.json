@@ -1,6 +1,11 @@
 [
   {
-    "name": "section LegendNode size Bridging0.0000.2180.437N",
+    "name": "section LegendNode size Bridging0.0000.443Node f",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "button Lasso select",
     "visible": true,
     "how": "outline"
   },
@@ -16,6 +21,11 @@
   },
   {
     "name": "button Fit to view",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "button Member, insights and coverage",
     "visible": true,
     "how": "outline"
   },
@@ -155,6 +165,11 @@
     "how": "outline"
   },
   {
+    "name": "button Weights and map settings",
+    "visible": true,
+    "how": "outline"
+  },
+  {
     "name": "select Formal structureInformal networkRelation",
     "visible": true,
     "how": "outline"
@@ -195,22 +210,27 @@
     "how": "outline"
   },
   {
-    "name": "button[switch] Formal collaboration on the map",
-    "visible": true,
-    "how": "outline"
-  },
-  {
-    "name": "button[switch] Informal collaboration on the map",
-    "visible": true,
-    "how": "outline"
-  },
-  {
-    "name": "button[switch] Valence on the map",
-    "visible": true,
-    "how": "outline"
-  },
-  {
     "name": "input ",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select ValenceComposite of all layersConnection",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "button[switch] Show the full scale",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select Ties from (Composite of all layers)Conne",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select NoneFormal and informal collaboration",
     "visible": true,
     "how": "outline"
   },
@@ -230,7 +250,47 @@
     "how": "outline"
   },
   {
+    "name": "input ",
+    "visible": true,
+    "how": "outline"
+  },
+  {
     "name": "select Team or functionLevelLocationTenure band",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "button[switch] Outline communities",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select Orange-brown to bluePurple to greenRed t",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select Automatic (Teal)TealIndigoOliveGreenSand",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select Automatic (Indigo)TealIndigoOliveGreenSa",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select Automatic (Olive)TealIndigoOliveGreenSan",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select Automatic (Green)TealIndigoOliveGreenSan",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select Automatic (Sand)TealIndigoOliveGreenSand",
     "visible": true,
     "how": "outline"
   },
@@ -251,6 +311,11 @@
   },
   {
     "name": "input ",
+    "visible": true,
+    "how": "outline"
+  },
+  {
+    "name": "select CondensedFullBeside the map",
     "visible": true,
     "how": "outline"
   },
@@ -420,17 +485,12 @@
     "how": "outline"
   },
   {
-    "name": "div[tabpanel] Lasso selectArrow keys move to the neare",
+    "name": "div[tabpanel] Arrow keys move to the nearest connected",
     "visible": true,
     "how": "outline"
   },
   {
-    "name": "button Lasso select",
-    "visible": true,
-    "how": "outline"
-  },
-  {
-    "name": "button Lior Theodolite, Operations, 27 ties sho",
+    "name": "button Lior Theodolite, Operations, 15 ties sho",
     "visible": true,
     "how": "canvas ring"
   }
