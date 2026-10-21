@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import { syntheticProject } from '../fixtures/synthetic';
 import { seededMembersCsv, seededTiesCsv } from '../fixtures/validation/seeded-errors';
+import { NIGHTLY } from './nightly';
 
 // Phase 8 design and accessibility audit (docs/design-audit.md). Every view
 // and state of the analyst workspace is drawn at each desktop width and at
@@ -20,16 +21,18 @@ const auditDir = process.env.AUDIT_OUT ?? 'test-results';
 // From --workspace-desktop, a window narrower than --workspace-wide or shorter
 // than --workspace-short gets the compact layout (D125): 1280, 1440 and the
 // three laptop sizes below are compact, 1920 and 2560 the full desktop layout.
+// Pull requests audit one size per layout mode (compact, full, tablet); the
+// other sizes run nightly (nightly.ts), as each size takes two to three minutes.
 const SIZES = [
-  { name: 'compact-1280x720', width: 1280, height: 720 },
-  { name: 'compact-1366x768', width: 1366, height: 768 },
-  { name: 'compact-1536x864', width: 1536, height: 864 },
-  { name: '1280', width: 1280, height: 800 },
-  { name: '1440', width: 1440, height: 900 },
-  { name: '1920', width: 1920, height: 1080 },
-  { name: '2560', width: 2560, height: 1440 },
-  { name: 'tablet-landscape-1024', width: 1024, height: 768 },
-  { name: 'tablet-portrait-768', width: 768, height: 1024 },
+  { name: 'compact-1280x720', width: 1280, height: 720, nightly: false },
+  { name: 'compact-1366x768', width: 1366, height: 768, nightly: true },
+  { name: 'compact-1536x864', width: 1536, height: 864, nightly: true },
+  { name: '1280', width: 1280, height: 800, nightly: true },
+  { name: '1440', width: 1440, height: 900, nightly: true },
+  { name: '1920', width: 1920, height: 1080, nightly: false },
+  { name: '2560', width: 2560, height: 1440, nightly: true },
+  { name: 'tablet-landscape-1024', width: 1024, height: 768, nightly: true },
+  { name: 'tablet-portrait-768', width: 768, height: 1024, nightly: false },
 ] as const;
 
 interface Finding {
@@ -90,7 +93,7 @@ async function openFile(page: Page, name: string, text: string, confirm: boolean
 test.use({ actionTimeout: 20_000 });
 
 for (const size of SIZES) {
-  test(`audit at ${size.name}`, async ({ page }) => {
+  test(`audit at ${size.name}`, size.nightly ? NIGHTLY : {}, async ({ page }) => {
     test.setTimeout(600_000);
     mkdirSync(screenshotDir, { recursive: true });
     mkdirSync(auditDir, { recursive: true });

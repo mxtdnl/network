@@ -7,8 +7,25 @@ permissions:
   contents: read
 
 jobs:
-  playwright:
+  # The suite is split into jobs that run at once (Playwright --shard). The
+  # window-size audits take two to three minutes each, so they have a job each;
+  # the rest is split into four shards by test count. Each job builds the site
+  # and serves it itself (playwright.config.ts). The slow suites tagged
+  # @nightly run in e2e-nightly.yml instead.
+  shard:
+    name: playwright (${{ matrix.part }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { part: 'audit sizes 1 of 3', select: '--grep "audit at " --shard=1/3' }
+          - { part: 'audit sizes 2 of 3', select: '--grep "audit at " --shard=2/3' }
+          - { part: 'audit sizes 3 of 3', select: '--grep "audit at " --shard=3/3' }
+          - { part: 'shard 1 of 4', select: '--grep-invert "audit at " --shard=1/4' }
+          - { part: 'shard 2 of 4', select: '--grep-invert "audit at " --shard=2/4' }
+          - { part: 'shard 3 of 4', select: '--grep-invert "audit at " --shard=3/4' }
+          - { part: 'shard 4 of 4', select: '--grep-invert "audit at " --shard=4/4' }
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -17,18 +34,47 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npm run test:e2e -- --project=chromium ${{ matrix.select }}
       - name: Upload screenshots
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: screenshots
+          name: screenshots-${{ strategy.job-index }}
           path: test-results/screenshots/
-          if-no-files-found: warn
-      - name: Upload report
+          if-no-files-found: ignore
+      - name: Upload blob report
         if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: blob-report-${{ strategy.job-index }}
+          path: blob-report/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # One check named "playwright", as before sharding, that passes only when
+  # every shard passed, and one HTML report merged from the shards.
+  playwright:
+    if: ${{ !cancelled() }}
+    needs: shard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v7
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+      - run: npx playwright merge-reports --reporter html ./all-blob-reports
+      - name: Upload report
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: playwright-report/
           if-no-files-found: ignore
+      - name: Every shard passed
+        run: test "${{ needs.shard.result }}" = success

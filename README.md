@@ -88,7 +88,7 @@ Regenerate the fixtures whenever the demo, the fixture script or a metric conven
 The site is deployed to GitHub Pages by GitHub Actions.
 
 - **`.github/workflows/deploy.yml`** runs on every push to `main` (and on demand from the Actions tab): `npm ci`, lint, type-check, unit tests and build, then `actions/configure-pages`, `actions/upload-pages-artifact` and `actions/deploy-pages`. A failing check stops the deployment.
-- **`.github/workflows/e2e.yml`** runs the Playwright tests on every pull request and uploads the screenshots and report.
+- **`.github/workflows/e2e.yml`** runs the Playwright tests on every pull request in seven parallel jobs (one per window-size audit, and the rest in four shards), then merges their reports into one HTML report; a final `playwright` check passes only when every job passed. **`.github/workflows/e2e-nightly.yml`** runs the tests tagged `@nightly` (performance, user guide screenshots, release check, and six of the nine audit sizes) every night on `main` and on request. `npm run test:e2e` runs everything locally.
 - In the repository settings, Pages → Source must be set to **GitHub Actions** (a one-off manual step).
 - Vite's `base` is `/network/`, matching the repository name; the app uses hash routes only (the survey links use `#/respond/…`), so Pages needs no rewrites.
 - Releases are tagged on `main` (`v1.0.0` onwards), with release notes on GitHub.

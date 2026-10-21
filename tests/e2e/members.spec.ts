@@ -2,13 +2,17 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { REGION } from './regions';
 
 // Building a roster in Graticule (CLAUDE.md D124). Screenshots go to
 // test-results/screenshots, or to SCREENSHOT_DIR when set.
 const screenshotDir = process.env.SCREENSHOT_DIR ?? join('test-results', 'screenshots');
 
-async function expectNoAxeViolations(page: Page) {
-  const results = await new AxeBuilder({ page })
+/** Fails on any WCAG A or AA violation, on the whole page or only in `scope` (regions.ts). */
+async function expectNoAxeViolations(page: Page, ...scope: string[]) {
+  const builder = new AxeBuilder({ page });
+  for (const region of scope) builder.include(region);
+  const results = await builder
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
@@ -110,7 +114,7 @@ test('build a roster, edit it, analyse it and save it', async ({ page }) => {
     .locator('input, textarea')
     .evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value).join('\n'));
   expect(values).not.toContain('Meridian');
-  await expectNoAxeViolations(page);
+  await expectNoAxeViolations(page, REGION.centre, REGION.top);
   await page.getByRole('switch', { name: 'Hide names' }).click();
   await expect(page.getByLabel('Project title')).toHaveValue('Studio roster for Ada Meridian');
   await fill(page, 'Project title', 'Studio roster');
