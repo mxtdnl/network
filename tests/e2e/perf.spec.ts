@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import { syntheticProject } from '../fixtures/synthetic';
+import { NIGHTLY } from './nightly';
 
 // Phase 8 performance measurements (spec §8: 250 members, about 10,000 ties).
 // Frame time is the interval between animation frames recorded in the page;
@@ -108,7 +109,7 @@ async function settled(page: Page) {
   await page.waitForTimeout(800);
 }
 
-test('performance at 250 members and about 10,000 ties', async ({ page }, info) => {
+test('performance at 250 members and about 10,000 ties', NIGHTLY, async ({ page }, info) => {
   test.setTimeout(300_000);
   await page.addInitScript(instrumentWorker);
   await page.setViewportSize({ width: 1440, height: 900 });

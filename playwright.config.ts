@@ -9,7 +9,6 @@ const browser = {
   ...devices['Desktop Chrome'],
   ...(executablePath ? { launchOptions: { executablePath } } : {}),
 };
-const SLOW = /(perf|guide|release)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -23,13 +22,14 @@ export default defineConfig({
     baseURL: 'http://localhost:4173/network/',
     trace: 'retain-on-failure',
   },
-  // The slow suites that change rarely (performance, user guide screenshots,
-  // release check) are a project of their own: pull requests run `chromium`
-  // only, and .github/workflows/e2e-nightly.yml runs `slow` every night and on
-  // request. A local `npm run test:e2e` runs both.
+  // Tests tagged @nightly (tests/e2e/nightly.ts: the performance suite, the
+  // user guide screenshots, the release check and six of the nine audit
+  // sizes) form the project `slow`: pull requests run `chromium` only, and
+  // .github/workflows/e2e-nightly.yml runs `slow` every night and on request.
+  // A local `npm run test:e2e` runs both.
   projects: [
-    { name: 'chromium', testIgnore: SLOW, use: browser },
-    { name: 'slow', testMatch: SLOW, use: browser },
+    { name: 'chromium', grepInvert: /@nightly/, use: browser },
+    { name: 'slow', grep: /@nightly/, use: browser },
   ],
   webServer: {
     command: 'npm run build && npm run preview',

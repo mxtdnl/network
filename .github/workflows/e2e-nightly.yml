@@ -1,9 +1,10 @@
 name: Slow end-to-end tests
 
-# The performance, user guide screenshot and release-check suites (the
-# Playwright project `slow`) change rarely and take about 90 s of test time, so
-# they run every night on main and on request (Run workflow, any branch)
-# rather than on every pull request.
+# Tests tagged @nightly (tests/e2e/nightly.ts), the Playwright project `slow`:
+# the performance suite, the user guide screenshots, the release check and six
+# of the nine window-size audits, about 16 minutes of test time. They change
+# rarely, so they run every night on main and on request (Run workflow, any
+# branch) rather than on every pull request.
 on:
   schedule:
     - cron: '17 3 * * *'
