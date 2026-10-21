@@ -29,15 +29,18 @@ export type LegendSection =
       title: string;
       variable: string;
       samples: { width: number; label: string }[];
+      /** A tie with no rating on the width layer: the thinnest width, in stone (D126). */
+      notRated: { width: number; label: string } | null;
       notes: string[];
     }
   | {
       kind: 'colour';
       title: string;
       variable: string;
-      /** Seven steps, −3 … +3, or empty when valence is hidden. */
-      steps: { step: number; label: string }[];
-      notRated: string | null;
+      /** A colour scale drawn as a ramp, with labels under its start, middle (optional) and end. */
+      ramp: { swatches: Swatch[]; labels: [string, string | null, string] } | null;
+      /** Single colours, drawn as line samples. */
+      items: { colour: 'stone' | 'graphite'; label: string }[];
     }
   | { kind: 'style'; title: string; variable: string; items: { style: EdgeStyle; label: string }[] }
   | {
@@ -52,8 +55,11 @@ export type LegendSection =
       kind: 'marks';
       title: string;
       variable: string;
-      items: { mark: 'group' | 'path' | 'highlight'; label: string }[];
+      items: { mark: 'group' | 'path' | 'highlight' | 'outline'; label: string }[];
     };
+
+/** A step of a colour scale: the valence scale (−3 … +3) or the sequential ramp (1 … 5). */
+export type Swatch = { scale: 'valence'; step: number } | { scale: 'ramp'; step: number };
 
 /** Layout and selection marks the legend explains besides the encodings. */
 export interface LegendExtras {
@@ -88,15 +94,28 @@ export function legendSections(
   const defined = Number.isFinite(lo) && Number.isFinite(hi);
   const mid = (lo + hi) / 2;
   const radiusAt = (t: number) => Math.sqrt(r.nodeMin ** 2 + (r.nodeMax ** 2 - r.nodeMin ** 2) * t);
+  const metric = metricCopy[model.size.metric].label;
+  const byRank = model.size.scale === 'rank';
+  // By rank (D134): the smallest member is the lowest rank, the largest rank 1.
+  const m = model.size.defined;
+  const rankSamples = (): { radius: number; label: string }[] =>
+    m > 1
+      ? [m, Math.round((m + 1) / 2), 1].map((rank) => ({
+          radius: radiusAt((m - rank) / (m - 1)),
+          label: L.rank(rank),
+        }))
+      : [{ radius: radiusAt(0.5), label: L.rank(1) }];
   sections.push({
     kind: 'size',
     title: L.size,
-    variable: metricCopy[model.size.metric].label,
-    samples: defined
-      ? hi > lo
-        ? formatScale([lo, mid, hi]).map((label, i) => ({ radius: radiusAt(i / 2), label }))
-        : [{ radius: radiusAt(0.5), label: formatValue(lo) }]
-      : [],
+    variable: byRank ? L.byRank(metric) : metric,
+    samples: !defined
+      ? []
+      : byRank
+        ? rankSamples()
+        : hi > lo
+          ? formatScale([lo, mid, hi]).map((label, i) => ({ radius: radiusAt(i / 2), label }))
+          : [{ radius: radiusAt(0.5), label: formatValue(lo) }],
     notDefined: model.size.anyUndefined ? { radius: r.nodeUndefined, label: L.notDefined } : null,
   });
 
@@ -119,34 +138,33 @@ export function legendSections(
     })),
   });
 
+  // Edge width: the layer the ties are drawn from, another layer, or the same for every tie (D126).
+  const tiesFrom = model.edgeLayer === model.layer ? layerName(model) : model.edgeLayerLabel;
+  const width = model.width;
+  const widthLabel = width.kind === 'layer' ? width.layerLabel : tiesFrom;
   sections.push({
     kind: 'width',
     title: L.width,
-    variable: L.widthScale(
-      model.edgeLayer === model.layer ? layerName(model) : model.edgeLayerLabel,
-    ),
-    samples: [0.2, 0.6, 1].map((w) => ({
-      width: r.edgeMin + (r.edgeMax - r.edgeMin) * w,
-      label: formatWeight(w),
-    })),
+    variable: width.kind === 'uniform' ? L.widthUniform : L.widthScale(widthLabel),
+    samples:
+      width.kind === 'uniform'
+        ? [{ width: r.edgeMin + (r.edgeMax - r.edgeMin) * 0.5, label: L.everyTie }]
+        : [0.2, 0.6, 1].map((w) => ({
+            width: r.edgeMin + (r.edgeMax - r.edgeMin) * w,
+            label: formatWeight(w),
+          })),
+    notRated:
+      width.kind === 'layer' && width.anyMissing
+        ? { width: r.edgeMin, label: L.notRatedOn(width.layerLabel) }
+        : null,
     notes: [
+      ...(width.kind === 'tiesFrom' ? [] : [L.tiesFrom(tiesFrom)]),
       ...(model.threshold > 0 ? [L.threshold(formatWeight(model.threshold))] : []),
       ...(model.hiddenLayers.length > 0 ? [L.hiddenLayers(model.hiddenLabels)] : []),
     ],
   });
 
-  sections.push({
-    kind: 'colour',
-    title: L.colour,
-    variable: model.valenceShown ? L.valence : model.valenceAvailable ? L.colourOff : L.colourNone,
-    steps: model.valenceShown
-      ? [-3, -2, -1, 0, 1, 2, 3].map((step) => ({
-          step,
-          label: step > 0 ? `+${String(step)}` : step < 0 ? `−${String(-step)}` : '0',
-        }))
-      : [],
-    notRated: model.valenceShown && model.anyValenceMissing ? L.valenceNotRated : null,
-  });
+  sections.push(colourSection(model));
 
   if (model.styleShown && model.stylesPresent.length > 0) {
     sections.push({
@@ -195,14 +213,18 @@ export function legendSections(
     });
   }
   const highlighted = extras?.highlight ?? 0;
-  if (extras && (extras.group > 0 || extras.path || highlighted > 0)) {
+  const outlined = model.outlines !== null;
+  if (outlined || (extras && (extras.group > 0 || extras.path || highlighted > 0))) {
     sections.push({
       kind: 'marks',
       title: L.marks,
       variable: '',
       items: [
-        ...(extras.path ? [{ mark: 'path' as const, label: L.path }] : []),
-        ...(extras.group > 0 ? [{ mark: 'group' as const, label: L.group(extras.group) }] : []),
+        ...(outlined ? [{ mark: 'outline' as const, label: L.outlines(layerName(model)) }] : []),
+        ...(extras?.path ? [{ mark: 'path' as const, label: L.path }] : []),
+        ...(extras && extras.group > 0
+          ? [{ mark: 'group' as const, label: L.group(extras.group) }]
+          : []),
         ...(highlighted > 0
           ? [{ mark: 'highlight' as const, label: L.highlighted(highlighted) }]
           : []),
@@ -210,6 +232,73 @@ export function legendSections(
     });
   }
   return sections;
+}
+
+/** The edge colour section (D126, D132): what colour shows, its scale and its single colours. */
+function colourSection(model: MapModel): LegendSection {
+  const c = model.colour;
+  const label = c.layerLabel;
+  const base = { kind: 'colour' as const, title: L.colour };
+  const notRated = c.anyMissing
+    ? [{ colour: 'graphite' as const, label: L.colourNotRated(label) }]
+    : [];
+  switch (c.kind) {
+    case 'signed':
+      return c.full
+        ? {
+            ...base,
+            variable: L.signedFull(label),
+            ramp: {
+              swatches: [-3, -2, -1, 0, 1, 2, 3].map((step) => ({ scale: 'valence', step })),
+              labels: ['−3', '0', '+3'],
+            },
+            items: notRated,
+          }
+        : {
+            ...base,
+            variable: L.signedNegative(label),
+            ramp: {
+              swatches: [-3, -2, -1].map((step) => ({ scale: 'valence', step })),
+              labels: ['−3', null, '−1'],
+            },
+            items: [{ colour: 'stone', label: L.neutralOrPositive }, ...notRated],
+          };
+    case 'unsigned':
+      return {
+        ...base,
+        variable: L.rampVariable(label === 'composite' ? mapCopy.controls.composite : label),
+        ramp: {
+          swatches: [1, 2, 3, 4, 5].map((step) => ({ scale: 'ramp', step })),
+          labels: [L.rampLow(formatWeight(0.2)), null, L.rampHigh(formatWeight(0.8))],
+        },
+        items: [
+          ...(c.anyZero ? [{ colour: 'stone' as const, label: L.ratedZero }] : []),
+          ...notRated,
+        ],
+      };
+    case 'groups':
+      return {
+        ...base,
+        variable: c.communities ? L.groupsCommunity(layerName(model)) : L.groupsOf(c.groupLabel),
+        ramp: null,
+        items: [
+          { colour: 'stone', label: c.communities ? L.withinCommunity : L.withinGroup },
+          { colour: 'graphite', label: c.communities ? L.betweenCommunities : L.betweenGroups },
+        ],
+      };
+    case 'none':
+      return {
+        ...base,
+        variable:
+          c.reason === 'excluded'
+            ? L.colourExcluded
+            : c.reason === 'unavailable'
+              ? L.colourUnavailable
+              : L.colourNone,
+        ramp: null,
+        items: [],
+      };
+  }
 }
 
 /**

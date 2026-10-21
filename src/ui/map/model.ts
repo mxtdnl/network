@@ -3,14 +3,17 @@
 // (Phase 7) both draw from a scene built on this model, so the two cannot
 // disagree.
 //
-// One visual channel carries one variable:
-//   node size   → the chosen metric on the selected layer
+// One visual channel carries one variable, chosen by the analyst (CLAUDE.md D126):
+//   node size   → the chosen metric on the selected layer, by value or by rank
 //   node fill   → the chosen attribute, or the community on the selected layer
-//   edge width  → the tie's weight (0–1) on the selected layer
-//   edge colour → valence of the pair, on the diverging scale
-//   edge style  → formal versus informal, when both layers are switched on
+//   edge width  → the tie's weight (0–1) on the selected layer, another layer, or none
+//   edge colour → a signed layer on the diverging scale (valence by default,
+//                 negative ratings only), an unsigned layer on the sequential
+//                 ramp, within or between groups, or none
+//   edge style  → formal versus informal, when chosen
 //   arrowheads  → directed view only, on ties rated one way; a pair rated
 //                 both ways is one line, its two directions combined
+//   outlines    → optional: the communities on the selected layer
 
 import { FI_CLASS, type AnalysisResult } from '../engineClient';
 import {
@@ -41,10 +44,17 @@ export interface MapNode {
 export interface MapEdge {
   source: number;
   target: number;
+  /** Weight on the "Ties from" layer, which decides that the tie is drawn. */
   weight: number;
   width: number;
-  /** Valence on the palette scale −3…+3; NaN when not rated or not shown. */
-  valence: number;
+  /**
+   * The pair's value on the colour encoding: a signed layer on the palette
+   * scale −3…+3, an unsigned layer's ramp class 1–5 (0 when rated 0), or 0
+   * within and 1 between groups. NaN when not rated, or no colour is shown.
+   */
+  colour: number;
+  /** The pair has no rating on the width layer: drawn thinnest, in stone (D126). */
+  widthNotRated: boolean;
   style: EdgeStyle;
   /**
    * Directed view: the pair is tied both ways and drawn as one line without
@@ -68,9 +78,39 @@ export interface FillGroup {
 
 export interface SizeScale {
   metric: SizeMetric;
+  /** Area linear in the value, or in the rank (D134). */
+  scale: 'value' | 'rank';
   lo: number;
   hi: number;
+  /** Members whose value is defined (the ranks run from 1 to this). */
+  defined: number;
   anyUndefined: boolean;
+}
+
+/** How edge colour is used, for the scene and the legend (D126). */
+export interface EdgeColourModel {
+  kind: 'signed' | 'unsigned' | 'groups' | 'none';
+  /** The colour layer's label (signed and unsigned). */
+  layerLabel: string;
+  /** Signed: the full scale, or negative ratings only (D132). */
+  full: boolean;
+  /** Some tie drawn has no rating on the colour layer. */
+  anyMissing: boolean;
+  /** Unsigned: some tie drawn is rated 0 on the colour layer. */
+  anyZero: boolean;
+  /** Groups: classes follow the communities, or the node-fill attribute named here. */
+  communities: boolean;
+  groupLabel: string;
+  /** None: chosen, the chosen layer is not enabled, or the export left it out. */
+  reason: 'chosen' | 'unavailable' | 'excluded' | null;
+}
+
+/** How edge width is used. */
+export interface EdgeWidthModel {
+  kind: 'tiesFrom' | 'layer' | 'uniform';
+  layerLabel: string;
+  /** Some tie drawn has no rating on the width layer. */
+  anyMissing: boolean;
 }
 
 export interface MapModel {
@@ -96,10 +136,8 @@ export interface MapModel {
     groups: FillGroup[];
     otherGroups: number;
   };
-  valenceShown: boolean;
-  /** The project has an enabled valence layer (it may be switched off on the map). */
-  valenceAvailable: boolean;
-  anyValenceMissing: boolean;
+  colour: EdgeColourModel;
+  width: EdgeWidthModel;
   styleShown: boolean;
   stylesPresent: EdgeStyle[];
   /** Directed view: which kinds of tie are drawn, for the legend (D131). */
@@ -113,6 +151,8 @@ export interface MapModel {
   searchMatches: Set<number> | null;
   /** Members named by an insight or a saved view (settings.highlight), visible ones only. */
   highlighted: Set<number> | null;
+  /** Community per member on the selected layer, when communities are outlined (D136); -1 for none. */
+  outlines: number[] | null;
 }
 
 export interface Radii {
@@ -123,9 +163,14 @@ export interface Radii {
   edgeMax: number;
 }
 
-/** The valence layer used for edge colour: the core `valence` layer when enabled. */
+/** The valence layer: the core `valence` layer when enabled. */
 export function valenceLayer(project: Project): LayerDefinition | undefined {
-  return project.layers.find((l) => l.key === 'valence' && l.enabled && l.signed);
+  return signedColourLayers(project).find((l) => l.key === 'valence');
+}
+
+/** Signed layers edge colour can show, on the diverging scale. */
+export function signedColourLayers(project: Project): LayerDefinition[] {
+  return project.layers.filter((l) => l.enabled && l.signed && !isCategorical(l));
 }
 
 export function roleLayer(project: Project, role: 'formal' | 'informal') {
@@ -133,17 +178,12 @@ export function roleLayer(project: Project, role: 'formal' | 'informal') {
 }
 
 /**
- * Layers whose map toggle is offered. By default, the layers that carry an
- * encoding: formal and informal (style) and valence (colour). When switching a
- * layer off hides its ties (CLAUDE.md D59), every enabled rated layer.
+ * Layers whose map switch is offered when switching a layer off hides its ties
+ * (CLAUDE.md D59): every enabled rated layer. The encodings have choices of
+ * their own (D126), so the switches only hide ties.
  */
-export function toggleLayers(project: Project, hideOff = false): LayerDefinition[] {
-  if (hideOff) return project.layers.filter((l) => l.enabled && !isCategorical(l));
-  return [
-    roleLayer(project, 'formal'),
-    roleLayer(project, 'informal'),
-    valenceLayer(project),
-  ].filter((l): l is LayerDefinition => l !== undefined);
+export function toggleLayers(project: Project): LayerDefinition[] {
+  return project.layers.filter((l) => l.enabled && !isCategorical(l));
 }
 
 /** Tie weights (view) of the layers switched off whose ties are hidden; a signed layer counts both signs. */
@@ -153,7 +193,7 @@ function hiddenLayerWeights(
   settings: MapSettings,
 ): { key: string; weights: Float64Array[] }[] {
   if (!settings.hideOffLayers) return [];
-  return toggleLayers(project, true)
+  return toggleLayers(project)
     .filter((l) => !isToggledOn(settings, l))
     .map((l) => ({
       key: l.key,
@@ -163,17 +203,9 @@ function hiddenLayerWeights(
     }));
 }
 
-/**
- * Whether a layer's map toggle is on. Edge style is off until the analyst
- * switches it on (CLAUDE.md D133), so the formal and informal layers start
- * off while their toggles set the line style; when switched-off layers hide
- * their ties (D59), every layer starts on, so nothing is hidden by default.
- */
-export function isToggledOn(
-  settings: MapSettings,
-  layer: Pick<LayerDefinition, 'key' | 'role'>,
-): boolean {
-  return settings.layerToggles[layer.key] ?? (settings.hideOffLayers || !layer.role);
+/** Whether a layer's map switch is on; every layer starts on, so nothing is hidden by default. */
+export function isToggledOn(settings: MapSettings, layer: Pick<LayerDefinition, 'key'>): boolean {
+  return settings.layerToggles[layer.key] ?? true;
 }
 
 /** Combines the two directions of a pair as the engine does (engine/aggregate.ts `combine`). */
@@ -209,7 +241,16 @@ export function attributeValues(project: Project, key: string): string[] {
 
 /** Pair valence on the palette scale (−3…+3) in the current view; NaN = not rated. */
 export function valenceMatrix(project: Project, settings: MapSettings): Float64Array | null {
-  const layer = valenceLayer(project);
+  return signedMatrix(project, 'valence', settings);
+}
+
+/** A signed layer's pair values on the palette scale (−3…+3) in the current view; NaN = not rated. */
+export function signedMatrix(
+  project: Project,
+  key: string,
+  settings: Pick<MapSettings, 'view' | 'symmetrise'>,
+): Float64Array | null {
+  const layer = signedColourLayers(project).find((l) => l.key === key);
   if (!layer) return null;
   const n = project.members.length;
   const index = new Map(project.members.map((m, i) => [m.id, i]));
@@ -355,6 +396,8 @@ export interface ModelOptions {
   edgeLayer?: string;
   /** Members hidden by the resilience simulation (map only). */
   removed?: ReadonlySet<string>;
+  /** The export left out the colour layer (signed-layer exclusion, D105), so the legend says so. */
+  colourExcluded?: boolean;
 }
 
 /** Plain label of a layer reference: a layer, a signed sub-layer or the composite. */
@@ -397,23 +440,32 @@ export function buildMapModel(
   const edgeLayer = options.edgeLayer ?? settings.layer;
   const edgeLayerLabel = refLabel(project, edgeLayer);
 
-  // Node size: area proportional to the metric between the smallest and largest defined value.
+  // Node size: area proportional to the metric, or to its rank (D134), between
+  // the smallest and largest defined value.
   const column = ref?.node.columns[settings.sizeMetric];
+  const values = Array.from({ length: n }, (_, i) => (column ? (column[i] as number) : NaN));
   let lo = Infinity;
   let hi = -Infinity;
-  let anyUndefined = false;
-  for (let i = 0; i < n; i++) {
-    const v = column ? (column[i] as number) : NaN;
+  let defined = 0;
+  for (const v of values)
     if (Number.isFinite(v)) {
       lo = Math.min(lo, v);
       hi = Math.max(hi, v);
-    } else anyUndefined = true;
-  }
-  const radius = (v: number) => {
+      defined += 1;
+    }
+  const anyUndefined = defined < n;
+  const ranks = settings.sizeScale === 'rank' ? averageRanks(values) : null;
+  const area = (t: number) =>
+    Math.sqrt(radii.nodeMin ** 2 + (radii.nodeMax ** 2 - radii.nodeMin ** 2) * t);
+  const radius = (i: number) => {
+    const v = values[i] as number;
     if (!Number.isFinite(v)) return radii.nodeUndefined;
-    const t = hi > lo ? (v - lo) / (hi - lo) : 0.5;
-    const a = radii.nodeMin ** 2 + (radii.nodeMax ** 2 - radii.nodeMin ** 2) * t;
-    return Math.sqrt(a);
+    if (ranks) {
+      // Rank 1 is the highest value and the largest member.
+      const rank = ranks[i] as number;
+      return area(defined > 1 ? (defined - rank) / (defined - 1) : 0.5);
+    }
+    return area(hi > lo ? (v - lo) / (hi - lo) : 0.5);
   };
 
   const fill = fillGroups(project, result, settings, layerLabel);
@@ -421,7 +473,7 @@ export function buildMapModel(
   const searchMatches = query === '' ? null : new Set<number>();
 
   const nodes: MapNode[] = project.members.map((m, i) => {
-    const sizeValue = column ? (column[i] as number) : NaN;
+    const sizeValue = values[i] as number;
     const name = names[i] ?? m.id;
     if (searchMatches && name.toLocaleLowerCase('en-GB').includes(query)) searchMatches.add(i);
     return {
@@ -430,28 +482,64 @@ export function buildMapModel(
       name,
       visible: memberMatchesFilters(m.attributes, settings.filters),
       sizeValue,
-      radius: radius(sizeValue),
+      radius: radius(i),
       group: fill.memberGroup[i] ?? 0,
     };
   });
   const weights = result.refs[edgeLayer]?.weights;
-  const valenceDef = valenceLayer(project);
-  const valenceOn = valenceDef !== undefined && isToggledOn(settings, valenceDef);
-  const valence = valenceOn ? valenceMatrix(project, settings) : null;
+
+  // Edge colour (D126). A choice whose layer is not in this analysis draws no
+  // colour, and the legend says why.
+  const choice = settings.edgeColour;
+  const colourLayer = choice.kind === 'signed' || choice.kind === 'unsigned' ? choice.layer : null;
+  const signedValues =
+    choice.kind === 'signed' ? signedMatrix(project, choice.layer, settings) : null;
+  const unsignedValues =
+    choice.kind === 'unsigned' &&
+    (result.refs[choice.layer]?.kind === 'unsigned' ||
+      result.refs[choice.layer]?.kind === 'composite')
+      ? (result.refs[choice.layer]?.weights ?? null)
+      : null;
+  const groupOf = choice.kind === 'groups' ? pairGroups(project, result, settings) : null;
+  const colourKind: EdgeColourModel['kind'] = signedValues
+    ? 'signed'
+    : unsignedValues
+      ? 'unsigned'
+      : groupOf
+        ? 'groups'
+        : 'none';
+  const colourReason: EdgeColourModel['reason'] =
+    colourKind !== 'none'
+      ? null
+      : choice.kind === 'none'
+        ? 'chosen'
+        : options.colourExcluded
+          ? 'excluded'
+          : 'unavailable';
+
+  // Edge width (D126): another layer's weight, or the same width for every tie.
+  const widthChoice = settings.edgeWidth;
+  const widthWeights =
+    widthChoice.kind === 'layer' ? (result.refs[widthChoice.layer]?.weights ?? null) : null;
+  const widthKind: EdgeWidthModel['kind'] =
+    widthChoice.kind === 'uniform' ? 'uniform' : widthWeights ? 'layer' : 'tiesFrom';
+  const widthOf = (w: number) => radii.edgeMin + (radii.edgeMax - radii.edgeMin) * w;
+
   const formal = roleLayer(project, 'formal');
   const informal = roleLayer(project, 'informal');
   const fi = result.multiplex?.formalInformal ?? null;
   const styleShown =
+    settings.edgeStyle === 'formalInformal' &&
     fi !== null &&
     formal !== undefined &&
-    informal !== undefined &&
-    isToggledOn(settings, formal) &&
-    isToggledOn(settings, informal);
+    informal !== undefined;
   const fW = formal ? result.refs[formal.key]?.weights : undefined;
   const gW = informal ? result.refs[informal.key]?.weights : undefined;
 
   const present = new Set<EdgeStyle>();
-  let anyValenceMissing = false;
+  let anyColourMissing = false;
+  let anyColourZero = false;
+  let anyWidthMissing = false;
   const hidden = hiddenLayerWeights(project, result, settings);
   const hiddenWeights = hidden.flatMap((h) => h.weights);
   const shown = (k: number) => {
@@ -463,7 +551,9 @@ export function buildMapModel(
     const edges: MapEdge[] = [];
     const neighbours: number[][] = Array.from({ length: n }, () => []);
     present.clear();
-    anyValenceMissing = false;
+    anyColourMissing = false;
+    anyColourZero = false;
+    anyWidthMissing = false;
     if (!weights) return { edges, neighbours };
     const rule = settings.symmetrise;
     const at = (m: Float64Array | null | undefined, k: number) => (m ? (m[k] as number) : NaN);
@@ -481,8 +571,26 @@ export function buildMapModel(
         const pick = (m: Float64Array | null | undefined) =>
           both ? combineDirections(at(m, k), at(m, back), rule) : at(m, k);
         const w = pick(weights);
-        const v = valence ? pick(valence) : NaN;
-        if (valence && Number.isNaN(v)) anyValenceMissing = true;
+        let colour = NaN;
+        if (signedValues) colour = pick(signedValues);
+        else if (unsignedValues) {
+          const u = pick(unsignedValues);
+          colour = Number.isNaN(u)
+            ? NaN
+            : u > 0
+              ? Math.min(5, Math.max(1, Math.ceil(u * 5 - 1e-9)))
+              : 0;
+          if (colour === 0) anyColourZero = true;
+        } else if (groupOf) colour = groupOf[i] === groupOf[j] ? 0 : 1;
+        if (colourKind !== 'none' && Number.isNaN(colour)) anyColourMissing = true;
+        let width = widthOf(widthKind === 'uniform' ? 0.5 : w);
+        let widthNotRated = false;
+        if (widthWeights) {
+          const v = pick(widthWeights);
+          widthNotRated = Number.isNaN(v);
+          width = widthNotRated ? radii.edgeMin : widthOf(v);
+          if (widthNotRated) anyWidthMissing = true;
+        }
         let style: EdgeStyle = 'plain';
         if (styleShown) {
           const f = pick(fW);
@@ -494,8 +602,9 @@ export function buildMapModel(
           source: i,
           target: j,
           weight: w,
-          width: radii.edgeMin + (radii.edgeMax - radii.edgeMin) * w,
-          valence: v,
+          width,
+          colour,
+          widthNotRated,
           style,
           reciprocated: both,
         });
@@ -544,6 +653,14 @@ export function buildMapModel(
         );
   const order: EdgeStyle[] = ['formal', 'informal', 'both', 'neither'];
 
+  // Community outlines (D136): only while node fill shows an attribute, since
+  // a community fill already shows them.
+  const communities = ref?.communities ?? null;
+  const outlines =
+    settings.communityOutlines && settings.fill.kind === 'attribute' && communities
+      ? Array.from(communities.membership, (c) => c)
+      : null;
+
   return {
     n,
     directed,
@@ -556,16 +673,31 @@ export function buildMapModel(
     nodes,
     edges,
     neighbours,
-    size: { metric: settings.sizeMetric, lo, hi, anyUndefined },
+    size: { metric: settings.sizeMetric, scale: settings.sizeScale, lo, hi, defined, anyUndefined },
     fill: {
       kind: fill.kind,
       label: fill.label,
       groups: fill.groups,
       otherGroups: fill.otherGroups,
     },
-    valenceShown: valence !== null,
-    valenceAvailable: valenceLayer(project) !== undefined,
-    anyValenceMissing,
+    colour: {
+      kind: colourKind,
+      layerLabel: colourLayer === null ? '' : refLabel(project, colourLayer),
+      full: settings.signedScale === 'full',
+      anyMissing: anyColourMissing,
+      anyZero: anyColourZero,
+      communities: settings.fill.kind === 'community',
+      groupLabel: fill.label,
+      reason: colourReason,
+    },
+    width: {
+      kind: widthKind,
+      layerLabel:
+        widthChoice.kind === 'layer' && widthKind === 'layer'
+          ? refLabel(project, widthChoice.layer)
+          : '',
+      anyMissing: anyWidthMissing,
+    },
     styleShown,
     stylesPresent: order.filter((s) => present.has(s)),
     directions: {
@@ -578,7 +710,47 @@ export function buildMapModel(
     hiddenLabels: hidden.map((h) => project.layers.find((l) => l.key === h.key)?.label ?? h.key),
     searchMatches,
     highlighted,
+    outlines,
   };
+}
+
+/** Ranks with 1 for the highest value; tied values share their average rank; NaN where not defined. */
+export function averageRanks(values: readonly number[]): number[] {
+  const order = values
+    .map((v, i) => ({ v, i }))
+    .filter((x) => Number.isFinite(x.v))
+    .sort((a, b) => b.v - a.v);
+  const out = values.map(() => NaN);
+  for (let a = 0; a < order.length;) {
+    let b = a;
+    while (
+      b + 1 < order.length &&
+      (order[b + 1] as { v: number }).v === (order[a] as { v: number }).v
+    )
+      b += 1;
+    const rank = (a + b) / 2 + 1;
+    for (let k = a; k <= b; k++) out[(order[k] as { i: number }).i] = rank;
+    a = b + 1;
+  }
+  return out;
+}
+
+/**
+ * Group per member for "within or between groups" (D126): the node-fill
+ * attribute's value (members without one form a group of their own), or the
+ * community on the selected layer. Null when communities are not available.
+ */
+function pairGroups(
+  project: Project,
+  result: AnalysisResult,
+  settings: MapSettings,
+): readonly (string | number)[] | null {
+  if (settings.fill.kind === 'community') {
+    const c = result.refs[settings.layer]?.communities;
+    return c ? Array.from(c.membership, (k) => k) : null;
+  }
+  const key = settings.fill.key;
+  return project.members.map((m) => m.attributes[key] ?? NOT_RECORDED);
 }
 
 /**

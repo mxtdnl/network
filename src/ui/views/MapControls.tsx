@@ -8,6 +8,8 @@ import {
   NOT_RECORDED,
   attributeValues,
   groupAttributes,
+  roleLayer,
+  signedColourLayers,
   toggleLayers,
   isToggledOn,
 } from '../map/model';
@@ -15,11 +17,31 @@ import { drawableLayers, hierarchyAvailable, useMapData } from '../map/useMapMod
 import { useLayout } from '../state/layoutMode';
 import {
   useAppStore,
+  type EdgeColourChoice,
+  type EdgeWidthChoice,
   type LayoutKind,
   type LegendMode,
   type MapSettings,
   type SizeMetric,
 } from '../state/store';
+
+/** The edge colour choice as a select value, and back. */
+function colourValue(c: EdgeColourChoice): string {
+  return c.kind === 'signed' || c.kind === 'unsigned' ? `${c.kind}:${c.layer}` : c.kind;
+}
+function colourChoice(value: string): EdgeColourChoice {
+  const [kind, ...rest] = value.split(':');
+  const layer = rest.join(':');
+  if (kind === 'signed' || kind === 'unsigned') return { kind, layer };
+  return kind === 'groups' ? { kind: 'groups' } : { kind: 'none' };
+}
+function widthValue(w: EdgeWidthChoice): string {
+  return w.kind === 'layer' ? `layer:${w.layer}` : w.kind;
+}
+function widthChoice(value: string): EdgeWidthChoice {
+  if (value.startsWith('layer:')) return { kind: 'layer', layer: value.slice('layer:'.length) };
+  return value === 'uniform' ? { kind: 'uniform' } : { kind: 'tiesFrom' };
+}
 
 const LAYOUTS: readonly LayoutKind[] = ['force', 'grouped', 'circular', 'hierarchy'];
 const LY = mapCopy.layouts;
@@ -57,6 +79,13 @@ export function MapControls() {
     groupBy: useId(),
     legend: useId(),
     legendHelp: useId(),
+    colour: useId(),
+    colourHelp: useId(),
+    width: useId(),
+    widthHelp: useId(),
+    style: useId(),
+    styleHelp: useId(),
+    outlinesHelp: useId(),
   };
   const [filterAttr, setFilterAttr] = useState<string>('');
   const [filterValue, setFilterValue] = useState<string>('');
@@ -66,7 +95,25 @@ export function MapControls() {
   const layers = drawableLayers(project, result);
   const layerLabel = (key: string) =>
     key === 'composite' ? C.composite : (project.layers.find((l) => l.key === key)?.label ?? key);
-  const toggles = toggleLayers(project, settings.hideOffLayers);
+  const toggles = toggleLayers(project);
+  const signedLayers = signedColourLayers(project);
+  const styleAvailable =
+    roleLayer(project, 'formal') !== undefined && roleLayer(project, 'informal') !== undefined;
+  // The colour the map draws: a choice whose layer is not enabled draws none (model.colour).
+  const colourShown: EdgeColourChoice =
+    model.colour.kind === 'none'
+      ? settings.edgeColour.kind === 'none'
+        ? settings.edgeColour
+        : { kind: 'none' }
+      : settings.edgeColour;
+  const widthShown: EdgeWidthChoice =
+    model.width.kind === 'tiesFrom' ? { kind: 'tiesFrom' } : settings.edgeWidth;
+  const colourHelp =
+    colourShown.kind === 'signed'
+      ? settings.signedScale === 'full'
+        ? C.colourHelp.signedFull
+        : C.colourHelp.signed
+      : C.colourHelp[colourShown.kind];
   const columns = result.refs[settings.layer]?.node.columns ?? {};
   const metrics = (settings.view === 'directed' ? DIRECTED_METRICS : SYMMETRISED_METRICS).filter(
     (m) => m in columns,
@@ -191,24 +238,6 @@ export function MapControls() {
       {toggles.length > 0 && (
         <fieldset className="map-controls__group">
           <legend className="field__label">{C.show}</legend>
-          <ul className="layer-list">
-            {toggles.map((layer) => (
-              <li key={layer.key} className="layer-list__item">
-                <Switch
-                  label={layer.label}
-                  hiddenSuffix={C.onMap}
-                  checked={isToggledOn(settings, layer)}
-                  onChange={(on) => {
-                    setMap({ layerToggles: { ...raw.layerToggles, [layer.key]: on } });
-                  }}
-                />
-              </li>
-            ))}
-          </ul>
-          <p className="field__help">
-            {toggles.some((l) => l.role) && `${C.styleHelp} `}
-            {toggles.some((l) => l.signed) && C.colourHelp}
-          </p>
           <fieldset className="map-controls__subgroup">
             <legend className="field__help">{C.whenOff}</legend>
             <div className="segmented">
@@ -228,8 +257,128 @@ export function MapControls() {
               ))}
             </div>
           </fieldset>
+          {settings.hideOffLayers ? (
+            <ul className="layer-list">
+              {toggles.map((layer) => (
+                <li key={layer.key} className="layer-list__item">
+                  <Switch
+                    label={layer.label}
+                    hiddenSuffix={C.onMap}
+                    checked={isToggledOn(settings, layer)}
+                    onChange={(on) => {
+                      setMap({ layerToggles: { ...raw.layerToggles, [layer.key]: on } });
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="field__help">{C.keepHelp}</p>
+          )}
         </fieldset>
       )}
+
+      {/* Edge encodings (D126): each channel shows one variable, chosen here. */}
+      <fieldset className="map-controls__group">
+        <legend className="field__label">{C.edges}</legend>
+        <div className="field">
+          <label htmlFor={ids.colour} className="field__label">
+            {C.colour}
+          </label>
+          <select
+            id={ids.colour}
+            className="select"
+            value={colourValue(colourShown)}
+            aria-describedby={ids.colourHelp}
+            onChange={(e) => {
+              setMap({ edgeColour: colourChoice(e.currentTarget.value) });
+            }}
+          >
+            {signedLayers.length > 0 && (
+              <optgroup label={C.colourSigned}>
+                {signedLayers.map((l) => (
+                  <option key={l.key} value={`signed:${l.key}`}>
+                    {l.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <optgroup label={C.colourUnsigned}>
+              {layers.map((key) => (
+                <option key={key} value={`unsigned:${key}`}>
+                  {layerLabel(key)}
+                </option>
+              ))}
+            </optgroup>
+            <option value="groups">{C.colourGroups}</option>
+            <option value="none">{C.colourNone}</option>
+          </select>
+          <p id={ids.colourHelp} className="field__help">
+            {colourHelp}
+          </p>
+          {colourShown.kind === 'signed' && (
+            <Switch
+              label={C.fullScale}
+              checked={settings.signedScale === 'full'}
+              onChange={(on) => {
+                setMap({ signedScale: on ? 'full' : 'negative' });
+              }}
+            />
+          )}
+        </div>
+        <div className="field">
+          <label htmlFor={ids.width} className="field__label">
+            {C.width}
+          </label>
+          <select
+            id={ids.width}
+            className="select"
+            value={widthValue(widthShown)}
+            aria-describedby={widthShown.kind === 'layer' ? ids.widthHelp : undefined}
+            onChange={(e) => {
+              setMap({ edgeWidth: widthChoice(e.currentTarget.value) });
+            }}
+          >
+            <option value="tiesFrom">{C.widthTiesFrom(layerLabel(settings.layer))}</option>
+            {layers
+              .filter((key) => key !== settings.layer)
+              .map((key) => (
+                <option key={key} value={`layer:${key}`}>
+                  {layerLabel(key)}
+                </option>
+              ))}
+            <option value="uniform">{C.widthUniform}</option>
+          </select>
+          {widthShown.kind === 'layer' && (
+            <p id={ids.widthHelp} className="field__help">
+              {C.widthHelp}
+            </p>
+          )}
+        </div>
+        <div className="field">
+          <label htmlFor={ids.style} className="field__label">
+            {C.style}
+          </label>
+          <select
+            id={ids.style}
+            className="select"
+            value={styleAvailable ? settings.edgeStyle : 'none'}
+            disabled={!styleAvailable}
+            aria-describedby={styleAvailable ? undefined : ids.styleHelp}
+            onChange={(e) => {
+              setMap({ edgeStyle: e.currentTarget.value as MapSettings['edgeStyle'] });
+            }}
+          >
+            <option value="none">{C.styleNone}</option>
+            <option value="formalInformal">{C.styleFormalInformal}</option>
+          </select>
+          {!styleAvailable && (
+            <p id={ids.styleHelp} className="field__help">
+              {C.styleUnavailable}
+            </p>
+          )}
+        </div>
+      </fieldset>
 
       <fieldset className="map-controls__group">
         <legend className="field__label">{C.direction}</legend>
@@ -317,6 +466,26 @@ export function MapControls() {
         </select>
       </div>
 
+      <fieldset className="map-controls__group">
+        <legend className="field__label">{C.sizeScale}</legend>
+        <div className="segmented">
+          {(['value', 'rank'] as const).map((scale) => (
+            <label key={scale} className="segmented__option">
+              <input
+                type="radio"
+                className="segmented__input"
+                name={`${ids.size}-scale`}
+                checked={settings.sizeScale === scale}
+                onChange={() => {
+                  setMap({ sizeScale: scale });
+                }}
+              />
+              <span className="segmented__label">{scale === 'value' ? C.byValue : C.byRank}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="field">
         <label htmlFor={ids.fill} className="field__label">
           {C.fill}
@@ -339,6 +508,26 @@ export function MapControls() {
           ))}
           <option value="__community">{C.community}</option>
         </select>
+      </div>
+
+      {/* Community outlines (D136): communities across the groups the fill shows. */}
+      <div className="field">
+        {settings.fill.kind === 'attribute' ? (
+          <>
+            <Switch
+              label={C.outlines}
+              checked={settings.communityOutlines}
+              onChange={(on) => {
+                setMap({ communityOutlines: on });
+              }}
+            />
+            <p id={ids.outlinesHelp} className="field__help">
+              {C.outlinesHelp(layerLabel(settings.layer))}
+            </p>
+          </>
+        ) : (
+          <p className="field__help">{C.outlinesUnavailable}</p>
+        )}
       </div>
 
       {attrs.length > 0 && (

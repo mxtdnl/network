@@ -361,7 +361,8 @@ function classModel(data: MapData, classes: Uint8Array, cls: number, style: Edge
         target: j,
         weight: 1,
         width,
-        valence: NaN,
+        colour: NaN,
+        widthNotRated: false,
         style,
         reciprocated: both,
       });
@@ -373,8 +374,9 @@ function classModel(data: MapData, classes: Uint8Array, cls: number, style: Edge
     ...model,
     edges,
     neighbours,
-    valenceShown: false,
-    valenceAvailable: false,
+    colour: { ...model.colour, kind: 'none', reason: 'chosen', anyMissing: false },
+    width: { kind: 'uniform', layerLabel: '', anyMissing: false },
+    outlines: null,
     styleShown: true,
     stylesPresent: [style],
     directions: {

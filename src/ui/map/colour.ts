@@ -70,3 +70,21 @@ export function valenceColour(scale: readonly string[], value: number): string {
     la[2] + (lb[2] - la[2]) * frac,
   ]);
 }
+
+/** `a` mixed into `b` in CIELAB: share 1 is `a`, 0 is `b`. */
+export function mixColour(a: string, share: number, b: string): string {
+  const la = hexToLab(a);
+  const lb = hexToLab(b);
+  return labToHex([
+    lb[0] + (la[0] - lb[0]) * share,
+    lb[1] + (la[1] - lb[1]) * share,
+    lb[2] + (la[2] - lb[2]) * share,
+  ]);
+}
+
+/** Steps of the sequential edge ramp (D126): `top` mixed into `ground` from `low` to full strength. */
+export function rampColours(top: string, ground: string, low: number, steps = 5): string[] {
+  return Array.from({ length: steps }, (_, k) =>
+    mixColour(top, low + ((1 - low) * k) / (steps - 1), ground),
+  );
+}

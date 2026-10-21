@@ -4,6 +4,8 @@ import { applyRatingChanges, type RatingChange } from '../../data/ratings';
 import type {
   AttributeFilter,
   AttributeKey,
+  EdgeColourChoice,
+  EdgeWidthChoice,
   LayerDefinition,
   LayerKey,
   MemberId,
@@ -99,7 +101,7 @@ export interface MapSettings {
   fill: NodeFill;
   /** Display only (plan Q6): ties below this weight on `layer` are hidden. */
   threshold: number;
-  /** Layers shown as an encoding: the formal and informal layers (edge style) and valence (edge colour). */
+  /** Layers switched off on the map; with `hideOffLayers`, their ties are hidden (D59). */
   layerToggles: Record<LayerKey, boolean>;
   /** When true, a layer switched off also hides its ties (CLAUDE.md D59). */
   hideOffLayers: boolean;
@@ -114,7 +116,21 @@ export interface MapSettings {
   ego: { member: MemberId; depth: 1 | 2 } | null;
   /** Members highlighted by an insight or a saved view; the rest of the map is faded. */
   highlight: MemberId[];
+  /** Edge colour (CLAUDE.md D126): valence by default. */
+  edgeColour: EdgeColourChoice;
+  /** A signed colour layer shows negative ratings only (the default, D132) or its full scale. */
+  signedScale: 'negative' | 'full';
+  /** Edge width: the "Ties from" layer by default. */
+  edgeWidth: EdgeWidthChoice;
+  /** Edge style: none by default (D133), or formal and informal collaboration. */
+  edgeStyle: 'none' | 'formalInformal';
+  /** Node area linear in the metric's value (default) or in its rank (D134). */
+  sizeScale: 'value' | 'rank';
+  /** A stone outline around each community on the "Ties from" layer (D136). */
+  communityOutlines: boolean;
 }
+
+export type { EdgeColourChoice, EdgeWidthChoice };
 
 export interface SelectionState {
   /** The member whose panel is open. */
@@ -234,6 +250,12 @@ export function initialMapSettings(): MapSettings {
     tool: 'pan',
     ego: null,
     highlight: [],
+    edgeColour: { kind: 'signed', layer: 'valence' },
+    signedScale: 'negative',
+    edgeWidth: { kind: 'tiesFrom' },
+    edgeStyle: 'none',
+    sizeScale: 'value',
+    communityOutlines: false,
   };
 }
 

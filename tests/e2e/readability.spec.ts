@@ -51,10 +51,7 @@ test('map readability screenshots of the demo at 1440 × 900', async ({ page }) 
 
   await page.getByRole('radio', { name: 'Force-directed' }).check();
   await settled(page);
-  for (const name of ['Formal collaboration', 'Informal collaboration']) {
-    const toggle = page.getByRole('switch', { name: `${name} on the map`, exact: true });
-    if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click();
-  }
+  await page.getByLabel('Edge style').selectOption({ label: 'Formal and informal collaboration' });
   await settled(page);
   await shot('force-directed-style-on');
 });

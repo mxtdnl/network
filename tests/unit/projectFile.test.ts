@@ -7,10 +7,12 @@ import {
   MIGRATIONS,
   ProjectFileError,
   savedViewV1toV2,
+  savedViewV3toV4,
   type Migration,
 } from '../../src/data/migrations';
 import { V1_PROJECT, V1_VIEW_MIGRATED } from '../fixtures/migrations/v1';
 import { V2_PROJECT } from '../fixtures/migrations/v2';
+import { V3_PROJECT } from '../fixtures/migrations/v3';
 import { parseProject, projectFileName, serialiseProject } from '../../src/data/projectFile';
 import { SCHEMA_VERSION, type Project } from '../../src/data/schema';
 
@@ -89,6 +91,13 @@ export function richProject(): Project {
         groupBy: 'team',
         ego: { member: 'A01', depth: 2 },
         highlight: ['A03'],
+        // As a version 3 view migrates: valence on its full scale (CLAUDE.md D128).
+        edgeColour: { kind: 'signed', layer: 'valence' },
+        signedScale: 'full',
+        edgeWidth: { kind: 'tiesFrom' },
+        edgeStyle: 'none',
+        sizeScale: 'value',
+        communityOutlines: false,
       },
       positions: { A01: { x: 1.5, y: -2, pinned: true } },
       selection: { member: null, group: ['A01', 'A03'] },
@@ -148,17 +157,91 @@ describe('schema versions and migrations', () => {
   // `app` field records; a migration keeps it.
   const writtenBy = { name: 'Graticule', version: '0.2.0' };
 
-  it('has two registered steps, from version 1 to 2 and from 2 to 3', () => {
+  it('has three registered steps, from version 1 to 2, 2 to 3 and 3 to 4', () => {
     expect(MIGRATIONS.map((m) => [m.from, m.to])).toEqual([
       [1, 2],
       [2, 3],
+      [3, 4],
     ]);
-    expect(SCHEMA_VERSION).toBe(3);
+    expect(SCHEMA_VERSION).toBe(4);
+  });
+
+  it('migrates the version 3 fixture: saved views gain encodings that draw what they drew', () => {
+    const loaded = parseProject(V3_PROJECT);
+    expect(loaded.schema_version).toBe(4);
+    const [first, second] = loaded.saved_views;
+    // Everything but the second view is unchanged.
+    expect({ ...loaded, saved_views: [first] }).toStrictEqual({
+      ...richProject(),
+      app: { name: 'Graticule', version: '1.0.0' },
+    });
+    // Its switches turned valence off and the formal and informal style on.
+    expect(second?.map).toStrictEqual({
+      ...richProject().saved_views[0]?.map,
+      layerToggles: { valence: false, formal_collaboration: true, informal_collaboration: true },
+      filters: [],
+      ego: null,
+      highlight: [],
+      edgeColour: { kind: 'none' },
+      edgeStyle: 'formalInformal',
+    });
+    expect(parseProject(serialiseProject(loaded))).toStrictEqual(loaded);
+  });
+
+  it('reads version 3 switches as version 3 did when ties of switched-off layers were hidden', () => {
+    const view = (toggles: Record<string, boolean>) => ({
+      id: 'x',
+      map: { layerToggles: toggles, hideOffLayers: true },
+    });
+    const roles = { formal: 'formal_collaboration', informal: 'informal_collaboration' };
+    const map = (v: unknown) => (v as { map: Record<string, unknown> }).map;
+    // With hidden ties every switch started on, so the style was drawn.
+    expect(map(savedViewV3toV4(view({}), roles))).toMatchObject({
+      edgeColour: { kind: 'signed', layer: 'valence' },
+      edgeStyle: 'formalInformal',
+      signedScale: 'full',
+    });
+    expect(map(savedViewV3toV4(view({ informal_collaboration: false }), roles)).edgeStyle).toBe(
+      'none',
+    );
+    // A project without the two layers had no style.
+    expect(map(savedViewV3toV4(view({}), {})).edgeStyle).toBe('none');
+    expect(savedViewV3toV4('not a view')).toBe('not a view');
+    expect(savedViewV3toV4({ id: 'x' })).toStrictEqual({ id: 'x' });
+  });
+
+  it('round-trips every encoding choice', () => {
+    const project = richProject();
+    const view = project.saved_views[0];
+    if (!view) throw new Error('no view');
+    const choices = [
+      {
+        edgeColour: { kind: 'unsigned', layer: 'composite' },
+        edgeWidth: { kind: 'layer', layer: 'formal_collaboration' },
+      },
+      { edgeColour: { kind: 'groups' }, edgeWidth: { kind: 'uniform' } },
+      { edgeColour: { kind: 'signed', layer: 'energy' }, signedScale: 'negative' },
+    ] as const;
+    for (const choice of choices) {
+      project.saved_views = [
+        {
+          ...view,
+          map: {
+            ...view.map,
+            ...choice,
+            edgeStyle: 'formalInformal',
+            sizeScale: 'rank',
+            communityOutlines: true,
+          },
+        },
+      ];
+      expect(parseProject(serialiseProject(project))).toStrictEqual(project);
+    }
   });
 
   it('migrates the version 2 fixture: an empty survey list, ties without a source', () => {
     const loaded = parseProject(V2_PROJECT);
-    expect(loaded.schema_version).toBe(3);
+    expect(loaded.schema_version).toBe(4);
     expect(loaded.surveys).toStrictEqual([]);
     expect(loaded).toStrictEqual({ ...richProject(), app: writtenBy });
     expect(loaded.ties.every((t) => t.source === undefined)).toBe(true);
@@ -167,7 +250,7 @@ describe('schema versions and migrations', () => {
 
   it('migrates the version 1 fixture: saved views take the version 2 shape', () => {
     const loaded = parseProject(V1_PROJECT);
-    expect(loaded.schema_version).toBe(3);
+    expect(loaded.schema_version).toBe(4);
     // Everything but the saved views and the version is unchanged.
     expect({ ...loaded, saved_views: [] }).toStrictEqual({
       ...richProject(),
@@ -175,7 +258,7 @@ describe('schema versions and migrations', () => {
       saved_views: [],
     });
     expect(loaded.saved_views).toStrictEqual([V1_VIEW_MIGRATED]);
-    // And the migrated file round-trips as version 3.
+    // And the migrated file round-trips as version 4.
     expect(parseProject(serialiseProject(loaded))).toStrictEqual(loaded);
   });
 
@@ -311,5 +394,52 @@ describe('damaged files are refused, never repaired', () => {
     ],
   ])('refuses %s', (_name, fn, message) => {
     expect(() => parseProject(mutate(fn))).toThrow(message);
+  });
+});
+
+describe('saved views: every encoding field is checked on load', () => {
+  const withMap = (patch: Record<string, unknown>, drop?: string) => {
+    const file = JSON.parse(serialiseProject(richProject())) as Record<string, unknown>;
+    const view = (file.saved_views as { map: Record<string, unknown> }[])[0];
+    if (!view) throw new Error('no view');
+    Object.assign(view.map, patch);
+    if (drop) Reflect.deleteProperty(view.map, drop);
+    return JSON.stringify(file);
+  };
+
+  it.each([
+    ['edgeColour', { edgeColour: { kind: 'valence' } }, 'has an invalid edge colour'],
+    ['edgeColour layer', { edgeColour: { kind: 'signed' } }, 'has an invalid edge colour'],
+    ['edgeColour empty layer', { edgeColour: { kind: 'unsigned', layer: '' } }, 'edge colour'],
+    ['signedScale', { signedScale: 'positive' }, 'has an invalid colour scale'],
+    ['edgeWidth', { edgeWidth: { kind: 'layer' } }, 'has an invalid edge width'],
+    ['edgeWidth kind', { edgeWidth: 'tiesFrom' }, 'has an invalid edge width'],
+    ['edgeStyle', { edgeStyle: 'formal' }, 'has an invalid edge style'],
+    ['sizeScale', { sizeScale: 'log' }, 'has an invalid node-size scale'],
+    ['communityOutlines', { communityOutlines: 'yes' }, 'whether communities are outlined'],
+  ])('refuses an invalid %s', (_name, patch, message) => {
+    expect(() => parseProject(withMap(patch))).toThrow(message);
+  });
+
+  it.each([
+    ['edgeColour', 'has an invalid edge colour'],
+    ['signedScale', 'has an invalid colour scale'],
+    ['edgeWidth', 'has an invalid edge width'],
+    ['edgeStyle', 'has an invalid edge style'],
+    ['sizeScale', 'has an invalid node-size scale'],
+    ['communityOutlines', 'whether communities are outlined'],
+  ])('refuses a view without %s', (field, message) => {
+    expect(() => parseProject(withMap({}, field))).toThrow(message);
+  });
+
+  it('accepts a layer that is not enabled: the map falls back', () => {
+    expect(() =>
+      parseProject(
+        withMap({
+          edgeColour: { kind: 'signed', layer: 'removed_layer' },
+          edgeWidth: { kind: 'layer', layer: 'removed_layer' },
+        }),
+      ),
+    ).not.toThrow();
   });
 });

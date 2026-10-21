@@ -136,6 +136,7 @@
   --map-gap: 3px;
   --map-dot: 1px; /* ties that are neither formal nor informal: dotted */
   --map-fade: 0.3; /* opacity of members outside a highlight (design-system §2.3) */
+  --map-ramp-low: 0.6; /* edge colour by an unsigned layer: the lightest of five steps from paper to val-p3, at 3.3:1 on paper (D126) */
   --map-legend-swatch: 24px; /* legend line and colour samples */
   --map-legend-column: 180px; /* narrowest legend column */
   --map-zoom-button: 32px; /* same as --control-height */

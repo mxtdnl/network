@@ -15,6 +15,7 @@ import {
   setViewCaption,
   updateView,
 } from '../../src/ui/state/savedViews';
+import { insightMapPatch } from '../../src/ui/state/insights';
 import { initialMapSettings, useAppStore } from '../../src/ui/state/store';
 
 const demoText = readFileSync(
@@ -49,6 +50,12 @@ describe('saving a view', () => {
       highlight: ['FIN02'],
       search: 'not saved',
       tool: 'lasso',
+      edgeColour: { kind: 'unsigned', layer: 'formal_collaboration' },
+      signedScale: 'full',
+      edgeWidth: { kind: 'layer', layer: 'connection_strength' },
+      edgeStyle: 'formalInformal',
+      sizeScale: 'rank',
+      communityOutlines: true,
     });
     s.selectMember('SAL03');
     s.setGroup(['SAL01', 'SAL02']);
@@ -77,6 +84,12 @@ describe('saving a view', () => {
         groupBy: 'level',
         ego: { member: 'FIN01', depth: 2 },
         highlight: ['FIN02'],
+        edgeColour: { kind: 'unsigned', layer: 'formal_collaboration' },
+        signedScale: 'full',
+        edgeWidth: { kind: 'layer', layer: 'connection_strength' },
+        edgeStyle: 'formalInformal',
+        sizeScale: 'rank',
+        communityOutlines: true,
       },
       selection: { member: 'SAL03', group: ['SAL01', 'SAL02'] },
     });
@@ -147,7 +160,16 @@ describe('restoring a view', () => {
   it('puts back the weights, map settings and selection, and ends explore tools', () => {
     const s = state();
     s.setPreset('formal');
-    s.setMap({ layout: 'grouped', filters: [{ key: 'team', values: ['People'] }] });
+    s.setMap({
+      layout: 'grouped',
+      filters: [{ key: 'team', values: ['People'] }],
+      edgeColour: { kind: 'groups' },
+      edgeWidth: { kind: 'uniform' },
+      edgeStyle: 'formalInformal',
+      sizeScale: 'rank',
+      communityOutlines: true,
+      signedScale: 'full',
+    });
     s.setGroup(['PEO01']);
     const saved = saveCurrentView('Formal');
     s.setPreset('health');
@@ -158,6 +180,14 @@ describe('restoring a view', () => {
     const after = state();
     expect(after.weights.preset).toBe('formal');
     expect(mapToSaved(after.map)).toStrictEqual(saved?.map);
+    expect(after.map).toMatchObject({
+      edgeColour: { kind: 'groups' },
+      edgeWidth: { kind: 'uniform' },
+      edgeStyle: 'formalInformal',
+      sizeScale: 'rank',
+      communityOutlines: true,
+      signedScale: 'full',
+    });
     expect(after.map.search).toBe('');
     expect(after.selection.group).toEqual(['PEO01']);
     expect(after.tools.removal).toEqual([]);
@@ -213,5 +243,44 @@ describe('layout positions from a saved view', () => {
       [10, 10],
       [-10, -10],
     ]);
+  });
+});
+
+describe('an insight shown on the map', () => {
+  const view = {
+    layer: 'composite',
+    sizeMetric: 'betweenness' as const,
+    layout: 'force' as const,
+    groupBy: null,
+    filters: [],
+    highlight: ['SAL02'],
+  };
+
+  it('colours ties by the signed layer it shows, keeping other encodings', () => {
+    const s = state();
+    s.setMap({ edgeColour: { kind: 'none' }, sizeScale: 'rank', edgeWidth: { kind: 'uniform' } });
+    const patch = insightMapPatch({ ...view, show: ['valence'] }, s.map, s.data.project);
+    expect(patch.edgeColour).toEqual({ kind: 'signed', layer: 'valence' });
+    expect(patch.edgeStyle).toBeUndefined();
+    s.setMap(patch);
+    expect(state().map).toMatchObject({ sizeScale: 'rank', edgeWidth: { kind: 'uniform' } });
+  });
+
+  it('switches the formal and informal style on when it shows both layers', () => {
+    const s = state();
+    const both = insightMapPatch(
+      { ...view, show: ['formal_collaboration', 'informal_collaboration'] },
+      s.map,
+      s.data.project,
+    );
+    expect(both.edgeStyle).toBe('formalInformal');
+    expect(both.edgeColour).toBeUndefined();
+    // Their ties are drawn even when switched-off layers hide them.
+    expect(both.layerToggles).toMatchObject({
+      formal_collaboration: true,
+      informal_collaboration: true,
+    });
+    const one = insightMapPatch({ ...view, show: ['formal_collaboration'] }, s.map, s.data.project);
+    expect(one.edgeStyle).toBeUndefined();
   });
 });

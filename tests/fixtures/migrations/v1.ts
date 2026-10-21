@@ -491,7 +491,7 @@ export const V1_PROJECT = String.raw`{
 }
 `;
 
-/** The saved view above after migration to version 2. */
+/** The saved view above after migration to the current version. */
 export const V1_VIEW_MIGRATED: SavedView = {
   id: 'v1',
   name: 'Finance links',
@@ -516,6 +516,13 @@ export const V1_VIEW_MIGRATED: SavedView = {
     groupBy: 'team',
     ego: { member: 'A01', depth: 2 },
     highlight: [],
+    // From the version 3 → 4 step: valence coloured the ties, on its full scale.
+    edgeColour: { kind: 'signed', layer: 'valence' },
+    signedScale: 'full',
+    edgeWidth: { kind: 'tiesFrom' },
+    edgeStyle: 'none',
+    sizeScale: 'value',
+    communityOutlines: false,
   },
   positions: { A01: { x: 1.5, y: -2, pinned: true } },
   selection: { member: null, group: ['A01', 'A03'] },

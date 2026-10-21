@@ -40,6 +40,8 @@ export interface ExportContext {
   excludeSigned: boolean;
   /** The exclusion removed at least one enabled layer, so the analysis was run again. */
   reanalysed: boolean;
+  /** The exclusion removed the layer edge colour shows, so the map draws no colour and the legend says why (D126). */
+  colourExcluded: boolean;
   weights: ReturnType<typeof effectiveWeights>;
   weightsPreset: WeightState['preset'];
 }
@@ -54,6 +56,12 @@ export async function exportContext(
   const weights = effectiveWeights(project, request.weights);
   let result = request.result;
   let map = request.map;
+  const colour = request.map.edgeColour;
+  const colourExcluded =
+    reanalysed &&
+    (colour.kind === 'signed' || colour.kind === 'unsigned') &&
+    !project.layers.some((l) => l.key === colour.layer) &&
+    source.layers.some((l) => l.key === colour.layer && l.enabled);
   if (reanalysed) {
     const input = buildAnalysisInput(
       project,
@@ -80,6 +88,7 @@ export async function exportContext(
     anonymised: anonymise,
     excludeSigned,
     reanalysed,
+    colourExcluded,
     weights,
     weightsPreset: request.weights.preset,
   };

@@ -34,6 +34,25 @@ export const MIGRATIONS: readonly Migration[] = [
       'Projects hold surveys (respondent mode, spec §15). Existing ties keep no source: it was not recorded, so it is not guessed.',
     up: (file) => ({ ...file, surveys: [] }),
   },
+  {
+    from: 3,
+    to: 4,
+    description:
+      'Saved views choose their encodings: edge colour, width and style, the signed colour scale, node size by value or rank, and community outlines (CLAUDE.md D126, D128).',
+    up: (file) => {
+      const layers = Array.isArray(file.layers) ? file.layers.map(obj) : [];
+      const roles = {
+        formal: layers.find((l) => l.role === 'formal' && l.signed !== true)?.key,
+        informal: layers.find((l) => l.role === 'informal' && l.signed !== true)?.key,
+      };
+      return {
+        ...file,
+        saved_views: Array.isArray(file.saved_views)
+          ? file.saved_views.map((v) => savedViewV3toV4(v, roles))
+          : file.saved_views,
+      };
+    },
+  },
 ];
 
 type Obj = Record<string, unknown>;
@@ -94,6 +113,46 @@ export function savedViewV1toV2(view: unknown): unknown {
     selection: {
       member: null,
       group: Array.isArray(v.selection) ? v.selection : [],
+    },
+  };
+}
+
+/**
+ * Version 3 views had no encoding choices: valence coloured the ties unless
+ * its map switch was off, the formal and informal switches together set the
+ * line style, the valence scale was always shown in full and node size was by
+ * value. Each new field takes its default, except where the version 3 view's
+ * switches already decided it, so a migrated view draws what it drew before.
+ * A view that is not an object, or has no map settings, is left as it is, so
+ * the file check reports it.
+ */
+export function savedViewV3toV4(
+  view: unknown,
+  roles: { formal?: unknown; informal?: unknown } = {},
+): unknown {
+  if (typeof view !== 'object' || view === null || Array.isArray(view)) return view;
+  const v = view as Obj;
+  if (typeof v.map !== 'object' || v.map === null || Array.isArray(v.map)) return view;
+  const map = v.map as Obj;
+  const toggles = obj(map.layerToggles);
+  const hideOff = map.hideOffLayers === true;
+  // Version 3's rule (map/model.ts isToggledOn): a switch not set is on, except
+  // the formal and informal switches, which were off unless ties were hidden.
+  const on = (key: unknown, role: boolean) =>
+    typeof key === 'string' &&
+    (typeof toggles[key] === 'boolean' ? toggles[key] : hideOff || !role);
+  const style = on(roles.formal, true) && on(roles.informal, true);
+  return {
+    ...v,
+    map: {
+      ...map,
+      edgeColour:
+        toggles.valence === false ? { kind: 'none' } : { kind: 'signed', layer: 'valence' },
+      signedScale: 'full',
+      edgeWidth: { kind: 'tiesFrom' },
+      edgeStyle: style ? 'formalInformal' : 'none',
+      sizeScale: 'value',
+      communityOutlines: false,
     },
   };
 }

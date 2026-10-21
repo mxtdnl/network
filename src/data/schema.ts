@@ -13,7 +13,7 @@
 // layer 0 is "neutral") and it is not missing: metrics treat it as no rating,
 // and coverage leaves it out of the ratings that were possible (CLAUDE.md D102).
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 export const APP_NAME = 'Graticule';
 export const APP_VERSION = '1.0.0';
 export const PROJECT_FILE_EXTENSION = '.ona.json';
@@ -94,7 +94,7 @@ export interface Tie {
 
 export type TieSource = 'self_report' | 'imported' | 'entered';
 
-// Saved views (spec §8, schema version 2). A saved view records everything
+// Saved views (spec §8, schema version 2; encodings added in version 4). A saved view records everything
 // needed to show the map again as it was: the composite weights, the map's
 // encodings, filters and layout, where each member was drawn and whether it
 // was pinned, and the selection. Field names inside `weights`, `map` and
@@ -116,6 +116,21 @@ export interface SavedWeights {
   customTreatment: Record<LayerKey, SignedTreatment>;
 }
 
+/**
+ * What edge colour shows (CLAUDE.md D126): a signed layer on the diverging
+ * scale, an unsigned layer (or the composite) on the sequential ramp, whether
+ * a tie runs within or between the node-fill groups, or nothing (stone).
+ */
+export type EdgeColourChoice =
+  | { kind: 'signed'; layer: LayerKey }
+  | { kind: 'unsigned'; layer: LayerRef }
+  | { kind: 'groups' }
+  | { kind: 'none' };
+
+/** What edge width shows: the "Ties from" layer, another unsigned layer (or the composite), or nothing. */
+export type EdgeWidthChoice =
+  { kind: 'tiesFrom' } | { kind: 'layer'; layer: LayerRef } | { kind: 'uniform' };
+
 export interface SavedMapSettings {
   view: 'directed' | 'symmetrised';
   symmetrise: 'mean' | 'min' | 'max';
@@ -133,6 +148,16 @@ export interface SavedMapSettings {
   ego: { member: MemberId; depth: 1 | 2 } | null;
   /** Members highlighted on the map; the rest are faded. */
   highlight: MemberId[];
+  // Schema version 4 (CLAUDE.md D126, D132, D134, D136).
+  edgeColour: EdgeColourChoice;
+  /** A signed colour layer shows its negative ratings only, or the full scale (D132). */
+  signedScale: 'negative' | 'full';
+  edgeWidth: EdgeWidthChoice;
+  edgeStyle: 'none' | 'formalInformal';
+  /** Node area linear in the metric's value or in its rank (D134). */
+  sizeScale: 'value' | 'rank';
+  /** An outline around each community on the "Ties from" layer (D136). */
+  communityOutlines: boolean;
 }
 
 export interface SavedPosition {

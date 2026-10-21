@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { rampColours } from '../../src/ui/map/colour';
 import { CVD, contrast, deltaE00, hex, mixLab, over, simulate, type Rgb } from './colour';
 
 const css = readFileSync(
@@ -83,6 +84,23 @@ describe('contrast of data marks and control boundaries', () => {
     check('valence not rated edge (graphite, D113) on paper', graphite, paper, 3);
     check('edge with valence hidden (stone) on paper', stone, paper, 3);
     check('shortest path (ink) on paper', ink, paper, 3);
+    // Edge colour by an unsigned layer (D126): five steps from --map-ramp-low to val-p3.
+    const low = Number(/--map-ramp-low:\s*([\d.]+)/.exec(css)?.[1]);
+    const text = (name: string) =>
+      new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(css)?.[1] ?? '';
+    const ramp = rampColours(text('val-p3'), text('paper'), low);
+    ramp.forEach((c, k) => {
+      check(`edge ramp step ${String(k + 1)} on paper`, hex(c), paper, 3);
+    });
+    expect(ramp[4]).toBe(text('val-p3').toLowerCase());
+    // Ties between groups (graphite) and within a group (stone) stay apart under every condition.
+    let min = Infinity;
+    for (const c of ['normal', ...Object.keys(CVD)]) {
+      const f = (x: Rgb) => (c === 'normal' ? x : simulate(x, c as keyof typeof CVD));
+      min = Math.min(min, deltaE00(f(graphite), f(stone)));
+    }
+    rows.push(`within (stone) vs between groups (graphite), worst ΔE00: ${min.toFixed(1)}`);
+    expect(min).toBeGreaterThan(9);
   });
 
   it('nodes: the ink outline carries the boundary; the fills are listed', () => {

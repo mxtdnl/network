@@ -152,6 +152,31 @@ interface LabelPlace {
   align: 'center' | 'left' | 'right';
 }
 
+/** Points on the circle round each member from which a community outline is built. */
+const OUTLINE_STEPS = 16;
+
+/** Convex hull of points, in order round the hull (Andrew's monotone chain). */
+export function convexHull(points: readonly Point[]): Point[] {
+  const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  if (pts.length < 3) return pts;
+  const cross = (o: Point, a: Point, b: Point) =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const half = (list: Point[]) => {
+    const out: Point[] = [];
+    for (const p of list) {
+      while (
+        out.length >= 2 &&
+        cross(out[out.length - 2] as Point, out[out.length - 1] as Point, p) <= 0
+      )
+        out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  return [...half(pts), ...half([...pts].reverse())];
+}
+
 /** Up to this many visible members, every member is labelled. */
 export const LABEL_ALL_BELOW = 60;
 
@@ -220,11 +245,7 @@ export function buildScene(
   };
 
   const valenceCache = new Map<number, string>();
-  const colourFor = (v: number) => {
-    if (!model.valenceShown) return theme.stone;
-    // No valence rating: graphite, which reaches 3:1 on paper and stays apart
-    // from every valence step, including the grey neutral (D113).
-    if (Number.isNaN(v)) return theme.graphite;
+  const signed = (v: number) => {
     const q = Math.round(v * 10) / 10;
     let c = valenceCache.get(q);
     if (c === undefined) {
@@ -233,6 +254,54 @@ export function buildScene(
     }
     return c;
   };
+  const colour = model.colour;
+  const colourFor = (e: (typeof model.edges)[number]) => {
+    // No rating on the width layer: thinnest, in stone (D126).
+    if (e.widthNotRated) return theme.stone;
+    const v = e.colour;
+    switch (colour.kind) {
+      case 'none':
+        return theme.stone;
+      case 'groups':
+        // Ties between groups in graphite stand out from ties within a group in stone.
+        return v === 1 ? theme.graphite : theme.stone;
+      default:
+        // Not rated on the colour layer: graphite, which reaches 3:1 on paper
+        // and stays apart from every valence step, including the grey neutral (D113).
+        if (Number.isNaN(v)) return theme.graphite;
+        if (colour.kind === 'unsigned')
+          return v === 0 ? theme.stone : (theme.ramp[v - 1] ?? theme.stone);
+        // Negative ratings only, unless the full scale is asked for (D132).
+        if (!colour.full && Math.round(v * 10) / 10 >= 0) return theme.stone;
+        return signed(v);
+    }
+  };
+
+  // Community outlines (D136), under the ties: a stone line round each community's members.
+  if (model.outlines && !onlyLit) {
+    const pad = theme.labelGap * 2;
+    const groups = new Map<number, Point[]>();
+    for (const node of model.nodes) {
+      const c = model.outlines[node.index] ?? -1;
+      const p = screen[node.index];
+      if (c < 0 || !node.visible || !p) continue;
+      let pts = groups.get(c);
+      if (!pts) groups.set(c, (pts = []));
+      const r = node.radius + theme.line + pad;
+      for (let k = 0; k < OUTLINE_STEPS; k++) {
+        const a = (2 * Math.PI * k) / OUTLINE_STEPS;
+        pts.push({ x: p.x + r * Math.cos(a), y: p.y + r * Math.sin(a) });
+      }
+    }
+    for (const pts of groups.values()) {
+      const hull = convexHull(pts);
+      for (let k = 0; k < hull.length; k++) {
+        const a = hull[k] as Point;
+        const b = hull[(k + 1) % hull.length] as Point;
+        line(theme.stone, theme.line, [], 1, a.x, a.y, b.x, b.y);
+      }
+    }
+  }
 
   // Faded ties first, so highlighted ties sit on top of them.
   const edges = lit
@@ -354,7 +423,7 @@ export function buildScene(
         : lit.has(e.source) && lit.has(e.target));
     if (onlyLit && !incident) continue;
     const alpha = incident ? 1 : theme.fade;
-    const stroke = colourFor(e.valence);
+    const stroke = colourFor(e);
     if (curved) {
       curve(e, a, b, stroke, alpha);
       continue;
