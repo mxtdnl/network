@@ -109,6 +109,7 @@ The passphrase and the decrypted private key are never stored.
   - non-numeric values.
 
   Nothing is coerced silently. The user can import valid rows and skip invalid ones, and the report states how many were skipped.
+- **Roster entry.** The members of a project can be built and edited in the tool instead of imported: start an empty project, add people by name (one per line, or pasted from a spreadsheet column), edit each member's name and attributes, add attributes, and remove members. Ids are generated and never change. Removing a member removes the ratings they gave or received, after a confirmation that says how many. Like every other change to a project, it is not offered in the read-only phone layout.
 - **Matrix entry.** A rater × ratee grid for each layer. It is keyboard-navigable and accepts paste from spreadsheets.
 - **Survey responses.** Encrypted response files and text blocks from respondent mode are imported on the collection dashboard (section 15.5). The ratings they contain pass through the same validation report as a ties file.
 - **Local persistence.** Optional IndexedDB persistence, off by default, with a visible indicator when it is on. A single action clears all locally stored data.
@@ -184,11 +185,13 @@ For path-based metrics, weight is converted to distance as 1/w. The method notes
   - include the positive component only;
   - filter out negative ties;
   - use the layer as a multiplier on the composite.
+
+  Unless the user or a preset chooses otherwise, a signed layer is a multiplier: it adjusts the strength of ties found on other layers and does not create ties of its own.
 - The live formula is shown in plain notation beneath the sliders.
 - Presets: Formal structure, Informal network, Relationship health, Custom.
 - The composite drives:
   - layout attraction;
-  - edge width;
+  - edge width, unless the map is set to take edge width from another layer (section 8);
   - the node-size metric;
   - all rankings.
 - Weight changes animate node positions by interpolation, so users can see what moved.
@@ -203,16 +206,21 @@ The network map is an interactive node-link diagram of members and their weighte
 - Circular by team.
 - Formal hierarchy, if manager ids exist, with informal ties overlaid.
 
-**Encodings.** Each visual channel carries one variable, and every encoding is explained in a persistent legend.
+**Encodings.** Each visual channel carries one variable, chosen by the user, and every encoding is explained in a legend that is always present (it can be condensed, never removed).
 
-| Channel | Variable |
+| Channel | Variable (default first) |
 |---|---|
-| Node size | Chosen metric |
+| Node size | Chosen metric, scaled by value (default) or by rank |
 | Node fill | Chosen attribute or detected community |
-| Edge width | Strength or composite |
-| Edge colour | Valence, on a diverging scale that is safe for colour-vision deficiencies and has a neutral midpoint |
-| Edge style | Formal versus informal, when both are shown |
-| Arrowheads | Directed view only |
+| Community outline | Optional: an outline around each detected community, so communities can be read while fill shows another attribute |
+| Edge width | The tie strength of the layer that sets the ties shown (strength or composite); or another unsigned layer; or the same width for every tie |
+| Edge colour | Valence, on a diverging scale that is safe for colour-vision deficiencies and has a neutral midpoint, colouring negative ratings only by default with a switch to show the full scale; or another signed layer; or whether a tie stays within a group or crosses between groups; or another unsigned layer on a sequential scale; or none |
+| Edge style | Off by default; formal versus informal when switched on and both are shown |
+| Arrowheads | Directed view only, on one-way ties; a pair rated in both directions is one line without arrowheads |
+
+**Colour choices.** The user picks a categorical and a diverging palette from a curated set, and may fix a group's colour. Every palette offered is safe for colour-vision deficiencies and meets 3:1 contrast against the map ground; colours are not entered freely.
+
+**Default density.** The map opens showing fewer ties than the full network, so its structure can be read; the legend states which ties are hidden and that metrics are computed on all ties.
 
 **Interaction.**
 - Layer toggles, a tie-strength threshold slider, attribute filters and search.
@@ -297,7 +305,7 @@ The approved token system lives in `docs/design-system.md` and `src/styles/token
 - **Motion:** only in response to user action, such as layout transitions and panels opening. UI transitions are 250 ms or less, and `prefers-reduced-motion` is respected.
 - **Data-ink discipline:** no 3D, no shadows or gradients on data marks, no decorative gridlines.
 - **Accessibility:** WCAG 2.2 AA. The map is fully keyboard-operable: nodes are focusable, and arrow keys move between neighbours. A tabular alternative is available for screen readers.
-- **Screen sizes:** the analyst workspace and presentation mode are desktop-first (1280–2560 px) and projector-legible, usable on tablet and read-only on phone. The collection dashboard follows the analyst rules. Respondent mode (section 15.4) is designed mobile-first and must be fully usable from 320 px wide phones to desktop, in portrait and landscape, with touch targets of at least 48 × 48 CSS px (which meets both Apple's 44 pt and Material's 48 dp guidance) and no horizontal scrolling.
+- **Screen sizes:** the analyst workspace and presentation mode are desktop-first (1280–2560 px) and projector-legible, usable on tablet and read-only on phone. On smaller laptop screens (narrower or shorter than a large desktop monitor) a compact layout lets the side panels collapse and the legend condense, so the map keeps most of the screen; the user can also choose the compact or full layout. The collection dashboard follows the analyst rules. Respondent mode (section 15.4) is designed mobile-first and must be fully usable from 320 px wide phones to desktop, in portrait and landscape, with touch targets of at least 48 × 48 CSS px (which meets both Apple's 44 pt and Material's 48 dp guidance) and no horizontal scrolling.
 
 **Avoid.** These are common signs of a generated interface:
 - purple, indigo or blue-violet gradients, and gradient washes used as decoration;
@@ -459,7 +467,7 @@ The analyst runs a whole-network survey inside Graticule, with no backend. Each 
 - **Older versions:** responses to an earlier version are mapped to the current roster and layers by member id and layer key. Ratings of members or layers that are no longer in the survey, and colleagues or layers added since, are reported; nothing is guessed.
 - **Close:** closing a survey stops further imports until the analyst reopens it.
 - **After import:** the dashboard reminds the analyst to delete the received response files and the emails that carried them.
-- **Empty state.** The workspace's empty state offers "Run a survey", "Import survey data" (the existing CSV and XLSX import), "Enter as observer" (only if an observer mode is built; none is specified yet) and "Load demo".
+- **Empty state.** The workspace's empty state offers "Run a survey", "Add members" (roster entry, section 5), "Import survey data" (the existing CSV and XLSX import), "Enter as observer" (only if an observer mode is built; none is specified yet) and "Load demo".
 
 ### 15.6 Transport abstraction
 

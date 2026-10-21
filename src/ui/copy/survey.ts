@@ -10,9 +10,10 @@ export const surveyCopy = {
   heading: 'Survey',
   needMembers: {
     heading: 'Add the people you will survey',
-    body: 'A survey asks every member of the project about their colleagues. Import a members file first: it lists each person’s id and name, and can include an email column for sending links.',
-    // The same action, and name, as the empty state's and the Project menu's.
+    body: 'A survey asks every member of the project about their colleagues. Add at least two people in the Members tab, or import a members file: it lists each person’s id and name, and can include an email column for sending links.',
+    // The same actions, and names, as the empty state's and the Project menu's.
     action: 'Import survey data',
+    add: 'Add members',
   },
   intro: {
     heading: 'Run a survey',

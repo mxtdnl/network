@@ -3,6 +3,7 @@ import { shellCopy } from '../copy/shell';
 import { loadDemo } from '../state/projectActions';
 import { useReadOnly } from '../state/layoutMode';
 import { useAppStore } from '../state/store';
+import { startNewProject } from './MembersView';
 
 // Shown in the map view until a project has data (spec §12: empty states tell
 // the user the next action).
@@ -10,6 +11,7 @@ export function EmptyState() {
   const headingId = useId();
   const setImportOpen = useAppStore((s) => s.setImportOpen);
   const setCentreView = useAppStore((s) => s.setCentreView);
+  const hasProject = useAppStore((s) => s.data.project !== null);
   const copy = shellCopy.empty;
   // On a phone the project can be viewed, not built: only the demo and Project → Open remain.
   const readOnly = useReadOnly();
@@ -30,6 +32,17 @@ export function EmptyState() {
               }}
             >
               {copy.runSurvey}
+            </button>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => {
+                // Without a project, one is started first (CLAUDE.md D124).
+                if (hasProject) setCentreView('members');
+                else startNewProject();
+              }}
+            >
+              {copy.addMembers}
             </button>
             <button
               type="button"

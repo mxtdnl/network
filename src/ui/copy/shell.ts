@@ -24,6 +24,7 @@ export const shellCopy = {
     matrix: 'Matrix',
     table: 'Table',
     compare: 'Compare',
+    members: 'Members',
     survey: 'Survey',
   },
   rightTabs: {
@@ -32,12 +33,13 @@ export const shellCopy = {
     coverage: 'Coverage',
   },
   empty: {
-    heading: 'Run a survey, import data or load the demo',
-    body: 'Run a survey: each person answers through their own link and returns an encrypted response to you. Or import survey data you already hold, as a members file and a ties file in CSV or XLSX format, or explore Graticule with a fictional team of 40 people.',
+    heading: 'Run a survey, add members, import data or load the demo',
+    body: 'Run a survey: each person answers through their own link and returns an encrypted response to you. Add the people the project is about by hand, then survey them or enter ratings yourself. Or import survey data you already hold, as a members file and a ties file in CSV or XLSX format, or explore Graticule with a fictional team of 40 people.',
     phoneBody:
       'On a phone, open a project saved on this device from the Project menu, or explore Graticule with a fictional team of 40 people. Surveys and imports need a tablet or computer.',
     privacy: 'Files are processed in this browser and are not uploaded anywhere.',
     runSurvey: 'Run a survey',
+    addMembers: 'Add members',
     importData: 'Import survey data',
     loadDemo: 'Load demo',
   },
@@ -48,7 +50,7 @@ export const shellCopy = {
   },
   phone: {
     readOnly:
-      'On a phone the project can be viewed and explored, not changed. Import data, enter ratings, edit layers and views, and run surveys on a tablet or computer.',
+      'On a phone the project can be viewed and explored, not changed. Add members, import data, enter ratings, edit layers and views, and run surveys on a tablet or computer.',
     controls: 'Weights and map settings',
   },
   rightEmpty: {

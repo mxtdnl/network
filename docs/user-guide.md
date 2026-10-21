@@ -16,17 +16,31 @@ The first time you open Graticule it shows a notice about data and consent. Read
 
 ![The first-run notice, "Before you start", listing four points about data, consent, evaluation and data protection, and four more for surveys](user-guide/first-run-notice.jpg)
 
-The empty workspace offers three ways in: run a survey, import survey data you already hold, or load the demo. The demo is a fictional organisation of 40 people in five teams, built to contain a broker between teams, a team that keeps to itself, a pocket of reciprocated negative ratings and a clear mismatch between formal and informal ties. It is the quickest way to learn the tool.
+The empty workspace offers four ways in: run a survey, add members by hand (see [Building a roster in Graticule](#building-a-roster-in-graticule)), import survey data you already hold, or load the demo. The demo is a fictional organisation of 40 people in five teams, built to contain a broker between teams, a team that keeps to itself, a pocket of reciprocated negative ratings and a clear mismatch between formal and informal ties. It is the quickest way to learn the tool.
 
-![The empty workspace with the buttons Run a survey, Import survey data and Load demo](user-guide/empty-workspace.jpg)
+![The empty workspace with the buttons Run a survey, Add members, Import survey data and Load demo](user-guide/empty-workspace.jpg)
 
-The workspace has three columns: settings on the left (weights, map settings and layers), views in the centre (Map, Matrix, Table, Compare and Survey), and details on the right (Member, Explore, Insights, Views and Coverage). The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
+The workspace has three columns: settings on the left (weights, map settings and layers), views in the centre (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Coverage). The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
 
 ### Projects and local storage
 
-A project is saved as a single file ending in `.ona.json`, which holds the members, layers, ratings, saved views, surveys and settings. Use Project → Save project to download it and Project → Open project… to open it again. Keep project files as you would any personal data; never commit them to a public repository.
+A project is saved as a single file ending in `.ona.json`, which holds the members, layers, ratings, saved views, surveys and settings. Use Project → New project to start an empty one, Project → Save project to download it and Project → Open project… to open it again. Keep project files as you would any personal data; never commit them to a public repository.
 
 Graticule does not keep anything in the browser unless you ask it to. Project → Keep a copy in this browser stores the open project on this device, and the top bar says "Kept in this browser" while it is on. Project → Clear local data… deletes everything Graticule has stored in this browser, including that copy and your preferences.
+
+## Building a roster in Graticule
+
+You do not need a spreadsheet to start. The Members tab builds the list of people a project is about, and keeps it up to date as people join or leave. Choose Add members in the empty workspace, or Project → New project, which starts an empty project and opens the tab. On a phone the tab is not shown, because a project cannot be changed there.
+
+- **Project title.** Shown in the top bar, in file names and on the report cover.
+- **Add people.** Type names, or paste a column from a spreadsheet, one name per line, and choose Add people. Each person gets an id (`m001`, `m002`, …) that never changes, because ratings, surveys and saved views refer to people by id.
+- **People.** One row per person, with their name and every attribute: team, level, location, tenure band and formal manager to begin with. Each change is saved when you leave the field; leave a field blank if it is not recorded. Values you have typed before are offered as you type, so "Finance" is spelled the same way each time. For the formal manager, type or choose another person's name.
+- **Remove.** Removing someone also removes every rating they gave or received, and clears them as anyone's manager. Graticule asks first and says how many ratings will go. If they are on a survey's roster, their responses can no longer be imported, and ratings of them in other people's responses are listed as dropped.
+- **Columns.** Rename a column, or add one: a category (such as a site), an ordered category (such as a grade) or an email address for sending survey links. Email addresses are never analysed, shown in analysis views or exported with the analysis. A renamed column keeps its import key, shown under its label, so a members file with that column still matches. Columns cannot be deleted here.
+
+While names are hidden, the tab shows codes instead of names and leaves out ids and email addresses, which could identify people; turn off Hide names to edit them.
+
+With two or more people on the list, set up a survey from the Survey tab or enter ratings yourself in the matrix (see [Entering ratings by hand](#entering-ratings-by-hand)). A members file can still be imported instead, and is quicker for a large organisation whose list already exists in a spreadsheet.
 
 ## Preparing data from the templates
 
@@ -78,7 +92,7 @@ The design is a whole-network (roster) survey: every person is asked about their
 
 ### Before you start
 
-1. Import a members file (Project → Import survey data…) listing everyone who will take part. Include an `email` column if you want a mail-merge list of links.
+1. List everyone who will take part: add them in the Members tab (see [Building a roster in Graticule](#building-a-roster-in-graticule)), or import a members file (Project → Import survey data…). Add an email column if you want a mail-merge list of links.
 2. Turn on the layers you want to ask about, and check their wording in the Layers section.
 3. Agree the purpose, who will see the results and how long the data will be kept, and take data protection advice (see [Ethics and consent](#ethics-and-consent)).
 

@@ -593,11 +593,12 @@ test('keyboard walkthrough: every analyst flow by keyboard alone', async ({ page
   // Project menu: open with Enter, move with arrows, choose with Enter.
   await page.getByRole('banner').getByRole('button', { name: 'Project' }).focus();
   await key('Enter');
-  await expect(page.getByRole('menuitem', { name: 'Open project…' })).toBeFocused();
+  await expect(page.getByRole('menuitem', { name: 'New project' })).toBeFocused();
   await key('Escape');
   await expect(page.getByRole('banner').getByRole('button', { name: 'Project' })).toBeFocused();
   await key('ArrowDown');
-  for (let i = 0; i < 3; i++) await key('ArrowDown');
+  // New project, Open project…, Save project, Import survey data…, Load demo.
+  for (let i = 0; i < 4; i++) await key('ArrowDown');
   expect(await focused()).toBe('Load demo');
   await key('Enter');
   await expect(nodes(page)).toHaveCount(40, { timeout: 60_000 });

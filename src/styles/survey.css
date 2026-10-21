@@ -361,3 +361,95 @@
   border-radius: var(--r-control);
   columns: 2 var(--matrix-label-width);
 }
+
+/* Members tab: building the roster in Graticule (CLAUDE.md D124) */
+.members {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.members > .survey__text,
+.members > .field {
+  max-width: calc(var(--dialog-width-wide) + var(--s-6));
+}
+
+.members__section {
+  margin-top: var(--s-6);
+}
+
+.members__heading {
+  margin-bottom: var(--s-2);
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+  font-weight: var(--weight-semibold);
+}
+
+.members__note {
+  display: flex;
+  gap: var(--s-2);
+  max-width: var(--measure);
+  margin-bottom: var(--s-3);
+}
+
+.members__note .icon {
+  flex: none;
+  margin-top: calc((var(--t-0-line) - var(--icon-size)) / 2);
+}
+
+.members__add {
+  max-width: var(--field-max-width);
+}
+
+.members__scroll {
+  max-width: 100%;
+  margin-top: var(--s-2);
+  overflow-x: auto;
+}
+
+.members__table tbody td {
+  padding-block: var(--s-1);
+}
+
+.members__id {
+  color: var(--graphite);
+}
+
+.members__name {
+  width: var(--matrix-label-width);
+}
+
+.members__field {
+  width: var(--members-field-width);
+}
+
+.members__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--matrix-label-width), 1fr));
+  column-gap: var(--s-4);
+  max-width: calc(var(--dialog-width-wide) + var(--s-6));
+}
+
+.members__columns .text-input {
+  width: 100%;
+}
+
+.members__add-column {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: var(--s-4);
+}
+
+.members__add-column > .button {
+  margin-bottom: var(--s-4);
+}
+
+.members__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.members__table thead th {
+  text-align: start;
+}
