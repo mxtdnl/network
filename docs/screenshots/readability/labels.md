@@ -63,3 +63,23 @@ Not recommended now: leader lines (E) remove the last 3 at 1280 × 720 but add a
 - One project (the 40-member demo), one layout (force-directed, which is deterministic: two runs gave the same positions) and the default settings. Grouped and circular layouts, other size metrics and other thresholds were not measured.
 - Device pixel ratio 1 only, in headless Chromium; fonts as shipped.
 - The options are a simulation on recorded positions, validated by reproducing the current rule exactly; their rendering, label-to-member legibility and export output have not been seen.
+
+## Built (2026-10-21)
+
+The owner chose the recommendation (B with D). As built:
+
+- **Widths.** `MapController.measure` caches a width per font and text, and only once `document.fonts.check` says the font has loaded. Until then it measures without caching, asks `document.fonts.load` for that font and text, and redraws the picture when it arrives; a font that still does not report as loaded after one try is measured as it falls back, so the map cannot redraw in a loop. Keying by font also keeps presentation mode's larger labels (`t-1`) from reusing the workspace's widths.
+- **Places.** Outside the circular layout, every label tries below, above, right and left (`scene.ts`), and a place is refused if it overlaps a placed label or covers another visible member's circle (radius plus the outline). The places after the first must lie on the canvas; the first (below) keeps today's rule, so a label at the edge of a panned view behaves as before. A highlighted, hovered or focused member whose four places all cover another member still gets the first place that clears the other labels (D80). The circular layout is unchanged. Unlike the simulation, the legend and zoom controls are not obstacles: the scene does not know where they are, and no label fell under them in any measured case.
+- **Exports.** PNG, SVG and PDF take labels from the same scene, so they follow; their measure already waited for the fonts.
+
+Measured again on the rebuilt site, the same way as above:
+
+| Window | Names shown, before → after | Names hidden, before → after |
+|---|---|---|
+| 1280 × 720 | 9 → 3 (Uma Trigpoint, Dario Zenith, Hugo Compass) | 5 → 1 (SAL-L2-05) |
+| 1440 × 900 | 3 → 0 | 1 → 0 |
+| 1920 × 1080 | 2 → 0 | 0 → 0 |
+
+These equal the simulation's figures for option D, member for member. Screenshots: `labels-after-1280x720.png`, `labels-after-1440x900.png`, `labels-after-1920x1080.png`, and `labels-after-1280x720-unlabelled.png` (the remaining unlabelled member circled; annotation only). Seen by eye at 1280 × 720: names beside a member in the dense Product–Sales–People area sit close to neighbouring members, so a name's member is read from its side (text starts at the member, or ends at it) rather than from being underneath.
+
+Tests: `tests/unit/map.test.ts` checks that no name covers another member, that a name moves above when the place below would cover a member, that a moved name stays on the canvas, and that a focused member is labelled even when every place covers another; the overlap test now reads each label's alignment. The unit suite and `map`, `present` (including the canvas anonymisation sweep), `readability`, `export` and `explore` end-to-end specs pass.

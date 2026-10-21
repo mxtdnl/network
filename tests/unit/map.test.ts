@@ -447,13 +447,31 @@ describe('scene', () => {
     expect(litOnly.lines.every((b) => b.alpha === 1)).toBe(true);
   });
 
+  /** A label's box as the scene places it, with the scene's default measure. */
+  const labelBox = (l: { x: number; y: number; text: string; align?: string }) => {
+    const w = l.text.length * theme.labelSize * 0.5 + theme.labelGap * 2;
+    const x0 = l.align === 'left' ? l.x : l.align === 'right' ? l.x - w : l.x - w / 2;
+    return { x0, x1: x0 + w, y0: l.y - theme.labelSize, y1: l.y + theme.labelGap };
+  };
+  const covers = (b: ReturnType<typeof labelBox>, c: { x: number; y: number; r: number }) => {
+    const dx = c.x - Math.min(Math.max(c.x, b.x0), b.x1);
+    const dy = c.y - Math.min(Math.max(c.y, b.y0), b.y1);
+    return dx * dx + dy * dy < (c.r + theme.line) ** 2;
+  };
+  /** Members 2 onwards in rows across the lower half; members 0 and 1 placed by the test. */
+  const rows = (n: number, first: Point, second: Point): Point[] =>
+    Array.from({ length: n }, (_, i) =>
+      i === 0
+        ? first
+        : i === 1
+          ? second
+          : { x: -360 + 80 * ((i - 2) % 10), y: 40 + 60 * Math.floor((i - 2) / 10) },
+    );
+
   it('never lets two labels overlap', async () => {
     const m = await model();
     const scene = buildScene(m, spiral(m.n), t, size, theme, none);
-    const boxes = scene.labels.map((l) => {
-      const w = (l.text.length * theme.labelSize * 0.5) / 2 + theme.labelGap;
-      return { x0: l.x - w, x1: l.x + w, y0: l.y - theme.labelSize, y1: l.y + theme.labelGap };
-    });
+    const boxes = scene.labels.map(labelBox);
     for (let i = 0; i < boxes.length; i++) {
       for (let j = i + 1; j < boxes.length; j++) {
         const a = boxes[i];
@@ -462,6 +480,71 @@ describe('scene', () => {
         expect(a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0).toBe(false);
       }
     }
+  });
+
+  it('never draws a name over another member', async () => {
+    const m = await model();
+    const scene = buildScene(m, spiral(m.n), t, size, theme, none);
+    for (const l of scene.labels) {
+      for (const node of scene.nodes) {
+        if (node.index !== l.index) expect(covers(labelBox(l), node)).toBe(false);
+      }
+    }
+  });
+
+  it('moves a name above its member when the place below would cover another (Q36)', async () => {
+    const m = await model();
+    const r = m.nodes[0]?.radius ?? 0;
+    const scene = buildScene(
+      m,
+      rows(m.n, { x: 0, y: -200 }, { x: 0, y: -200 + r + 12 }),
+      t,
+      size,
+      theme,
+      none,
+    );
+    const label = scene.labels.find((l) => l.index === 0);
+    expect(label?.align ?? 'center').toBe('center');
+    expect(label?.y).toBeLessThan(100);
+  });
+
+  it('keeps a moved name on the canvas', async () => {
+    const m = await model();
+    const r = m.nodes[0]?.radius ?? 0;
+    // At the top edge, the place above is off the canvas: the name goes to the
+    // right of the member (text anchored at its left end).
+    const top = -300 + r + 10;
+    const scene = buildScene(
+      m,
+      rows(m.n, { x: 0, y: top }, { x: 0, y: top + r + 12 }),
+      t,
+      size,
+      theme,
+      none,
+    );
+    const label = scene.labels.find((l) => l.index === 0);
+    expect(label?.align).toBe('left');
+    const box = label ? labelBox(label) : undefined;
+    expect(box && box.y0 >= 0 && box.x1 <= size.width).toBe(true);
+  });
+
+  it('labels a focused member even when every place covers another', async () => {
+    const m = await model();
+    const r = m.nodes[0]?.radius ?? 0;
+    // Members below, above, right and left of member 0, where its name would go.
+    const at = (i: number): Point =>
+      [
+        { x: 0, y: -200 },
+        { x: 0, y: -200 + r + 12 },
+        { x: 0, y: -200 - r - 14 },
+        { x: r + 20, y: -200 },
+        { x: -r - 20, y: -200 },
+      ][i] ?? { x: -360 + 80 * ((i - 5) % 10), y: 40 + 60 * Math.floor((i - 5) / 10) };
+    const positions = Array.from({ length: m.n }, (_, i) => at(i));
+    const plain = buildScene(m, positions, t, size, theme, none);
+    expect(plain.labels.some((l) => l.index === 0)).toBe(false);
+    const focused = buildScene(m, positions, t, size, theme, { ...none, focused: 0 });
+    expect(focused.labels.some((l) => l.index === 0)).toBe(true);
   });
 
   it('draws arrowheads on one-way ties only, and one line per pair', async () => {
