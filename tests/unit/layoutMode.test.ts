@@ -203,6 +203,7 @@ describe('condensed legend', () => {
         { width: 2.2, label: '0.60' },
         { width: 3, label: '1.00' },
       ],
+      notRated: null,
       notes: ['Ties below 0.20 are hidden.'],
     },
     {

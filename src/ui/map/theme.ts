@@ -3,6 +3,8 @@
 // read with getComputedStyle once and passed to the scene builder (the same
 // approach as the matrix, CLAUDE.md D31). No design value is written here.
 
+import { rampColours } from './colour';
+
 export interface MapTheme {
   ink: string;
   graphite: string;
@@ -12,6 +14,8 @@ export interface MapTheme {
   other: string;
   /** Diverging valence scale, −3 … +3. */
   valence: string[];
+  /** Sequential ramp for edge colour by an unsigned layer, five steps from light to dark (D126). */
+  ramp: string[];
   /** Node radius range in CSS pixels, and the radius of a member whose size metric is not defined. */
   nodeMin: number;
   nodeMax: number;
@@ -72,6 +76,7 @@ export function readMapTheme(source: Element | TokenSource = document.documentEl
     categorical: TOKEN_NAMES.categorical.map(text),
     other: text('--cat-other'),
     valence: TOKEN_NAMES.valence.map(text),
+    ramp: rampColours(text('--val-p3'), text('--paper'), number('--map-ramp-low')),
     nodeMin: number('--map-node-min'),
     nodeMax: number('--map-node-max'),
     nodeUndefined: number('--map-node-undefined'),

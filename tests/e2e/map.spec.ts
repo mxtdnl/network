@@ -101,13 +101,11 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   // A pair rated both ways is one line; only one-way ties carry arrowheads (D131).
   await expect(legend.getByText('One way, from rater to rated member')).toBeVisible();
   await expect(legend.getByText('Both ways: one line, the two directions averaged')).toBeVisible();
-  // Edge style is off until both collaboration layers are switched on (D133).
+  // Edge style is off until it is chosen (D126, D133).
   await expect(legend.getByText('Edge style', { exact: true })).toHaveCount(0);
-  for (const name of ['Formal collaboration', 'Informal collaboration']) {
-    const toggle = page.getByRole('switch', { name: `${name} on the map`, exact: true });
-    await expect(toggle).toHaveAttribute('aria-checked', 'false');
-    await toggle.click();
-  }
+  const style = page.getByLabel('Edge style');
+  await expect(style).toHaveValue('none');
+  await style.selectOption({ label: 'Formal and informal collaboration' });
   await expect(legend.getByText('Edge style', { exact: true })).toBeVisible();
   await expect(legend.getByText('Bridging', { exact: true })).toBeVisible();
   await expect(map.getByRole('table')).toHaveCount(1);
@@ -124,9 +122,35 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   await expect(legend.getByText('Local clustering', { exact: true })).toBeVisible();
   await page.getByRole('radio', { name: 'Directed', exact: true }).check();
   await expect(legend.getByText('Direction', { exact: true })).toBeVisible();
-  await page.getByRole('switch', { name: 'Valence on the map' }).click();
-  await expect(legend.getByText('Not used: valence is hidden')).toBeVisible();
-  await page.getByRole('switch', { name: 'Valence on the map' }).click();
+  // Edge colour: negative valence only by default (D132), the full scale on request, or another encoding (D126).
+  const colour = page.getByLabel('Edge colour');
+  await expect(legend.getByText('Valence: negative ratings only')).toBeVisible();
+  await page.getByRole('switch', { name: 'Show the full scale' }).click();
+  await expect(legend.getByText('Valence, −3 to +3')).toBeVisible();
+  await page.getByRole('switch', { name: 'Show the full scale' }).click();
+  await colour.selectOption({ label: 'Within or between groups' });
+  await expect(legend.getByText('Within or between groups of Team or function')).toBeVisible();
+  await colour.selectOption({ label: 'Formal collaboration' });
+  await expect(legend.getByText('Formal collaboration, strength')).toBeVisible();
+  await colour.selectOption({ label: 'None' });
+  await expect(legend.getByText('Not used', { exact: true })).toBeVisible();
+  await colour.selectOption({ label: 'Valence' });
+  // Edge width by another layer, or the same for every tie.
+  await page.getByLabel('Edge width').selectOption({ label: 'Formal collaboration' });
+  await expect(legend.getByText('Ties drawn from Composite of all layers')).toBeVisible();
+  await page.getByLabel('Edge width').selectOption({ label: 'Same for every tie' });
+  await expect(legend.getByText('Not used: the same for every tie')).toBeVisible();
+  await page.getByLabel('Edge width').selectOption({ index: 0 });
+  // Node size by rank (D134) and community outlines (D136).
+  await page.getByRole('radio', { name: 'By rank' }).check();
+  await expect(legend.getByText('Local clustering, by rank')).toBeVisible();
+  await page.getByRole('radio', { name: 'By value' }).check();
+  await page.getByRole('switch', { name: 'Outline communities' }).click();
+  await expect(
+    legend.getByText('Community outline, detected on Composite of all layers'),
+  ).toBeVisible();
+  await page.getByRole('switch', { name: 'Outline communities' }).click();
+  await expectNoAxeViolations(page);
 
   // Layer toggles can also hide a layer's ties.
   await page.getByRole('radio', { name: 'Hide its ties' }).check();

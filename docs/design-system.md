@@ -118,6 +118,7 @@ Assessment: the sign of a tie (the most important reading) is unambiguous under 
 ### 2.3 Other data encodings
 
 - **Edge style:** formal = solid, informal = dashed (4 px dash, 3 px gap at 1× width), both = solid with a parallel dashed offset only when both are shown. No colour change.
+- **Edge colour by an unsigned layer (D126):** five steps of `val-p3` mixed into `paper` in CIELAB, from `--map-ramp-low` (60 %, 3.3:1 on `paper`) to `val-p3` itself; a pair rated 0 is `stone` and one not rated `graphite`. Within or between groups: `stone` within, `graphite` between (ΔE00 ≥ 16.9 under every simulation).
 - **Matrix heat-coding:** sequential single-hue ramp derived from `val-p3` towards `paper` for unsigned layers; the diverging scale for signed layers. Missing cells use a diagonal hatch in `stone`, never a colour, so "not rated" cannot be mistaken for 0.
 - **Selection and focus on the map:** 2 px `ink` ring outside a 2 px `paper` halo; non-selected members fade to 30 % opacity. No accent.
 

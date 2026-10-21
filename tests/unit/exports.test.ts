@@ -27,6 +27,7 @@ import {
 import { readExportTheme } from '../../src/ui/export/theme';
 import { DIRECTED_METRICS } from '../../src/ui/copy/metrics';
 import { effectiveWeights, type WeightState } from '../../src/ui/state/presets';
+import type { MapSettings } from '../../src/ui/state/store';
 import {
   EXCLUDED_KEYS,
   contextFor,
@@ -225,6 +226,195 @@ describe.each(TYPES)('%s export', (type) => {
   });
 });
 
+const label = (key: string) => project.layers.find((l) => l.key === key)?.label ?? key;
+
+/**
+ * The encoding choices (CLAUDE.md D126, D132, D134, D136), each with text the
+ * map's legend shows when the encoding's layer is kept, and when the
+ * signed-layer exclusion leaves it out.
+ */
+const ENCODINGS: {
+  name: string;
+  map: Partial<MapSettings>;
+  kept: string[];
+  excluded: string[];
+}[] = [
+  {
+    name: 'valence, negative ratings only (the default)',
+    map: {},
+    kept: ['Valence: negative ratings only', 'Neutral or positive'],
+    excluded: ['Not used: its layer is left out of this export'],
+  },
+  {
+    name: 'valence, full scale',
+    map: { signedScale: 'full' },
+    kept: ['Valence, −3 to +3'],
+    excluded: ['Not used: its layer is left out of this export'],
+  },
+  {
+    name: 'energy',
+    map: { edgeColour: { kind: 'signed', layer: 'energy' } },
+    kept: [`${label('energy')}: negative ratings only`],
+    excluded: ['Not used: its layer is left out of this export'],
+  },
+  {
+    name: 'a conflict layer on the ramp',
+    map: { edgeColour: { kind: 'unsigned', layer: 'conflict_task' } },
+    kept: [`${label('conflict_task')}, strength`],
+    excluded: ['Not used: its layer is left out of this export'],
+  },
+  {
+    name: 'formal collaboration on the ramp',
+    map: { edgeColour: { kind: 'unsigned', layer: 'formal_collaboration' } },
+    kept: ['Formal collaboration, strength'],
+    excluded: ['Formal collaboration, strength'],
+  },
+  {
+    name: 'within or between groups',
+    map: { edgeColour: { kind: 'groups' } },
+    kept: ['Within or between groups of Team or function', 'Between groups'],
+    excluded: ['Within or between groups of Team or function', 'Between groups'],
+  },
+  {
+    name: 'no colour',
+    map: { edgeColour: { kind: 'none' } },
+    kept: ['Edge colour'],
+    excluded: ['Edge colour'],
+  },
+  {
+    name: 'width by a conflict layer',
+    map: { edgeWidth: { kind: 'layer', layer: 'conflict_personal' } },
+    kept: [`Not rated on ${label('conflict_personal')}`, 'Ties drawn from Composite of all layers'],
+    // Left out, the width falls back to the layer the ties are drawn from.
+    excluded: ['Composite of all layers'],
+  },
+  {
+    name: 'the same width for every tie',
+    map: { edgeWidth: { kind: 'uniform' } },
+    kept: ['Not used: the same for every tie'],
+    excluded: ['Not used: the same for every tie'],
+  },
+  {
+    name: 'formal and informal style',
+    map: { edgeStyle: 'formalInformal' },
+    kept: ['Edge style', 'Formal only'],
+    excluded: ['Edge style', 'Formal only'],
+  },
+  {
+    name: 'size by rank',
+    map: { sizeScale: 'rank' },
+    kept: ['Bridging, by rank', 'Rank 1'],
+    excluded: ['Bridging, by rank', 'Rank 1'],
+  },
+  {
+    name: 'community outlines',
+    map: { communityOutlines: true },
+    kept: ['Community outline, detected on Composite of all layers'],
+    excluded: ['Community outline, detected on Composite of all layers'],
+  },
+];
+
+const MAP_TYPES = ['png', 'svg', 'pdf'] as const;
+
+describe.each(ENCODINGS)('map encoding: $name', ({ map, kept, excluded }) => {
+  describe.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])('names hidden %s, signed layers left out %s', (anonymise, excludeSigned) => {
+    // The PDF draws the same document as the SVG; it runs for two of the four combinations to save time.
+    const types = anonymise === excludeSigned ? MAP_TYPES : MAP_TYPES.filter((x) => x !== 'pdf');
+    it.each(types)(
+      '%s respects both settings and explains the encoding',
+      async (type) => {
+        const ctx = await contextFor(project, { anonymise, excludeSigned, weights: HEALTH, map });
+        const out = await produce(type, ctx);
+        const namesFound = NAMES.filter((n) => out.text.includes(n));
+        if (anonymise) expect(namesFound).toEqual([]);
+        else expect(namesFound.length).toBeGreaterThan(0);
+        const signedFound = [...EXCLUDED_KEYS, ...EXCLUDED_LABELS].filter((w) =>
+          wordIn(out.text, w),
+        );
+        // The ramp's darkest step is val-p3 itself (the matrix's ramp runs towards it), so with an
+        // unsigned colour layer that one colour is the ramp's, not valence's.
+        const ramp =
+          map.edgeColour?.kind === 'unsigned' ? theme.map.ramp.map((c) => c.toLowerCase()) : [];
+        const valenceDrawn = VALENCE_COLOURS.filter(
+          (c) => out.colours?.has(c) && !ramp.includes(c),
+        );
+        // Legend lines wrap into separate text items, so text is searched without markup or line breaks.
+        const flat = out.text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        if (excludeSigned) {
+          expect(signedFound).toEqual([]);
+          expect(valenceDrawn).toEqual([]);
+          for (const text of excluded) expect(flat).toContain(text);
+        } else {
+          for (const text of kept) expect(flat).toContain(text);
+        }
+      },
+      30_000,
+    );
+  });
+});
+
+describe('map encodings in exports', () => {
+  it('draws only negative valence steps by default, and every step on the full scale', async () => {
+    const steps = async (m: Partial<MapSettings>) => {
+      const ctx = await contextFor(project, { anonymise: true, excludeSigned: false, map: m });
+      const out = await produce('svg', ctx);
+      return VALENCE_COLOURS.map((c) => out.colours?.has(c) ?? false);
+    };
+    // The legend's ramp shows the steps it uses; the map draws whole steps in the directed view.
+    expect(await steps({})).toEqual([true, true, true, false, false, false, false]);
+    expect(await steps({ signedScale: 'full' })).toEqual(VALENCE_COLOURS.map(() => true));
+  });
+
+  it('draws the sequential ramp for an unsigned colour layer', async () => {
+    const ctx = await contextFor(project, {
+      anonymise: true,
+      excludeSigned: false,
+      map: { edgeColour: { kind: 'unsigned', layer: 'formal_collaboration' } },
+    });
+    const out = await produce('svg', ctx);
+    expect(theme.map.ramp.every((c) => out.colours?.has(c.toLowerCase()))).toBe(true);
+  });
+
+  it('says why colour is not used when the exclusion removed its layer', async () => {
+    const ctx = await contextFor(project, {
+      anonymise: false,
+      excludeSigned: true,
+      map: { edgeColour: { kind: 'signed', layer: 'energy' } },
+    });
+    expect(ctx.colourExcluded).toBe(true);
+    const { map } = mapExport(ctx, mapState, deps, '');
+    expect(map.model.colour).toMatchObject({ kind: 'none', reason: 'excluded' });
+    // A colour layer the exclusion keeps is not affected.
+    const kept = await contextFor(project, {
+      anonymise: false,
+      excludeSigned: true,
+      map: { edgeColour: { kind: 'unsigned', layer: 'formal_collaboration' } },
+    });
+    expect(kept.colourExcluded).toBe(false);
+    expect(mapExport(kept, mapState, deps, '').map.model.colour.kind).toBe('unsigned');
+  });
+
+  it('carries the community outlines into the exported map', async () => {
+    const lines = async (communityOutlines: boolean) => {
+      const ctx = await contextFor(project, {
+        anonymise: true,
+        excludeSigned: false,
+        map: { communityOutlines },
+      });
+      const { map } = mapExport(ctx, mapState, deps, '');
+      return map.scene.lines
+        .filter((b) => b.stroke === theme.map.stone)
+        .reduce((k, b) => k + b.coords.length, 0);
+    };
+    expect(await lines(true)).toBeGreaterThan(await lines(false));
+  });
+});
+
 describe('signed-layer exclusion recalculates every figure', () => {
   it('gives the composite of the project without those layers, not the one on screen', async () => {
     const kept = await contextFor(project, {
@@ -355,7 +545,10 @@ describe('export files', () => {
     expect(heads).toBeGreaterThan(0);
     expect(heads).toBeLessThanOrEqual(oneWay);
     expect(map.model.styleShown).toBe(false);
-    const svg = (await svgExport(ctx, mapState, deps, '')).text;
+    // Legend labels wrap within the column, so the text is read without markup.
+    const svg = (await svgExport(ctx, mapState, deps, '')).text
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ');
     expect(svg).toContain('One way, from rater to rated member');
     expect(svg).toContain('Both ways: one line, the two directions averaged');
     expect(svg).not.toContain('Edge style');

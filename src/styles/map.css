@@ -177,8 +177,15 @@
   stroke: var(--stone);
 }
 
-.legend__edge--not-rated {
+.legend__edge--not-rated,
+.legend__edge--graphite {
   stroke: var(--graphite); /* as on the map (D113) */
+}
+
+/* Community outlines (D136): unfilled, in stone. */
+.legend__outline {
+  fill: none;
+  stroke: var(--stone);
 }
 
 .legend__arrow {
@@ -230,7 +237,9 @@
 
 .legend__ramp {
   display: grid;
-  grid-template-columns: repeat(7, var(--map-legend-swatch));
+  grid-auto-columns: var(--map-legend-swatch);
+  grid-auto-flow: column;
+  justify-content: start;
   height: var(--s-2);
 }
 
@@ -253,6 +262,35 @@
   background: var(--val-p2);
 }
 .legend__step--p3 {
+  background: var(--val-p3);
+}
+
+/* Edge colour by an unsigned layer (D126): val-p3 into paper, from --map-ramp-low to full. */
+.legend__step--ramp-1 {
+  background: color-mix(in lab, var(--val-p3) calc(var(--map-ramp-low) * 100%), var(--paper));
+}
+.legend__step--ramp-2 {
+  background: color-mix(
+    in lab,
+    var(--val-p3) calc((var(--map-ramp-low) + (1 - var(--map-ramp-low)) * 0.25) * 100%),
+    var(--paper)
+  );
+}
+.legend__step--ramp-3 {
+  background: color-mix(
+    in lab,
+    var(--val-p3) calc((var(--map-ramp-low) + (1 - var(--map-ramp-low)) * 0.5) * 100%),
+    var(--paper)
+  );
+}
+.legend__step--ramp-4 {
+  background: color-mix(
+    in lab,
+    var(--val-p3) calc((var(--map-ramp-low) + (1 - var(--map-ramp-low)) * 0.75) * 100%),
+    var(--paper)
+  );
+}
+.legend__step--ramp-5 {
   background: var(--val-p3);
 }
 

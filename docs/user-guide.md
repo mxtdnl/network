@@ -201,11 +201,12 @@ Once a project has ratings, the Map tab draws the network: each person is a node
 
 The legend explains every encoding on the map, and is always shown:
 
-- **Node size**: the metric you choose under Node size.
+- **Node size**: the metric you choose under Node size, by value or by rank.
 - **Node fill**: an attribute such as team, or detected communities.
-- **Edge width**: tie strength on the layer chosen under Ties from.
-- **Edge colour**: valence, from orange-brown (negative) through grey (neutral) to blue (positive). Ties with no valence rating are dark grey, so they are never read as neutral.
-- **Edge style**: formal only (solid), informal only (dashed), both (solid with a dashed line), or neither (dotted). It is off until you switch both collaboration layers on under Show on the map.
+- **Edge width**: tie strength on the layer chosen under Ties from, or on another layer you choose; or the same for every tie. A tie with no rating on the width layer is drawn thinnest, in grey, with its own legend entry, so it is never read as 0.
+- **Edge colour**: by default, negative valence ratings in orange-brown, with neutral and positive ties in grey; "Show the full scale" adds blue for positive ratings. Ties with no valence rating are dark grey, so they are never read as neutral. Edge colour can instead show another signed layer, the strength of any layer on a blue ramp, whether a tie runs within or between groups, or nothing.
+- **Edge style**: formal only (solid), informal only (dashed), both (solid with a dashed line), or neither (dotted). It is off until you choose it under Edge style.
+- **Marks**: community outlines, when switched on, and the subgroup, a shortest path or highlighted members.
 - **Direction**: in the directed view, a tie rated one way has an arrowhead from the rater to the person rated; a pair rated both ways is one line without arrowheads, whose width and colour combine the two directions by the rule chosen under Direction.
 
 ![The map legend: node size, node fill, edge width, edge colour, edge style and arrowheads](user-guide/legend.jpg)
@@ -213,10 +214,11 @@ The legend explains every encoding on the map, and is always shown:
 **Map settings** (left column, under Map):
 
 - **Ties from** chooses the layer, or the composite, that sets which ties are drawn, their width, the layout, node size, communities and ranks.
-- **Show on the map** switches the encodings of valence and the two collaboration layers on and off; the collaboration layers start off, so lines are plain until you switch both on. "When a layer is switched off" chooses whether its ties stay or are hidden (with "Hide its ties", every layer starts on).
+- **Show on the map**: with "Hide its ties", a switch for each layer hides the pairs tied on it; every layer starts on. With "Keep its ties" (the default) every layer's ties are drawn.
+- **Edges**: Edge colour, Edge width and Edge style, as in the legend above. Each line encoding shows one thing at a time.
 - **Direction.** Directed shows each person's ratings separately. Mutual combines the two directions of each pair, by their average, the weaker or the stronger of the two. The choice changes the metrics, so it is stated in every export.
 - **Tie strength at least** hides weaker ties from the drawing only; the metrics still use every tie.
-- **Node size**, **Node fill**, **Filter** (by any attribute) and **Search**.
+- **Node size**, with **Node size scale** by value (area in proportion to the value) or by rank (area in proportion to the rank, so one member with a very high value does not leave everyone else small), **Node fill**, **Outline communities** (a grey outline round each community found on Ties from, while the fill shows an attribute, so communities that cross teams are visible), **Filter** (by any attribute) and **Search**.
 - **Layout**: force-directed (ties pull people together in proportion to their strength), grouped by an attribute, circular by group, or formal hierarchy (managers above their reports, with informal ties drawn over it; it needs a `manager_id` column).
 
 ![The grouped layout, with members pulled together by team](user-guide/layout-grouped.jpg)

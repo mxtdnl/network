@@ -77,7 +77,8 @@ export function exportMap(
 ): ExportMap {
   const { project, result, settings, names } = ctx;
   const t = theme.map;
-  const model = buildMapModel(project, result, settings, t, names.byIndex);
+  const options = { colourExcluded: ctx.colourExcluded };
+  const model = buildMapModel(project, result, settings, t, names.byIndex, options);
   // Over the formal hierarchy the map draws informal collaboration ties (D62).
   const informal = roleLayer(project, 'informal');
   const overlay =
@@ -85,7 +86,7 @@ export function exportMap(
       ? informal.key
       : undefined;
   const mapModel = overlay
-    ? buildMapModel(project, result, settings, t, names.byIndex, { edgeLayer: overlay })
+    ? buildMapModel(project, result, settings, t, names.byIndex, { ...options, edgeLayer: overlay })
     : model;
 
   // Positions: the map's own when they belong to this layout; otherwise the

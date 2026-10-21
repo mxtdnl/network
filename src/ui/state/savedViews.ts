@@ -1,7 +1,7 @@
 // Saved views (spec §8): capture the map as it is now, and restore it later or
 // step through views in presentation mode. A view holds the weights, the map's
 // encodings, filters and layout, each member's position and pin, and the
-// selection (schema version 2, data/schema.ts). Views live in the project, so
+// selection (schema version 4, data/schema.ts). Views live in the project, so
 // they are saved in the .ona.json file; changing them does not re-run the
 // analysis (store.updateProjectViews).
 
@@ -59,6 +59,12 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
     groupBy: map.groupBy,
     ego: map.ego ? { ...map.ego } : null,
     highlight: [...map.highlight],
+    edgeColour: { ...map.edgeColour },
+    signedScale: map.signedScale,
+    edgeWidth: { ...map.edgeWidth },
+    edgeStyle: map.edgeStyle,
+    sizeScale: map.sizeScale,
+    communityOutlines: map.communityOutlines,
   };
 }
 
@@ -73,6 +79,9 @@ export function savedToMap(saved: SavedMapSettings, project: Project): MapSettin
     filters: saved.filters.map((f) => ({ key: f.key, values: [...f.values] })),
     ego: saved.ego && ids.has(saved.ego.member) ? { ...saved.ego } : null,
     highlight: saved.highlight.filter((id) => ids.has(id)),
+    // A layer no longer enabled is corrected by the map (effectiveSettings).
+    edgeColour: { ...saved.edgeColour },
+    edgeWidth: { ...saved.edgeWidth },
   };
 }
 

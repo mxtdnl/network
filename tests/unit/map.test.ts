@@ -11,6 +11,7 @@ import type { AnalysisResult } from '../../src/engine/types';
 import { hexToLab, labToHex, valenceColour } from '../../src/ui/map/colour';
 import { legendSections } from '../../src/ui/map/legend';
 import {
+  averageRanks,
   buildMapModel,
   nextMember,
   NOT_RECORDED,
@@ -19,7 +20,7 @@ import {
 } from '../../src/ui/map/model';
 import { ForceLayout, groupBoxes } from '../../src/ui/map/layout';
 import { rankOf } from '../../src/ui/map/rank';
-import { buildScene, highlightSet, type Point } from '../../src/ui/map/scene';
+import { buildScene, convexHull, highlightSet, type Point } from '../../src/ui/map/scene';
 import type { MapTheme } from '../../src/ui/map/theme';
 import { initialMapSettings, type MapSettings } from '../../src/ui/state/store';
 import { demoText } from './engineFixtures';
@@ -44,6 +45,7 @@ const theme: MapTheme = {
   ],
   other: '#b4b9bf',
   valence: VALENCE,
+  ramp: ['#6694a8', '#4c8098', '#336b85', '#195c79', '#004d6e'],
   nodeMin: 4,
   nodeMax: 16,
   nodeUndefined: 2,
@@ -176,8 +178,8 @@ describe('map model', () => {
         if (e.reciprocated) {
           expect(e.weight).toBeCloseTo(pick(w[k] as number, w[back] as number), 12);
           const valence = pick(v[k] as number, v[back] as number);
-          if (Number.isNaN(valence)) expect(e.valence).toBeNaN();
-          else expect(e.valence).toBeCloseTo(valence, 12);
+          if (Number.isNaN(valence)) expect(e.colour).toBeNaN();
+          else expect(e.colour).toBeCloseTo(valence, 12);
           expect(e.width).toBeCloseTo(theme.edgeMin + (theme.edgeMax - theme.edgeMin) * e.weight);
         } else {
           expect(e.weight).toBe(w[k]);
@@ -191,35 +193,52 @@ describe('map model', () => {
     const m = await model({ layer: 'connection_strength' });
     const v = valenceMatrix(demo, { ...initialMapSettings() });
     expect(v).not.toBeNull();
-    expect(m.edges.some((e) => e.valence === 0)).toBe(true);
-    expect(m.edges.some((e) => Number.isNaN(e.valence))).toBe(true);
-    expect(m.anyValenceMissing).toBe(true);
-    const off = await model({ layer: 'connection_strength', layerToggles: { valence: false } });
-    expect(off.valenceShown).toBe(false);
-    expect(off.edges.every((e) => Number.isNaN(e.valence))).toBe(true);
+    expect(m.edges.some((e) => e.colour === 0)).toBe(true);
+    expect(m.edges.some((e) => Number.isNaN(e.colour))).toBe(true);
+    expect(m.colour.anyMissing).toBe(true);
+    const off = await model({ layer: 'connection_strength', edgeColour: { kind: 'none' } });
+    expect(off.colour).toMatchObject({ kind: 'none', reason: 'chosen' });
+    expect(off.edges.every((e) => Number.isNaN(e.colour))).toBe(true);
   });
 
-  it('styles ties by formal and informal only when both layers are switched on', async () => {
-    // Edge style is off until the analyst switches it on (CLAUDE.md D133).
+  it('styles ties by formal and informal only when that style is chosen', async () => {
+    // Edge style is off until the analyst chooses it (CLAUDE.md D126, D133).
     const initial = await model();
     expect(initial.styleShown).toBe(false);
     expect(initial.edges.every((e) => e.style === 'plain')).toBe(true);
-    const on = { formal_collaboration: true, informal_collaboration: true };
-    const both = await model({ layerToggles: on });
+    const both = await model({ edgeStyle: 'formalInformal' });
     expect(both.styleShown).toBe(true);
     expect(both.stylesPresent).toEqual(expect.arrayContaining(['formal', 'informal', 'both']));
-    const one = await model({ layerToggles: { ...on, informal_collaboration: false } });
+    // The switches only hide ties; they no longer set the style.
+    const switched = await model({
+      layerToggles: { formal_collaboration: true, informal_collaboration: true },
+    });
+    expect(switched.styleShown).toBe(false);
+    // Without the informal layer there is no style to draw.
+    const noInformal = {
+      ...demo,
+      layers: demo.layers.map((l) =>
+        l.key === 'informal_collaboration' ? { ...l, enabled: false } : l,
+      ),
+    };
+    const one = buildMapModel(
+      noInformal,
+      await resultFor(demo, initialMapSettings()),
+      { ...initialMapSettings(), edgeStyle: 'formalInformal' },
+      theme,
+      demo.members.map((m) => m.display_name),
+    );
     expect(one.styleShown).toBe(false);
     expect(one.edges.every((e) => e.style === 'plain')).toBe(true);
     // A pair styled in the directed view combines its two directions' ratings.
-    const directed = await model({ layerToggles: on, layer: 'connection_strength' });
+    const directed = await model({ edgeStyle: 'formalInformal', layer: 'connection_strength' });
     expect(directed.edges.some((e) => e.reciprocated && e.style !== 'plain')).toBe(true);
   });
 
   it('starts every layer switched on when switched-off layers hide their ties', async () => {
     const hide = await model({ hideOffLayers: true });
     expect(hide.hiddenLayers).toEqual([]);
-    expect(hide.styleShown).toBe(true);
+    expect(hide.styleShown).toBe(false);
   });
 
   it('hides the ties of a switched-off layer only when asked to', async () => {
@@ -327,26 +346,17 @@ describe('map model', () => {
 describe('legend', () => {
   it('explains every encoding in use, and only those', async () => {
     const kinds = (m: MapModel) => legendSections(m, theme).map((s) => s.kind);
-    const on = { formal_collaboration: true, informal_collaboration: true };
+    const on = { edgeStyle: 'formalInformal' } as const;
     expect(kinds(await model())).toEqual(['size', 'fill', 'width', 'colour', 'arrows']);
-    expect(kinds(await model({ layerToggles: on }))).toEqual([
-      'size',
-      'fill',
-      'width',
-      'colour',
-      'style',
-      'arrows',
-    ]);
-    expect(kinds(await model({ view: 'symmetrised', layerToggles: on }))).toEqual([
+    expect(kinds(await model(on))).toEqual(['size', 'fill', 'width', 'colour', 'style', 'arrows']);
+    expect(kinds(await model({ view: 'symmetrised', ...on }))).toEqual([
       'size',
       'fill',
       'width',
       'colour',
       'style',
     ]);
-    expect(
-      kinds(await model({ layerToggles: { ...on, formal_collaboration: false } })),
-    ).not.toContain('style');
+    expect(kinds(await model({ edgeStyle: 'none' }))).not.toContain('style');
   });
 
   it('explains one-way and both-way ties in the directed view', async () => {
@@ -371,11 +381,16 @@ describe('legend', () => {
   });
 
   it('shows the valence scale, and a separate entry for valence not rated', async () => {
-    const colour = legendSections(await model(), theme).find((x) => x.kind === 'colour');
-    expect(colour?.kind === 'colour' && colour.steps.map((x) => x.step)).toEqual([
+    const colour = legendSections(await model({ signedScale: 'full' }), theme).find(
+      (x) => x.kind === 'colour',
+    );
+    expect(colour?.kind === 'colour' && colour.ramp?.swatches.map((x) => x.step)).toEqual([
       -3, -2, -1, 0, 1, 2, 3,
     ]);
-    expect(colour?.kind === 'colour' && colour.notRated).toBe('Valence not rated');
+    expect(colour?.variable).toBe('Valence, −3 to +3');
+    expect(colour?.kind === 'colour' && colour.items).toEqual([
+      { colour: 'graphite', label: 'Valence not rated' },
+    ]);
   });
 });
 
@@ -467,6 +482,218 @@ describe('scene', () => {
     const m = await model();
     const scene = buildScene(m, spiral(m.n), t, size, theme, { ...none, selected: 2, focused: 5 });
     expect(scene.rings).toHaveLength(2);
+  });
+});
+
+describe('encoding choices (D126, D132, D134, D136)', () => {
+  const size = { width: 800, height: 600 };
+  const t = { x: 400, y: 300, k: 1 };
+  const none = { hovered: null, focused: null, selected: null };
+  /** Stroke of each drawn tie, by pair, from the scene's line batches (straight ties: one segment each). */
+  const strokes = (m: MapModel) => {
+    const scene = buildScene(m, spiral(m.n), t, size, theme, none);
+    return new Set(scene.lines.map((b) => b.stroke));
+  };
+  const n = demo.members.length;
+
+  it('colours only negative ratings by default, and the full scale when asked (D132)', async () => {
+    const m = await model({ layer: 'connection_strength' });
+    expect(m.colour).toMatchObject({ kind: 'signed', layerLabel: 'Valence', full: false });
+    const used = strokes(m);
+    // Negative steps are drawn; positive steps and the neutral grey are not.
+    expect(VALENCE.slice(0, 3).some((c) => used.has(c))).toBe(true);
+    expect(VALENCE.slice(3).some((c) => used.has(c))).toBe(false);
+    expect(used.has(theme.stone)).toBe(true);
+    const full = strokes(await model({ layer: 'connection_strength', signedScale: 'full' }));
+    expect(VALENCE.slice(4).some((c) => full.has(c))).toBe(true);
+    const legend = legendSections(m, theme).find((x) => x.kind === 'colour');
+    expect(legend?.variable).toBe('Valence: negative ratings only');
+    expect(legend?.kind === 'colour' && legend.items[0]).toEqual({
+      colour: 'stone',
+      label: 'Neutral or positive',
+    });
+  });
+
+  it('colours by any enabled signed layer, and by none when that layer is not enabled', async () => {
+    const withEnergy = {
+      ...demo,
+      layers: demo.layers.map((l) => (l.key === 'energy' ? { ...l, enabled: true } : l)),
+    };
+    const s = { ...initialMapSettings(), edgeColour: { kind: 'signed', layer: 'energy' } as const };
+    const r = await resultFor(demo, s);
+    const names = demo.members.map((x) => x.display_name);
+    const on = buildMapModel(withEnergy, r, s, theme, names);
+    expect(on.colour).toMatchObject({ kind: 'signed', layerLabel: 'Energy' });
+    // The demo has no energy ratings, so every tie is "not rated" on it.
+    expect(on.edges.every((e) => Number.isNaN(e.colour))).toBe(true);
+    expect(on.colour.anyMissing).toBe(true);
+    const off = buildMapModel(demo, r, s, theme, names);
+    expect(off.colour).toMatchObject({ kind: 'none', reason: 'unavailable' });
+    expect(legendSections(off, theme).find((x) => x.kind === 'colour')?.variable).toBe(
+      'Not used: the chosen layer is not enabled',
+    );
+  });
+
+  it('colours by an unsigned layer on the sequential ramp, with 0 and not rated apart', async () => {
+    const m = await model({
+      layer: 'connection_strength',
+      edgeColour: { kind: 'unsigned', layer: 'formal_collaboration' },
+    });
+    const r = await resultFor(demo, initialMapSettings());
+    const f = r.refs.formal_collaboration?.weights ?? new Float64Array();
+    for (const e of m.edges) {
+      const a = f[e.source * n + e.target] as number;
+      const b = f[e.target * n + e.source] as number;
+      const v = e.reciprocated ? (Number.isNaN(a) ? b : Number.isNaN(b) ? a : (a + b) / 2) : a;
+      if (Number.isNaN(v)) expect(e.colour).toBeNaN();
+      else if (v === 0) expect(e.colour).toBe(0);
+      else expect(e.colour).toBe(Math.ceil(v * 5 - 1e-9));
+    }
+    expect(m.colour.anyZero).toBe(true);
+    const used = strokes(m);
+    expect(theme.ramp.some((c) => used.has(c))).toBe(true);
+    const legend = legendSections(m, theme).find((x) => x.kind === 'colour');
+    expect(legend?.kind === 'colour' && legend.ramp?.swatches).toHaveLength(5);
+    expect(legend?.kind === 'colour' && legend.items.map((x) => x.label)).toContain('Rated 0');
+  });
+
+  it('colours ties within and between the node-fill groups, or communities', async () => {
+    const m = await model({ edgeColour: { kind: 'groups' } });
+    for (const e of m.edges) {
+      const a = demo.members[e.source]?.attributes.team;
+      const b = demo.members[e.target]?.attributes.team;
+      expect(e.colour).toBe(a === b ? 0 : 1);
+    }
+    expect(m.edges.some((e) => e.colour === 0) && m.edges.some((e) => e.colour === 1)).toBe(true);
+    const used = strokes(m);
+    expect([...used].sort()).toEqual([theme.graphite, theme.stone].sort());
+    expect(legendSections(m, theme).find((x) => x.kind === 'colour')?.variable).toBe(
+      'Within or between groups of Team or function',
+    );
+    const c = await model({ edgeColour: { kind: 'groups' }, fill: { kind: 'community' } });
+    const membership = (await resultFor(demo, initialMapSettings())).refs.composite?.communities
+      ?.membership;
+    for (const e of c.edges)
+      expect(e.colour).toBe(membership?.[e.source] === membership?.[e.target] ? 0 : 1);
+    expect(c.colour.communities).toBe(true);
+  });
+
+  it('sets width by another layer, thinnest in stone where it is not rated', async () => {
+    const m = await model({ edgeWidth: { kind: 'layer', layer: 'formal_collaboration' } });
+    const r = await resultFor(demo, initialMapSettings());
+    const f = r.refs.formal_collaboration?.weights ?? new Float64Array();
+    expect(m.width).toMatchObject({ kind: 'layer', layerLabel: 'Formal collaboration' });
+    const missing = m.edges.filter((e) => e.widthNotRated);
+    expect(missing.length).toBeGreaterThan(0);
+    for (const e of missing) {
+      expect(e.width).toBe(theme.edgeMin);
+      expect(Number.isNaN(f[e.source * n + e.target] as number)).toBe(true);
+    }
+    for (const e of m.edges.filter((x) => !x.widthNotRated && !x.reciprocated))
+      expect(e.width).toBeCloseTo(
+        theme.edgeMin + (theme.edgeMax - theme.edgeMin) * (f[e.source * n + e.target] as number),
+      );
+    // The drawn ties are still those of "Ties from".
+    expect(m.edges.length).toBe((await model()).edges.length);
+    const legend = legendSections(m, theme).find((x) => x.kind === 'width');
+    expect(legend?.kind === 'width' && legend.notRated).toEqual({
+      width: theme.edgeMin,
+      label: 'Not rated on Formal collaboration',
+    });
+    expect(legend?.kind === 'width' && legend.notes).toEqual([
+      'Ties drawn from Composite of all layers',
+    ]);
+    // The scene draws them in stone whatever the colour.
+    const scene = buildScene(m, spiral(m.n), t, size, theme, none);
+    expect(scene.lines.some((b) => b.stroke === theme.stone && b.width === theme.edgeMin)).toBe(
+      true,
+    );
+  });
+
+  it('draws every tie at one width when width is not used', async () => {
+    const m = await model({ edgeWidth: { kind: 'uniform' } });
+    const w = theme.edgeMin + (theme.edgeMax - theme.edgeMin) / 2;
+    expect(m.edges.every((e) => e.width === w)).toBe(true);
+    expect(legendSections(m, theme).find((x) => x.kind === 'width')?.variable).toBe(
+      'Not used: the same for every tie',
+    );
+  });
+
+  it('a width layer that is not in the analysis falls back to "Ties from"', async () => {
+    const m = await model({ edgeWidth: { kind: 'layer', layer: 'not_a_layer' } });
+    expect(m.width.kind).toBe('tiesFrom');
+  });
+
+  it('sizes members by rank, highest largest, ties at their average rank (D134)', async () => {
+    const byValue = await model();
+    const byRank = await model({ sizeScale: 'rank' });
+    const values = byRank.nodes.map((x) => x.sizeValue);
+    const ranks = averageRanks(values);
+    const m = byRank.size.defined;
+    for (const node of byRank.nodes) {
+      const rank = ranks[node.index] as number;
+      if (Number.isNaN(rank)) {
+        expect(node.radius).toBe(theme.nodeUndefined);
+        continue;
+      }
+      const tt = (m - rank) / (m - 1);
+      expect(node.radius).toBeCloseTo(
+        Math.sqrt(theme.nodeMin ** 2 + (theme.nodeMax ** 2 - theme.nodeMin ** 2) * tt),
+      );
+    }
+    // Ranks spread members out: more members above the smallest third of the range.
+    const big = (x: MapModel) => x.nodes.filter((node) => node.radius > theme.nodeMax / 2).length;
+    expect(big(byRank)).toBeGreaterThan(big(byValue));
+    const legend = legendSections(byRank, theme).find((x) => x.kind === 'size');
+    expect(legend?.variable).toBe('Bridging, by rank');
+    expect(legend?.kind === 'size' && legend.samples.map((x) => x.label)).toEqual([
+      `Rank ${String(m)}`,
+      `Rank ${String(Math.round((m + 1) / 2))}`,
+      'Rank 1',
+    ]);
+  });
+
+  it('ranks ties at their average rank', () => {
+    expect(averageRanks([3, 1, 3, NaN, 2])).toEqual([1.5, 4, 1.5, NaN, 3]);
+  });
+
+  it('outlines communities under the members while fill shows an attribute (D136)', async () => {
+    const off = await model();
+    expect(off.outlines).toBeNull();
+    const m = await model({ communityOutlines: true });
+    expect(m.outlines).not.toBeNull();
+    expect(legendSections(m, theme).find((x) => x.kind === 'marks')?.kind === 'marks').toBe(true);
+    const marks = legendSections(m, theme).find((x) => x.kind === 'marks');
+    expect(marks?.kind === 'marks' && marks.items[0]).toEqual({
+      mark: 'outline',
+      label: 'Community outline, detected on Composite of all layers',
+    });
+    const positions = spiral(m.n);
+    const withOutlines = buildScene(m, positions, t, size, theme, none);
+    const without = buildScene(off, positions, t, size, theme, none);
+    const segments = (sc: typeof without) =>
+      sc.lines
+        .filter((b) => b.stroke === theme.stone && b.width === theme.line)
+        .reduce((k, b) => k + b.coords.length / 4, 0);
+    expect(segments(withOutlines)).toBeGreaterThan(segments(without));
+    // The outlines are drawn first, so they sit under the ties.
+    expect(withOutlines.lines[0]?.stroke).toBe(theme.stone);
+    // A community fill already shows them.
+    expect((await model({ communityOutlines: true, fill: { kind: 'community' } })).outlines).toBe(
+      null,
+    );
+  });
+
+  it('builds a convex hull round its points', () => {
+    const hull = convexHull([
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+      { x: 1, y: 1 },
+      { x: 2, y: 2 },
+      { x: 0, y: 2 },
+    ]);
+    expect(hull).toHaveLength(4);
+    expect(hull).not.toContainEqual({ x: 1, y: 1 });
   });
 });
 

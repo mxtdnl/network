@@ -86,7 +86,7 @@ function Sample({
     case 'width':
       return (
         <ul className="legend__samples">
-          {section.samples.map((s) => (
+          {[...section.samples, ...(section.notRated ? [section.notRated] : [])].map((s) => (
             <li key={s.label} className="legend__sample">
               <svg className="legend__svg" width={theme.swatch} height={lineH} aria-hidden="true">
                 <line
@@ -103,30 +103,33 @@ function Sample({
           ))}
         </ul>
       );
-    case 'colour':
-      if (section.steps.length === 0) return null;
+    case 'colour': {
+      const ramp = section.ramp;
+      if (!ramp && section.items.length === 0) return null;
       return (
         <ul className="legend__samples">
-          <li className="legend__sample legend__sample--ramp">
-            <span className="legend__ramp" aria-hidden="true">
-              {section.steps.map((s) => (
-                <span
-                  key={s.step}
-                  className={`legend__step legend__step--${VAL_CLASS[s.step] ?? '0'}`}
-                />
-              ))}
-            </span>
-            <span className="legend__ramp-labels num" aria-hidden="true">
-              <span>{section.steps[0]?.label}</span>
-              <span>0</span>
-              <span>{section.steps[section.steps.length - 1]?.label}</span>
-            </span>
-          </li>
-          {section.notRated && (
-            <li className="legend__sample">
+          {ramp && (
+            <li className="legend__sample legend__sample--ramp">
+              <span className="legend__ramp" aria-hidden="true">
+                {ramp.swatches.map((sw) => (
+                  <span
+                    key={`${sw.scale}${String(sw.step)}`}
+                    className={`legend__step legend__step--${sw.scale === 'valence' ? (VAL_CLASS[sw.step] ?? '0') : `ramp-${String(sw.step)}`}`}
+                  />
+                ))}
+              </span>
+              <span className="legend__ramp-labels num" aria-hidden="true">
+                <span>{ramp.labels[0]}</span>
+                <span>{ramp.labels[1] ?? ''}</span>
+                <span>{ramp.labels[2]}</span>
+              </span>
+            </li>
+          )}
+          {section.items.map((item) => (
+            <li key={item.label} className="legend__sample">
               <svg className="legend__svg" width={box} height={lineH} aria-hidden="true">
                 <line
-                  className="legend__edge legend__edge--not-rated"
+                  className={`legend__edge legend__edge--${item.colour}`}
                   x1={0}
                   y1={lineH / 2}
                   x2={box}
@@ -134,11 +137,12 @@ function Sample({
                   strokeWidth={theme.edgeMax / 2}
                 />
               </svg>
-              <span>{section.notRated}</span>
+              <span>{item.label}</span>
             </li>
-          )}
+          ))}
         </ul>
       );
+    }
     case 'style':
       return (
         <ul className="legend__samples legend__samples--list">
@@ -233,6 +237,17 @@ function Sample({
                       cx={box / 2 + theme.nodeMin + theme.line}
                       cy={box / 2}
                       r={theme.nodeMin}
+                    />
+                  </>
+                ) : item.mark === 'outline' ? (
+                  <>
+                    <circle className="legend__node" cx={box / 2} cy={box / 2} r={theme.nodeMin} />
+                    <circle
+                      className="legend__outline"
+                      cx={box / 2}
+                      cy={box / 2}
+                      r={Math.min(theme.nodeMin + theme.line + theme.labelGap * 2, box / 2)}
+                      strokeWidth={theme.line}
                     />
                   </>
                 ) : item.mark === 'path' ? (

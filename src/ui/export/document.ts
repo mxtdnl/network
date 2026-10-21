@@ -4,7 +4,7 @@
 // and PDF exports all draw this list, so the three show exactly the same
 // picture; only the backend differs (export/canvas.ts, svg.ts, pdf.ts).
 
-import { legendSections, type LegendExtras, type LegendSection } from '../map/legend';
+import { legendSections, type LegendExtras, type LegendSection, type Swatch } from '../map/legend';
 import type { MapModel } from '../map/model';
 import type { Scene } from '../map/scene';
 import type { ExportTheme } from './theme';
@@ -203,8 +203,6 @@ export function wrap(text: string, width: number, measure: (s: string) => number
 
 // ------------------------------------------------------------------ legend
 
-const VALENCE_STEPS = [-3, -2, -1, 0, 1, 2, 3];
-
 interface Item {
   width: number;
   height: number;
@@ -256,24 +254,27 @@ export function legendPrimitives(
   const lineW = box * 1.5;
   const labelled = (graphicW: number, graphicH: number, label: string) => {
     const role: FontRole = 'regular';
-    const lw = label === '' ? 0 : measure(label, role, L.size);
-    const h = Math.max(graphicH, L.line);
+    // A label wider than the column wraps beside its sample, so nothing runs past the legend.
+    const room = Math.max(width - graphicW - theme.legendItemGap, 0);
+    const rows = label === '' ? [] : wrap(label, room, (x) => measure(x, role, L.size));
+    const lw = Math.max(0, ...rows.map((r) => measure(r, role, L.size)));
+    const first = Math.max(graphicH, L.line);
+    const h = Math.max(graphicH, rows.length * L.line);
     return (graphic: (x: number, cy: number) => Primitive[]): Item => ({
       width: graphicW + (label === '' ? 0 : theme.legendItemGap + lw),
       height: h,
       draw: (x, top) => [
-        ...graphic(x, top + h / 2),
-        ...(label === ''
-          ? []
-          : [
-              text(
-                x + graphicW + theme.legendItemGap,
-                baseline(top + (h - L.line) / 2),
-                label,
-                role,
-                t.graphite,
-              ),
-            ]),
+        // The sample sits beside the label's first line.
+        ...graphic(x, top + first / 2),
+        ...rows.map((row, k) =>
+          text(
+            x + graphicW + theme.legendItemGap,
+            baseline(top + (first - L.line) / 2 + k * L.line),
+            row,
+            role,
+            t.graphite,
+          ),
+        ),
       ],
     });
   };
@@ -359,7 +360,7 @@ export function legendPrimitives(
           ]),
         );
       case 'width':
-        return section.samples.map((s) =>
+        return [...section.samples, ...(section.notRated ? [section.notRated] : [])].map((s) =>
           labelled(
             t.swatch,
             L.line,
@@ -367,54 +368,60 @@ export function legendPrimitives(
           )((x, cy) => [edge(x, cy, x + t.swatch, cy, t.stone, s.width)]),
         );
       case 'colour': {
-        if (section.steps.length === 0) return [];
-        const rampW = t.swatch * VALENCE_STEPS.length;
-        const ramp: Item = {
-          width: rampW,
-          height: theme.rampHeight + L.line,
-          draw: (x, top) => [
-            ...section.steps.map((s, k): Primitive => ({
-              kind: 'rect',
-              x: x + k * t.swatch,
-              y: top,
-              width: t.swatch,
-              height: theme.rampHeight,
-              fill: t.valence[s.step + 3] ?? t.stone,
-            })),
-            text(
-              x,
-              baseline(top + theme.rampHeight),
-              section.steps[0]?.label ?? '',
-              'regular',
-              t.graphite,
-            ),
-            {
-              ...text(x + rampW / 2, baseline(top + theme.rampHeight), '0', 'regular', t.graphite),
-              align: 'center',
-            },
-            {
-              ...text(
-                x + rampW,
-                baseline(top + theme.rampHeight),
-                section.steps[section.steps.length - 1]?.label ?? '',
-                'regular',
-                t.graphite,
-              ),
-              align: 'right',
-            },
-          ],
-        };
+        const swatch = (sw: Swatch) =>
+          sw.scale === 'valence'
+            ? (t.valence[sw.step + 3] ?? t.stone)
+            : (t.ramp[sw.step - 1] ?? t.stone);
+        const ramp = section.ramp;
+        const rampItems: Item[] = [];
+        if (ramp) {
+          const step = t.swatch;
+          const rampW = step * ramp.swatches.length;
+          const [first, middle, last] = ramp.labels;
+          const under = (top: number) => baseline(top + theme.rampHeight);
+          rampItems.push({
+            width: rampW,
+            height: theme.rampHeight + L.line,
+            draw: (x, top) => [
+              ...ramp.swatches.map((sw, k): Primitive => ({
+                kind: 'rect',
+                x: x + k * step,
+                y: top,
+                width: step,
+                height: theme.rampHeight,
+                fill: swatch(sw),
+              })),
+              text(x, under(top), first, 'regular', t.graphite),
+              ...(middle === null
+                ? []
+                : [
+                    {
+                      ...text(x + rampW / 2, under(top), middle, 'regular', t.graphite),
+                      align: 'center' as const,
+                    },
+                  ]),
+              { ...text(x + rampW, under(top), last, 'regular', t.graphite), align: 'right' },
+            ],
+          });
+        }
         return [
-          ramp,
-          ...(section.notRated
-            ? [
-                labelled(
-                  box,
-                  L.line,
-                  section.notRated,
-                )((x, cy) => [edge(x, cy, x + box, cy, t.graphite, t.edgeMax / 2)]),
-              ]
-            : []),
+          ...rampItems,
+          ...section.items.map((item) =>
+            labelled(
+              box,
+              L.line,
+              item.label,
+            )((x, cy) => [
+              edge(
+                x,
+                cy,
+                x + box,
+                cy,
+                item.colour === 'graphite' ? t.graphite : t.stone,
+                t.edgeMax / 2,
+              ),
+            ]),
+          ),
         ];
       }
       case 'style':
@@ -498,6 +505,24 @@ export function legendPrimitives(
                 node(x + box / 2 + t.nodeMin + t.line, cy, t.nodeMin, t.fade),
               ];
             if (item.mark === 'path') return [edge(x, cy, x + box, cy, t.ink, t.focusWidth)];
+            if (item.mark === 'outline') {
+              // A rounded outline round a member, as on the map.
+              const r = t.nodeMin + t.line + t.labelGap * 2;
+              return [
+                node(x + box / 2, cy, t.nodeMin),
+                {
+                  kind: 'circle',
+                  x: x + box / 2,
+                  y: cy,
+                  r: Math.min(r, box / 2),
+                  fill: null,
+                  stroke: t.stone,
+                  strokeWidth: t.line,
+                  dash: [],
+                  alpha: 1,
+                },
+              ];
+            }
             return [
               node(x + box / 2, cy, t.nodeMin),
               {

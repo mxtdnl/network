@@ -300,7 +300,7 @@ const isNumRecord = (v: unknown): v is Record<string, number> =>
   isObj(v) && Object.values(v).every(isNum);
 const isNullableStr = (v: unknown) => v === null || isStr(v);
 
-/** Problems with one saved view (schema version 2), each a sentence ending. */
+/** Problems with one saved view (schema version 4), each a sentence ending. */
 export function checkSavedView(v: Obj): string[] {
   const problems: string[] = [];
   const need = (ok: boolean, message: string) => {
@@ -351,6 +351,30 @@ export function checkSavedView(v: Obj): string[] {
       'has an invalid ego view.',
     );
     need(isStrArray(m.highlight), 'has an invalid highlight.');
+    // Encodings (schema version 4). A layer that is no longer enabled is
+    // allowed: the map falls back to no colour, or to the "Ties from" width.
+    const colour = m.edgeColour;
+    need(
+      isObj(colour) &&
+        (colour.kind === 'none' ||
+          colour.kind === 'groups' ||
+          ((colour.kind === 'signed' || colour.kind === 'unsigned') &&
+            isStr(colour.layer) &&
+            colour.layer !== '')),
+      'has an invalid edge colour.',
+    );
+    need(m.signedScale === 'negative' || m.signedScale === 'full', 'has an invalid colour scale.');
+    const width = m.edgeWidth;
+    need(
+      isObj(width) &&
+        (width.kind === 'tiesFrom' ||
+          width.kind === 'uniform' ||
+          (width.kind === 'layer' && isStr(width.layer) && width.layer !== '')),
+      'has an invalid edge width.',
+    );
+    need(m.edgeStyle === 'none' || m.edgeStyle === 'formalInformal', 'has an invalid edge style.');
+    need(m.sizeScale === 'value' || m.sizeScale === 'rank', 'has an invalid node-size scale.');
+    need(isBool(m.communityOutlines), 'must say whether communities are outlined.');
   }
 
   const positions = v.positions;
