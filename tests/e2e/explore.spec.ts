@@ -201,6 +201,11 @@ test('layouts: grouped, circular and formal hierarchy, with animated transitions
 });
 
 test('selection stays in sync across the map, the matrix and the table', async ({ page }) => {
+  // Two axe scans of the whole workspace take most of the time, and axe's cost
+  // grows with the custom properties on :root: the D127 palette tokens took this
+  // test from about 22.5 s to 26–30 s alone (21 dummy tokens on main gave 25.1 s),
+  // over the default 30 s under parallel load.
+  test.setTimeout(60_000);
   await start(page);
   await loadDemo(page);
   await settled(page);
