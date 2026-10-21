@@ -250,7 +250,7 @@ test('demo, layer manager, coverage, project files and local persistence', async
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('demo-meridian-works.ona.json');
   const saved = readFileSync(await download.path(), 'utf8');
-  expect(JSON.parse(saved)).toMatchObject({ schema_version: 3 });
+  expect(JSON.parse(saved)).toMatchObject({ schema_version: 4 });
 
   await page.getByRole('button', { name: 'Project' }).click();
   const chooser = page.waitForEvent('filechooser');
