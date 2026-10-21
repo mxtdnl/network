@@ -11,7 +11,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  // CI runs the suite in shards (.github/workflows/e2e.yml); each writes a blob
+  // report, and the workflow merges them into one HTML report.
+  reporter: process.env.CI ? [['list'], ['blob']] : 'list',
   use: {
     baseURL: 'http://localhost:4173/network/',
     trace: 'retain-on-failure',
