@@ -20,6 +20,7 @@ import {
 } from './metrics/network';
 import { metricKeysFor, nodeMetrics } from './metrics/node';
 import { resilience } from './metrics/resilience';
+import { leaveOut, reconstruct, standardiseRows } from './remedies';
 import { shortestPath } from './paths';
 import { signedResult } from './metrics/signed';
 import { Scheduler, type RunControl } from './schedule';
@@ -62,6 +63,21 @@ export interface Prepared {
   signedScaled: Map<LayerKey, Float64Array>;
   composite: CompositeFormula | null;
   warnings: EngineWarning[];
+  /** Members who gave no ratings (from the coverage the input carries), by index. */
+  silent: Set<number>;
+  /** Directions reconstructed per layer (engine/remedies.ts): a 0/1 mask, directed. */
+  reconstructed: Map<LayerKey, Uint8Array>;
+}
+
+/** Members who gave none of the ratings possible for them (data/quality.ts ratingFlag). */
+export function silentMembers(input: AnalysisInput): Set<number> {
+  const index = new Map(input.memberIds.map((id, i) => [id, i]));
+  const out = new Set<number>();
+  for (const r of input.coverage?.raters ?? []) {
+    const i = index.get(r.id);
+    if (i !== undefined && ratingFlag(r) === 'gaveNoRatings') out.add(i);
+  }
+  return out;
 }
 
 export function prepare(input: AnalysisInput): Prepared {
@@ -72,6 +88,16 @@ export function prepare(input: AnalysisInput): Prepared {
   const signedScaled = new Map<LayerKey, Float64Array>();
   const layers: EngineLayer[] = [];
   const ratings: Float64Array[] = [];
+  const silent = silentMembers(input);
+  const reconstructed = new Map<LayerKey, Uint8Array>();
+  const scaled = new Map<LayerKey, Float64Array>();
+  const standardise = input.settings.standardise ?? 'none';
+  const fill = (key: LayerKey, m: Float64Array, layer: EngineLayer): Float64Array => {
+    if (!input.settings.reconstruct || !layer.mutual || silent.size === 0) return m;
+    const r = reconstruct(m, n, silent);
+    if (r.count > 0) reconstructed.set(key, r.filled);
+    return r.ratings;
+  };
 
   input.layers.forEach((layer, k) => {
     const r = input.ratings[k];
@@ -106,13 +132,21 @@ export function prepare(input: AnalysisInput): Prepared {
     const r = ratings[k] as Float64Array;
     if (layer.signed) {
       // Signed layers are symmetrised before the split, so a dyad's sign follows the rule (plan Q4).
-      const s = scaleSigned(r, layer);
+      const s = fill(layer.key, scaleSigned(r, layer), layer);
+      scaled.set(layer.key, s);
       signedScaled.set(layer.key, s);
       const sSym = symmetrise(s, n, rule);
       add(`${layer.key}+`, 'positive', signedPart(s, 1), signedPart(sSym, 1), layer.key);
       add(`${layer.key}-`, 'negative', signedPart(s, -1), signedPart(sSym, -1), layer.key);
     } else {
-      const w = rescaleUnsigned(r, layer);
+      // Standardise each rater's own ratings, then reconstruct from them (engine/remedies.ts).
+      const step = 1 / (layer.max - layer.min);
+      const w = fill(
+        layer.key,
+        standardiseRows(rescaleUnsigned(r, layer), n, standardise, step, silent),
+        layer,
+      );
+      scaled.set(layer.key, w);
       add(layer.key, 'unsigned', w, symmetrise(w, n, rule), layer.key);
     }
   });
@@ -123,13 +157,13 @@ export function prepare(input: AnalysisInput): Prepared {
   } else {
     composite = compositeFormula(layers, input.settings);
     if (composite) {
-      const c = compositeMatrix(composite, layers, ratings, n);
+      const c = compositeMatrix(composite, layers, ratings, n, scaled);
       add(COMPOSITE, 'composite', c, symmetrise(c, n, rule));
     } else {
       warnings.push({ code: 'compositeUndefined', reason: 'noWeightedLayers' });
     }
   }
-  return { input, n, refs, signedScaled, composite, warnings };
+  return { input, n, refs, signedScaled, composite, warnings, silent, reconstructed };
 }
 
 export function viewGraph(p: Prepared, ref: LayerRef): DenseGraph {
@@ -141,7 +175,12 @@ export function viewGraph(p: Prepared, ref: LayerRef): DenseGraph {
 function refResult(p: Prepared, r: PreparedRef, warnings: EngineWarning[]): RefResult {
   const directed = p.input.settings.view === 'directed';
   const g = denseGraph(r.view, p.n, directed);
-  const { table, eigenvectorReason } = nodeMetrics(g, r.kind);
+  const metrics = nodeMetrics(g, r.kind);
+  const { eigenvectorReason } = metrics;
+  const table =
+    p.input.settings.nonRespondents === 'leaveOut'
+      ? leaveOut(metrics.table, p.silent, ownRatingMetrics(directed))
+      : metrics.table;
   if (eigenvectorReason)
     warnings.push({ code: 'eigenvectorUndefined', ref: r.ref, reason: eigenvectorReason });
   const clusteringValues = table.columns.clustering ?? new Float64Array(0);
@@ -241,11 +280,21 @@ export async function analysePrepared(
     return c ? ratingFlag(c) : null;
   });
 
+  // Left out of the rules: no value of theirs is read by the member-level rules (engine/remedies.ts).
+  const ruleRefs: Record<LayerRef, RefResult> =
+    input.settings.nonRespondents === 'leaveOut' && p.silent.size > 0
+      ? Object.fromEntries(
+          Object.entries(refs).map(([k, r]) => [
+            k,
+            { ...r, node: leaveOut(r.node, p.silent, OWN_RATING_METRICS) },
+          ]),
+        )
+      : refs;
   const insights = observe({
     ids: input.memberIds,
     ratingFlags,
     directed,
-    refs,
+    refs: ruleRefs,
     refOrder: p.refs.map((r) => r.ref),
     attributes: input.attributes,
     signed: p.signedScaled,
@@ -268,7 +317,7 @@ export async function analysePrepared(
     composite: p.composite,
     coverage,
     ratingFlags,
-    ownRatingMetrics: OWN_RATING_METRICS.filter((m) => !directed || !INCOMING_METRICS.includes(m)),
+    ownRatingMetrics: ownRatingMetrics(directed),
     insights,
     warnings,
   };
@@ -293,6 +342,11 @@ const OWN_RATING_METRICS: NodeMetricKey[] = [
 ];
 /** In the directed view these read only other members' ratings of the member. */
 const INCOMING_METRICS: NodeMetricKey[] = ['inStrength', 'inDegree', 'harmonicIn'];
+
+/** Metrics that depend on a member's own ratings in the view (D147). */
+export function ownRatingMetrics(directed: boolean): NodeMetricKey[] {
+  return OWN_RATING_METRICS.filter((m) => !directed || !INCOMING_METRICS.includes(m));
+}
 
 export function analyse(input: AnalysisInput, control: RunControl = {}): Promise<AnalysisResult> {
   return analysePrepared(prepare(input), control);

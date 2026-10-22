@@ -19,8 +19,10 @@ NetworkX has no function or a different convention (docs/method-notes.md):
   and split into a positive (max(s, 0)) and a negative (max(-s, 0)) sub-layer;
 * a tie exists when its weight is > 0; a missing rating is no tie;
 * symmetrised views combine w_ij and w_ji by mean, min or max; when one
-  direction is missing the other is used; signed layers are symmetrised before
-  they are split;
+  direction is missing the other is used; "both" keeps a pair only where both
+  directions report a tie of the same sign (the weaker of the two), and a
+  missing direction leaves the pair missing; signed layers are symmetrised
+  before they are split;
 * path metrics use distance = 1 / w;
 * harmonic closeness is divided by (n - 1);
 * eigenvector centrality is computed on the largest strongly connected
@@ -56,7 +58,7 @@ OUT = ROOT / "tests" / "fixtures"
 DEMO = ROOT / "src" / "demo" / "demo.ona.json"
 
 SEED = 1  # project default random_seed (src/data/defaults.ts)
-VIEWS = ["directed", "mean", "min", "max"]
+VIEWS = ["directed", "mean", "min", "max", "both"]
 NAN = float("nan")
 
 # Largest gap between nx.effective_size's scipy path and the reference used here.
@@ -100,6 +102,16 @@ def signed_scale(v, lo, hi):
 
 
 def combine(a, b, rule):
+    if rule == "both":
+        # A tie only where both directions report one of the same sign; a
+        # missing direction leaves the pair missing (build plan session 5).
+        if isnan(a) or isnan(b):
+            return NAN
+        if a > 0 and b > 0:
+            return min(a, b)
+        if a < 0 and b < 0:
+            return max(a, b)
+        return 0.0
     if isnan(a) and isnan(b):
         return NAN
     if isnan(a):

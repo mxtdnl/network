@@ -21,8 +21,13 @@ export type AttributeKey = string;
 export type LayerRef = string;
 
 export type ViewKind = 'directed' | 'symmetrised';
-export type SymmetriseRule = 'mean' | 'min' | 'max';
+/** 'both': a tie only where both directions report one (build plan session 5). */
+export type SymmetriseRule = 'mean' | 'min' | 'max' | 'both';
 export type SignedTreatment = 'positive' | 'filterNegative' | 'multiplier';
+/** Rater standardisation of unsigned layers (engine/remedies.ts, build plan session 5). */
+export type StandardiseMethod = 'none' | 'rank' | 'z';
+/** Members who gave no ratings: marked in the results (default) or left out (engine/remedies.ts). */
+export type NonRespondentTreatment = 'mark' | 'leaveOut';
 
 export const COMPOSITE: LayerRef = 'composite';
 
@@ -36,6 +41,8 @@ export interface EngineLayer {
   /** The layer's group (plan §2); the insight rules leave out INSIGHT_RULES.excludedLayerGroups. */
   group?: string;
   defaultWeight: number;
+  /** The relation is mutual by nature, so a missing direction may be reconstructed (engine/remedies.ts). */
+  mutual?: boolean;
 }
 
 export interface EngineSettings {
@@ -49,6 +56,12 @@ export interface EngineSettings {
   seed: number;
   /** Attribute the silo, formal–informal and one-way rules group members by (settings.insight_group). */
   insightGroup?: AttributeKey;
+  /** Members who gave no ratings (build plan session 5); absent means 'mark'. */
+  nonRespondents?: NonRespondentTreatment;
+  /** Reconstruct the ties of members who gave no ratings on mutual layers; absent means off. */
+  reconstruct?: boolean;
+  /** Rater standardisation of unsigned layers; absent means 'none'. */
+  standardise?: StandardiseMethod;
 }
 
 export interface AttributeColumn {

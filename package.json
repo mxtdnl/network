@@ -20,6 +20,7 @@
     "demo": "tsx scripts/generate-demo.ts",
     "scenarios": "tsx scripts/generate-scenarios.ts && tsx scripts/generate-merged-scenarios.ts",
     "scenarios:measure": "tsx scripts/measure-scenarios.ts",
+    "scenarios:remedies": "tsx scripts/measure-remedies.ts",
     "templates": "tsx scripts/make-templates.ts",
     "fixtures": "python3 scripts/generate_fixtures.py",
     "notices": "node scripts/third-party-notices.mjs"

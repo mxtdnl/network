@@ -127,7 +127,7 @@ export interface Fixture {
 }
 
 export const CASES = ['karate-unweighted', 'karate-weighted', 'karate-directed', 'demo'] as const;
-export const VIEWS = ['directed', 'mean', 'min', 'max'] as const;
+export const VIEWS = ['directed', 'mean', 'min', 'max', 'both'] as const;
 export type FixtureViewName = (typeof VIEWS)[number];
 
 export function loadFixture(name: string): Fixture {

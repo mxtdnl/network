@@ -133,7 +133,8 @@ export type EdgeWidthChoice =
 
 export interface SavedMapSettings {
   view: 'directed' | 'symmetrised';
-  symmetrise: 'mean' | 'min' | 'max';
+  /** 'both' added to schema 4 in place, before release (build plan session 5). */
+  symmetrise: 'mean' | 'min' | 'max' | 'both';
   /** The layer the map draws ties from: a layer key or 'composite'. */
   layer: LayerRef;
   /** Node-size metric (engine NodeMetricKey). */

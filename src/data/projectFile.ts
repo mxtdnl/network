@@ -356,7 +356,7 @@ export function checkSavedView(v: Obj): string[] {
     problems.push('has no map settings.');
   } else {
     need(m.view === 'directed' || m.view === 'symmetrised', 'has an unknown view.');
-    need(['mean', 'min', 'max'].includes(m.symmetrise as string), 'has an unknown rule.');
+    need(['mean', 'min', 'max', 'both'].includes(m.symmetrise as string), 'has an unknown rule.');
     need(isStr(m.layer) && isStr(m.sizeMetric), 'has no layer or node-size metric.');
     const fill = m.fill;
     need(

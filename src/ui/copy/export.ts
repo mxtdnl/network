@@ -117,7 +117,12 @@ export const exportCopy = {
     view: 'Direction',
     directed: 'Directed',
     symmetrised: (rule: string) => `Mutual, combined by ${rule}`,
-    rules: { mean: 'average', min: 'the weaker of the two', max: 'the stronger of the two' },
+    rules: {
+      mean: 'average',
+      min: 'the weaker of the two',
+      max: 'the stronger of the two',
+      both: 'both report a tie',
+    },
     measures: {
       view: 'Direction of ties',
       members: 'Members',

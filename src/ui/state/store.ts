@@ -94,7 +94,7 @@ export type LayoutKind = 'force' | 'grouped' | 'circular' | 'hierarchy';
 /** Map encodings, filters and the analysis view (plan §1.3 `analysis` and `map`). */
 export interface MapSettings {
   view: 'directed' | 'symmetrised';
-  symmetrise: 'mean' | 'min' | 'max';
+  symmetrise: 'mean' | 'min' | 'max' | 'both';
   /** The layer that drives layout attraction, edge width, node size and ranks: a layer key or 'composite'. */
   layer: string;
   sizeMetric: SizeMetric;
