@@ -6,7 +6,7 @@ Graticule is a browser-only organisational network analysis (ONA) tool for teams
 
 `spec.md` is the single source of truth. This file records decisions made during the build. If this file and `spec.md` conflict, stop and ask the owner; do not resolve the conflict silently.
 
-Supporting documents: `docs/user-guide.md` (the analyst's guide, with screenshots in `docs/user-guide/`), `docs/respondent-help.md` (one page for survey participants), `docs/plan.md` (architecture, schema, metric definitions), `docs/design-system.md` (tokens and wireframes), `docs/method-notes.md` (every metric's meaning, formula and caveats, and the differences from NetworkX; the in-app explanations are drawn from it), `docs/scenarios.md` (the twelve fictional scenario projects) and `docs/reports/initial-assessment.md` (the tool assessed on them, with open issues). Screenshots of each phase are in `docs/screenshots/phase-N/`.
+Supporting documents: `docs/user-guide.md` (the analyst's guide, with screenshots in `docs/user-guide/`), `docs/respondent-help.md` (one page for survey participants), `docs/plan.md` (architecture, schema, metric definitions), `docs/design-system.md` (tokens and wireframes), `docs/method-notes.md` (every metric's meaning, formula and caveats, and the differences from NetworkX; the in-app explanations are drawn from it), `docs/scenarios.md` (the twelve fictional scenario projects), `docs/reports/initial-assessment.md` (the tool assessed on them, with open issues) and `docs/reports/consultant-review.md` (the tool reviewed as a consultant new to ONA would use it, with proposed changes). Screenshots of each phase are in `docs/screenshots/phase-N/`.
 
 ## Decisions
 
@@ -381,6 +381,8 @@ On 2026-09-26 the owner approved `docs/plan.md` §6 Q1–Q17 with their proposed
 Q35 (the release check against the live site), under Phase 9.
 
 Q37 (scenario assessment, 2026-10-22): `docs/reports/initial-assessment.md` lists nine issues found on the scenario projects (D138, D139). Each changes a rule or default the owner approved (D26, D72, D130, Q26, plan Q3), so each needs the owner's decision before it is built; a deep-dive session is to propose fixes with measured effects.
+
+Q38 (consultant review, 2026-10-22): `docs/reports/consultant-review.md` reviews the tool as a consultant new to ONA would use it with a client new to ONA (persona confirmed by the owner), drawing on five resources the owner supplied. It proposes changes in eight areas, ordered in its section 11, and lists eight small defects in its Appendix A, among them three user guide screenshots that show only the collapsed right rail. Most changes amend the specification (§2: descriptive stance, no backend, one wave; §4.2 layers; §7 composite default; §8 views; §9 insights; §11 exports), so each needs the owner's decision before it is built. Evidence screenshots are in `docs/screenshots/consultant-review/`.
 
 ## Phase status
 
