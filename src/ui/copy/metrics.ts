@@ -155,6 +155,8 @@ export const flagCopy = {
   notConverged: 'Not defined: the calculation did not settle.',
   fewerThanTwoContacts: 'This member has fewer than two contacts, so the value is 0.',
   negativeSubLayer: 'Not computed on negative ties.',
+  leftOut:
+    'Not defined: this member gave no ratings, and the analysis leaves out values that depend on their own ratings.',
   gaveNoRatings: ratingFlagCopy.gaveNoRatings,
   gaveFewRatings: ratingFlagCopy.gaveFewRatings,
 } as const;

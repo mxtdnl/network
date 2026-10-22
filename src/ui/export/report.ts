@@ -7,6 +7,8 @@
 import { DEFAULT_WAVE, isCategorical } from '../../data/schema';
 import { surveyStatus } from '../../survey/model';
 import { coveragePercent, percent } from '../copy/data';
+import { remediesCopy } from '../copy/remedies';
+import { appliedRemedies } from '../state/remedies';
 import { exportCopy, reportCopy as R } from '../copy/export';
 import {
   insightsCopy,
@@ -427,6 +429,7 @@ export function buildReport(
     R.cover.view(view),
     R.cover.weights(R.cover.presets[ctx.weightsPreset]),
     ctx.anonymised ? R.cover.anonymised : R.cover.named,
+    ...appliedRemedies(result).map((id) => R.cover.remedy(remediesCopy.applied[id])),
     ...(ctx.excludeSigned ? [ctx.reanalysed ? R.cover.excluded : R.cover.excludedNone] : []),
     R.cover.descriptive,
   ];

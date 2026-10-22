@@ -4,6 +4,7 @@
 // long request can report progress and be cancelled.
 
 import { buildAnalysisInput, type AnalysisOptions } from '../engine/input';
+export type { AnalysisOptions };
 import {
   transferables,
   type EngineRequest,

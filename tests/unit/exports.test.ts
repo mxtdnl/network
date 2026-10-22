@@ -32,6 +32,7 @@ import { withPalette, withPin } from '../../src/ui/map/palettes';
 import { DIRECTED_METRICS, flagCopy } from '../../src/ui/copy/metrics';
 import { qualityCopy, qualityStatement } from '../../src/ui/copy/quality';
 import { mapCopy } from '../../src/ui/copy/map';
+import { remediesCopy } from '../../src/ui/copy/remedies';
 import { computeQuality } from '../../src/data/quality';
 import { effectiveWeights, type WeightState } from '../../src/ui/state/presets';
 import type { MapSettings } from '../../src/ui/state/store';
@@ -715,6 +716,62 @@ describe('data-quality statement and rating flags', () => {
     expect(ctx.result.ratingFlags.includes('gaveNoRatings')).toBe(false);
     const out = await produce('svg', ctx);
     expect(out.text).not.toContain(mapCopy.legend.noRatings);
+  }, 30_000);
+});
+
+describe('data remedies in exports (build plan session 5)', () => {
+  const silentId = project.members[3]?.id ?? '';
+  const silentProject = {
+    ...project,
+    ties: project.ties.filter((t) => t.rater_id !== silentId),
+  };
+  const remedies: Partial<MapSettings> = {
+    view: 'symmetrised',
+    symmetrise: 'both',
+    nonRespondents: 'leaveOut',
+    reconstruct: true,
+    standardise: 'rank',
+  };
+  describe.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])('names hidden %s, signed layers left out %s', (anonymise, excludeSigned) => {
+    it('states every option applied and labels reconstructed ties', async () => {
+      const ctx = await contextFor(silentProject, {
+        anonymise,
+        excludeSigned,
+        weights: HEALTH,
+        map: remedies,
+      });
+      // The exclusion's own analysis keeps the options.
+      expect(ctx.result.remedies).toEqual({
+        nonRespondents: 'leaveOut',
+        reconstruct: true,
+        standardise: 'rank',
+      });
+      expect(Object.keys(ctx.result.reconstructed).length).toBeGreaterThan(0);
+      const network = networkMetricsCsv(ctx).text;
+      for (const text of Object.values(remediesCopy.applied)) expect(network).toContain(text);
+      const member = memberMetricsCsv(ctx).text;
+      const rows = member.split('\r\n').filter((r) => r.startsWith(ctx.names.of(silentId)));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) expect(r).toContain(remediesCopy.reconstructedHelp);
+      const svg = await produce('svg', ctx);
+      // Legend notes wrap, so their first words are checked.
+      expect(svg.text).toContain('tie directions reconstructed');
+      expect(svg.text).toContain('Each person’s ratings ranked');
+      const text = await pdfText((await pdfExport(ctx, mapState, deps, '')).bytes);
+      expect(text).toContain('Analysis option');
+      if (anonymise) for (const n of NAMES) expect(member + svg.text + text).not.toContain(n);
+      if (excludeSigned) for (const l of EXCLUDED_LABELS) expect(network).not.toContain(l);
+    }, 30_000);
+  });
+
+  it('states no option when none is applied', async () => {
+    const ctx = await contextFor(silentProject, { anonymise: true, excludeSigned: false });
+    expect(networkMetricsCsv(ctx).text).not.toContain(exportCopy.csv.measures.option);
   }, 30_000);
 });
 

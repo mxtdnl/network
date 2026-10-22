@@ -11,6 +11,7 @@ import { memberNames, type MemberNames } from '../state/names';
 import { effectiveWeights, type WeightState } from '../state/presets';
 import type { MapSettings } from '../state/store';
 import { exclusionApplies, exportProject } from './scope';
+import { analysisOptions } from '../state/remedies';
 
 /** Runs one analysis; the browser uses a worker of its own, tests call the engine directly. */
 export type Analyse = (input: AnalysisInput) => Promise<AnalysisResult>;
@@ -68,6 +69,7 @@ export async function exportContext(
       {
         view: map.view,
         symmetrise: map.symmetrise,
+        ...analysisOptions(map),
         weights: weights.weights,
         signedTreatment: weights.signedTreatment,
       },

@@ -823,3 +823,47 @@ a {
   font-size: var(--t--1-size);
   line-height: var(--t--1-line);
 }
+
+/* Adjust the analysis (build plan session 5) */
+.remedy {
+  margin-bottom: var(--s-4);
+}
+
+.remedy__title {
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--s-1);
+}
+
+.remedy__preview {
+  max-width: var(--measure);
+  margin-top: var(--s-2);
+  padding-inline-start: var(--s-3);
+  border-inline-start: var(--line-width) solid var(--stone);
+}
+
+.remedy__preview p {
+  margin-bottom: var(--s-1);
+}
+
+.remedy__changes {
+  margin: 0 0 var(--s-2);
+  padding: 0;
+  list-style: none;
+}
+
+.remedy__changes li {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--s-2);
+}
+
+.remedy__rule {
+  font-weight: var(--weight-medium);
+}
+
+.remedies__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}

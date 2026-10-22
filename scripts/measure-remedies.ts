@@ -48,7 +48,6 @@ const CASES: Case[] = [
       },
       { name: `reconstruct, ${v}`, base: view, option: { ...view, reconstruct: true } },
       { name: `standardise by rank, ${v}`, base: view, option: { ...view, standardise: 'rank' } },
-      { name: `standardise by z-score, ${v}`, base: view, option: { ...view, standardise: 'z' } },
     ];
   }),
   {

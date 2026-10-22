@@ -5,7 +5,7 @@
 // it is computed here from the project (src/data/coverage.ts, D29).
 
 import { computeCoverage } from '../data/coverage';
-import { DEFAULT_WAVE, isCategorical, type Project } from '../data/schema';
+import { DEFAULT_WAVE, isCategorical, isMutualLayer, type Project } from '../data/schema';
 import type { AnalysisInput, AttributeColumn, EngineLayer, EngineSettings } from './types';
 
 export type AnalysisOptions = Pick<
@@ -13,13 +13,6 @@ export type AnalysisOptions = Pick<
   'view' | 'symmetrise' | 'weights' | 'signedTreatment'
 > &
   Partial<Pick<EngineSettings, 'nonRespondents' | 'reconstruct' | 'standardise'>>;
-
-/** Relations mutual by nature: a missing direction may be reconstructed from the other (build plan session 5). */
-export const MUTUAL_LAYER_KEYS: readonly string[] = [
-  'connection_strength',
-  'formal_collaboration',
-  'informal_collaboration',
-];
 
 export function engineSettings(project: Project, options: AnalysisOptions): EngineSettings {
   return {
@@ -58,7 +51,7 @@ export function buildAnalysisInput(
     ...(l.role === undefined ? {} : { role: l.role }),
     ...(l.group === undefined ? {} : { group: l.group }),
     defaultWeight: l.default_weight,
-    ...(MUTUAL_LAYER_KEYS.includes(l.key) ? { mutual: true } : {}),
+    ...(isMutualLayer(l) ? { mutual: true } : {}),
   }));
   const layerIndex = new Map(defs.map((l, k) => [l.key, k]));
   const ratings = defs.map(() => new Float64Array(n * n).fill(NaN));

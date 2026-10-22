@@ -5,6 +5,7 @@
 
 import { formatScale, formatValue, formatWeight, mapCopy } from '../copy/map';
 import { metricCopy } from '../copy/metrics';
+import { remediesCopy } from '../copy/remedies';
 import type { EdgeStyle, MapModel } from './model';
 
 const L = mapCopy.legend;
@@ -174,6 +175,8 @@ export function legendSections(
       ...(rangeNote && model.negativeOutsideRange ? [L.negativeOutside] : []),
       ...(model.hiddenLayers.length > 0 ? [L.hiddenLayers(model.hiddenLabels)] : []),
       ...(rangeNote || model.hiddenLayers.length > 0 ? [L.metricsUseAllTies] : []),
+      ...(model.standardised ? [remediesCopy.applied.standardise] : []),
+      ...(model.reconstructed > 0 ? [remediesCopy.reconstructedNote(model.reconstructed)] : []),
     ],
   });
 

@@ -140,10 +140,9 @@ export function prepare(input: AnalysisInput): Prepared {
       add(`${layer.key}-`, 'negative', signedPart(s, -1), signedPart(sSym, -1), layer.key);
     } else {
       // Standardise each rater's own ratings, then reconstruct from them (engine/remedies.ts).
-      const step = 1 / (layer.max - layer.min);
       const w = fill(
         layer.key,
-        standardiseRows(rescaleUnsigned(r, layer), n, standardise, step, silent),
+        standardiseRows(rescaleUnsigned(r, layer), n, standardise, silent),
         layer,
       );
       scaled.set(layer.key, w);
@@ -318,6 +317,20 @@ export async function analysePrepared(
     coverage,
     ratingFlags,
     ownRatingMetrics: ownRatingMetrics(directed),
+    remedies: {
+      nonRespondents: input.settings.nonRespondents ?? 'mark',
+      reconstruct: input.settings.reconstruct ?? false,
+      standardise: input.settings.standardise ?? 'none',
+    },
+    reconstructed: Object.fromEntries(
+      [...p.reconstructed].map(([key, mask]) => {
+        const pairs: [number, number][] = [];
+        mask.forEach((v, k) => {
+          if (v) pairs.push([Math.floor(k / n), k % n]);
+        });
+        return [key, pairs];
+      }),
+    ),
     insights,
     warnings,
   };

@@ -1,9 +1,10 @@
 import { useId, useState } from 'react';
 import { defaultLayers } from '../../data/defaults';
-import type { LayerDefinition } from '../../data/schema';
+import { isCategorical, isMutualLayer, type LayerDefinition } from '../../data/schema';
 import { ConfirmDialog, Dialog } from '../components/Dialog';
 import { Switch } from '../components/Switch';
 import { layerCopy } from '../copy/data';
+import { remediesCopy } from '../copy/remedies';
 import { useAppStore } from '../state/store';
 
 export function scaleDescription(layer: LayerDefinition): string {
@@ -145,6 +146,7 @@ function LayerForm({
   const setStatus = useAppStore((s) => s.setStatus);
   const [label, setLabel] = useState(layer.label);
   const [wording, setWording] = useState(layer.question_wording);
+  const [mutual, setMutual] = useState(isMutualLayer(layer));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [touched, setTouched] = useState(false);
   const labelId = useId();
@@ -159,7 +161,12 @@ function LayerForm({
         e.preventDefault();
         setTouched(true);
         if (labelEmpty) return;
-        updateLayer(layer.key, { label: label.trim(), question_wording: wording.trim() });
+        updateLayer(layer.key, {
+          label: label.trim(),
+          question_wording: wording.trim(),
+          // Stored only when it differs from the default for the layer (isMutualLayer).
+          ...(mutual === isMutualLayer(layer) ? {} : { mutual }),
+        });
         setStatus({ text: layerCopy.saved(label.trim()), tone: 'info' });
         onClose();
       }}
@@ -202,6 +209,12 @@ function LayerForm({
           }}
         />
       </div>
+      {!isCategorical(layer) && (
+        <div className="field">
+          <Switch label={remediesCopy.mutual} checked={mutual} onChange={setMutual} />
+          <p className="field__help">{remediesCopy.mutualHelp}</p>
+        </div>
+      )}
       <dl className="definition-list">
         <dt>{layerCopy.scale}</dt>
         <dd className="num">{scaleDescription(layer)}</dd>

@@ -361,8 +361,11 @@ function MetricsTable({ data }: { data: MapData }) {
                       text = r.community === null ? '–' : String(r.community);
                     else if (c.key === 'rank') text = rankInterval(r.rankLow, r.rankHigh);
                     else text = formatted[c.key]?.[k] ?? '';
+                    // A value the analysis leaves out (build plan session 5) is shown as not defined, unmarked.
                     const own =
-                      r.flag !== null && result.ownRatingMetrics.includes(c.key as SizeMetric);
+                      r.flag !== null &&
+                      text !== 'Not defined' &&
+                      result.ownRatingMetrics.includes(c.key as SizeMetric);
                     return (
                       <td key={c.key} className={c.numeric ? 'numeric' : undefined}>
                         {text === 'Not defined' ? (

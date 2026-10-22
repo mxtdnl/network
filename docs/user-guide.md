@@ -228,7 +228,7 @@ The legend shows:
 - **Ties from** chooses the layer, or the composite, that sets which ties are drawn, their width, the layout, node size, communities and ranks.
 - **Show on the map**: with "Hide its ties", a switch for each layer hides the pairs tied on it; every layer starts on. With "Keep its ties" (the default) every layer's ties are drawn.
 - **Edges**: Edge colour, Edge width and Edge style, as in the legend above. Each line encoding shows one thing at a time.
-- **Direction.** Directed shows each person's ratings separately. Mutual combines the two directions of each pair, by their average, the weaker or the stronger of the two. The choice changes the metrics, so it is stated in every export.
+- **Direction.** Directed shows each person's ratings separately. Mutual combines the two directions of each pair, by their average, the weaker or the stronger of the two, or "Both report a tie", which keeps a tie only when each has rated the other above 0. Under the weaker of the two, a tie to someone who did not answer survives, because their missing rating is filled from the one given; under "Both report a tie" it does not. The choice changes the metrics, so it is stated in every export.
 - **Tie strength from** and **to** draw only the ties whose strength lies within the range, both ends included; the metrics still use every tie. Set from 0.30 to 0.50, for example, to see only the middling ties. The map opens at 0.30 to 1.00, so the weakest ties are hidden, and the legend says which ties are hidden; set the range to 0 to 1 to draw every tie. From can never be above to: moving one slider past the other moves both. Showing an insight on the map draws every tie, and a saved view keeps its own range.
 - **Draw negative ratings outside the range** (when valence or energy is enabled) also draws every tie that carries a negative rating, however weak. With valence as a multiplier on the composite, a negatively rated tie is weakened and often falls below 0.30, so it would otherwise be hidden.
 - **Node size**, with **Node size scale** by value (area in proportion to the value) or by rank (area in proportion to the rank, so one member with a very high value does not leave everyone else small), **Node fill**, **Outline communities** (a grey outline round each community found on Ties from, while the fill shows an attribute, so communities that cross teams are visible), **Filter** (by any attribute) and **Search**.
@@ -302,6 +302,15 @@ Read this tab before the insights. It says whether the data can bear a conclusio
 - **Ties reported by one side only**: of the ties someone reported, where the other person also answered, how many were not reported back.
 
 The checks change no figure. The definitions and thresholds are in the [method notes](method-notes.md#13-data-quality-checks).
+
+**Adjust the analysis**, at the end of the tab, offers four options for what the checks show. Each changes the whole analysis (map, tables, insights and exports), is saved with views, and is stated in exports. All are off until you switch them on.
+
+- **Count a tie only when both report it**: the Direction rule "Both report a tie" (above).
+- **Leave out people who gave no ratings**: their values that depend on their own ratings show as not defined, and the rules on brokers, peripheral members and possible overload neither name nor count them. Otherwise those values are shown and marked *.
+- **Reconstruct their ties from colleagues' ratings**: on relations both people share (connection strength and formal and informal collaboration, unless you change "Mutual by nature" when editing a layer), someone who gave no ratings is given each colleague's rating of them as their own. Reconstructed ratings are labelled in the member panel, the legend and the member metrics export.
+- **Compare each person's ratings with their own**: on unsigned layers, each person's ratings are replaced by their rank among their own ties, so someone who rates everyone high and someone who rates everyone low count alike. Which ties exist does not change.
+
+**Preview the effect on the insights** runs the analysis again with each option switched, without changing the screen, and lists the observations each would change (for example a broker no longer named, or a silo found), with the composite's tie count when it changes. Options that cannot change anything, such as leaving out non-respondents when everyone answered, say so. The methods are in the [method notes](method-notes.md#14-data-remedies).
 
 ![The Check the data tab: the data-quality statement, then coverage overall and by group](user-guide/coverage.jpg)
 

@@ -161,6 +161,10 @@ export interface MapModel {
   outlines: number[] | null;
   /** The project's palettes (D127): renderers take their colours from the theme's palette of that id. */
   palette: PaletteChoice;
+  /** Tie directions reconstructed from colleagues' ratings, all layers (build plan session 5). */
+  reconstructed: number;
+  /** Each rater's ratings on unsigned layers are ranks within the rater (build plan session 5). */
+  standardised: boolean;
 }
 
 export interface Radii {
@@ -785,6 +789,8 @@ export function buildMapModel(
     highlighted,
     outlines,
     palette: paletteChoice(project),
+    reconstructed: Object.values(result.reconstructed).reduce((s, p) => s + p.length, 0),
+    standardised: result.remedies.standardise === 'rank',
   };
 }
 

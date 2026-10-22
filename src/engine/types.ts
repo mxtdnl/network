@@ -25,7 +25,7 @@ export type ViewKind = 'directed' | 'symmetrised';
 export type SymmetriseRule = 'mean' | 'min' | 'max' | 'both';
 export type SignedTreatment = 'positive' | 'filterNegative' | 'multiplier';
 /** Rater standardisation of unsigned layers (engine/remedies.ts, build plan session 5). */
-export type StandardiseMethod = 'none' | 'rank' | 'z';
+export type StandardiseMethod = 'none' | 'rank';
 /** Members who gave no ratings: marked in the results (default) or left out (engine/remedies.ts). */
 export type NonRespondentTreatment = 'mark' | 'leaveOut';
 
@@ -118,6 +118,8 @@ export type NodeFlag =
   | 'noComponent'
   | 'notConverged'
   | 'fewerThanTwoContacts'
+  /** Not defined because the member gave no ratings and the analysis leaves them out (engine/remedies.ts). */
+  | 'leftOut'
   | RatingFlag;
 
 export interface NodeMetricTable {
@@ -405,6 +407,17 @@ export interface AnalysisResult {
    * directions are combined, all but the incoming ones when directed.
    */
   ownRatingMetrics: NodeMetricKey[];
+  /** The data remedies applied (build plan session 5), as given in the settings. */
+  remedies: {
+    nonRespondents: NonRespondentTreatment;
+    reconstruct: boolean;
+    standardise: StandardiseMethod;
+  };
+  /**
+   * Directions reconstructed from the other side's rating, per layer, as
+   * [rater index, rated index] pairs (engine/remedies.ts); empty without reconstruction.
+   */
+  reconstructed: Record<LayerKey, [number, number][]>;
   /** Every insight rule, in panel order, with its observations (spec §9). */
   insights: InsightOutcome[];
   warnings: EngineWarning[];

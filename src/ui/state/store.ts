@@ -105,6 +105,12 @@ export interface MapSettings {
   thresholdTo: number;
   /** Display only: ties with a negative rating on a signed layer are drawn outside the range too (D145). */
   negativeOutsideRange: boolean;
+  /** Analysis: members who gave no ratings are marked (default) or left out (D150). */
+  nonRespondents: 'mark' | 'leaveOut';
+  /** Analysis: their ties on mutual layers are reconstructed from colleagues' ratings (D150). */
+  reconstruct: boolean;
+  /** Analysis: each rater's ratings on unsigned layers replaced by ranks within the rater (D151). */
+  standardise: 'none' | 'rank';
   /** Layers switched off on the map; with `hideOffLayers`, their ties are hidden (D59). */
   layerToggles: Record<LayerKey, boolean>;
   /** When true, a layer switched off also hides its ties (CLAUDE.md D59). */
@@ -187,7 +193,11 @@ interface Actions {
   setPersistence: (status: PersistenceStatus) => void;
   setMatrixLayer: (key: LayerKey) => void;
   setLayerEnabled: (key: LayerKey, enabled: boolean) => void;
-  updateLayer: (key: LayerKey, patch: Pick<LayerDefinition, 'label' | 'question_wording'>) => void;
+  updateLayer: (
+    key: LayerKey,
+    patch: Pick<LayerDefinition, 'label' | 'question_wording'> &
+      Pick<Partial<LayerDefinition>, 'mutual'>,
+  ) => void;
   deleteLayer: (key: LayerKey) => void;
   restoreLayer: (key: LayerKey) => void;
   applyRatings: (variable: LayerKey, changes: readonly RatingChange[]) => void;
@@ -255,6 +265,9 @@ export function initialMapSettings(): MapSettings {
     threshold: DEFAULT_THRESHOLD,
     thresholdTo: DEFAULT_THRESHOLD_TO,
     negativeOutsideRange: false,
+    nonRespondents: 'mark',
+    reconstruct: false,
+    standardise: 'none',
     layerToggles: {},
     hideOffLayers: false,
     filters: [],

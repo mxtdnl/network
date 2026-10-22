@@ -8,8 +8,9 @@
 //   rating as their own (j → i := i → j). Only missing directions are filled,
 //   and only for members who gave no ratings at all.
 // - rater standardisation: each rater's ties on an unsigned layer (weights
-//   above 0) are re-expressed within that rater, so a rater who rates
-//   everyone high and one who rates everyone low contribute the same spread.
+//   above 0) are replaced by their ranks within that rater, so a rater who
+//   rates everyone high and one who rates everyone low contribute the same
+//   spread (the owner chose ranks over z-scores, CLAUDE.md D151).
 //   A rated 0 stays 0 and a missing rating stays missing, so standardisation
 //   changes how strong ties are, never which ties exist.
 // - leaving out: values that depend on a member's own ratings are not
@@ -59,63 +60,34 @@ function averageRanks(values: readonly number[]): number[] {
 }
 
 /**
- * Standardises each rater's (row's) weights above 0 within that rater.
- *
- *   rank  w' = (rank − 0.5) / k, average ranks over the rater's k ties, so
- *         ties spread evenly over (0, 1) and a rater whose ties are all equal
- *         (or who has one) gets 0.5 for each.
- *   z     w' = clamp(μ + σ·(w − μ_i)/σ_i, step, 1), with μ_i, σ_i the rater's
- *         mean and standard deviation over their ties and μ, σ those of every
- *         tie on the layer; a rater with one tie, or all ties equal, gets μ.
- *         `step` is the layer's smallest scale step, 1 / (max − min), so a
- *         tie never becomes 0.
- *
- * Rows in `skip` (members who gave no ratings) are left as they are.
+ * Standardises each rater's (row's) weights above 0 within that rater, by
+ * rank: w' = (rank − 0.5) / k, average ranks (ascending) over the rater's k
+ * ties, so the ties spread evenly over (0, 1) and a rater whose ties are all
+ * equal, or who has one, gets 0.5 for each. A weight of 0 stays 0 and NaN
+ * stays NaN. Rows in `skip` (members who gave no ratings) are left as they are.
  */
 export function standardiseRows(
   w: Float64Array,
   n: number,
   method: StandardiseMethod,
-  step: number,
   skip: ReadonlySet<number> = new Set(),
 ): Float64Array {
   const out = w.slice();
   if (method === 'none') return out;
-  const rows: number[][] = [];
   for (let i = 0; i < n; i++) {
+    if (skip.has(i)) continue;
     const row: number[] = [];
-    if (!skip.has(i))
-      for (let j = 0; j < n; j++) if (i !== j && (w[i * n + j] as number) > 0) row.push(j);
-    rows.push(row);
-  }
-  if (method === 'rank') {
-    rows.forEach((row, i) => {
-      const ranks = averageRanks(row.map((j) => w[i * n + j] as number));
-      row.forEach((j, k) => {
-        out[i * n + j] = ((ranks[k] as number) - 0.5) / row.length;
-      });
-    });
-    return out;
-  }
-  const all = rows.flatMap((row, i) => row.map((j) => w[i * n + j] as number));
-  if (all.length === 0) return out;
-  const mu = all.reduce((s, x) => s + x, 0) / all.length;
-  const sigma = Math.sqrt(all.reduce((s, x) => s + (x - mu) ** 2, 0) / all.length);
-  rows.forEach((row, i) => {
-    if (row.length === 0) return;
-    const xs = row.map((j) => w[i * n + j] as number);
-    const m = xs.reduce((s, x) => s + x, 0) / xs.length;
-    const sd = Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / xs.length);
+    for (let j = 0; j < n; j++) if (i !== j && (w[i * n + j] as number) > 0) row.push(j);
+    const ranks = averageRanks(row.map((j) => w[i * n + j] as number));
     row.forEach((j, k) => {
-      const z = sd > 0 ? ((xs[k] as number) - m) / sd : 0;
-      out[i * n + j] = Math.min(1, Math.max(step, mu + sigma * z));
+      out[i * n + j] = ((ranks[k] as number) - 0.5) / row.length;
     });
-  });
+  }
   return out;
 }
 
 /**
- * The node table with `metrics` not defined (NaN, flag gaveNoRatings) for
+ * The node table with `metrics` not defined (NaN, flag leftOut) for
  * the members in `silent`. Columns are copied, so the input is unchanged.
  */
 export function leaveOut(
@@ -135,7 +107,7 @@ export function leaveOut(
     ];
     for (const i of silent) {
       copy[i] = NaN;
-      f[i] = 'gaveNoRatings';
+      f[i] = 'leftOut';
     }
     columns[m] = copy;
     flags[m] = f;
