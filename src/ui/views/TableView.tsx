@@ -1,9 +1,11 @@
 import { useId, useMemo, useState } from 'react';
+import type { RatingFlag } from '../../data/quality';
 import type { BootstrapMetric } from '../engineClient';
 import { Icon } from '../components/Icon';
 import { percent } from '../copy/data';
 import { formatScale, mapCopy } from '../copy/map';
 import { DIRECTED_METRICS, SYMMETRISED_METRICS, metricCopy } from '../copy/metrics';
+import { ratingFlagCopy } from '../copy/quality';
 import { tableCopy } from '../copy/table';
 import { rankInterval } from '../map/rank';
 import { drawableLayers, useMapData, type MapData } from '../map/useMapModel';
@@ -26,6 +28,8 @@ interface Row {
   values: Partial<Record<SizeMetric, number>>;
   rankLow: number;
   rankHigh: number;
+  /** Gave no ratings or few (session 4): values resting on their own ratings are marked. */
+  flag: RatingFlag | null;
 }
 
 // The metrics table (spec §8): one row per member shown, the metrics of the
@@ -94,6 +98,7 @@ function MetricsTable({ data }: { data: MapData }) {
         values,
         rankLow: interval ? (interval.rankLow[node.index] ?? NaN) : NaN,
         rankHigh: interval ? (interval.rankHigh[node.index] ?? NaN) : NaN,
+        flag: result.ratingFlags[node.index] ?? null,
       });
     }
     const dir = sort.descending ? -1 : 1;
@@ -124,7 +129,8 @@ function MetricsTable({ data }: { data: MapData }) {
       if (xn !== yn) return xn ? -1 : 1;
       return (xn && yn ? dir * (x - y) : 0) || a.name.localeCompare(b.name, 'en-GB');
     });
-  }, [model, project, names, metrics, ref, fillAttr, interval, sort]);
+  }, [model, project, names, metrics, ref, fillAttr, interval, sort, result]);
+  const anyFlag = rows.some((r) => r.flag !== null);
 
   const formatted = useMemo(() => {
     const out: Partial<Record<SizeMetric, string[]>> = {};
@@ -272,6 +278,7 @@ function MetricsTable({ data }: { data: MapData }) {
           <table className="data-table" aria-labelledby={captionId}>
             <caption id={captionId} className="data-table__caption">
               {T.caption(layerLabel(settings.layer), rows.length)}
+              {anyFlag && <span className="data-table__flag-note">{ratingFlagCopy.tableNote}</span>}
             </caption>
             <thead>
               <tr>
@@ -343,6 +350,9 @@ function MetricsTable({ data }: { data: MapData }) {
                           >
                             {r.name}
                           </button>
+                          {r.flag && (
+                            <span className="data-table__flag">{ratingFlagCopy.short[r.flag]}</span>
+                          )}
                         </th>
                       );
                     let text: string;
@@ -351,12 +361,19 @@ function MetricsTable({ data }: { data: MapData }) {
                       text = r.community === null ? '–' : String(r.community);
                     else if (c.key === 'rank') text = rankInterval(r.rankLow, r.rankHigh);
                     else text = formatted[c.key]?.[k] ?? '';
+                    const own =
+                      r.flag !== null && result.ownRatingMetrics.includes(c.key as SizeMetric);
                     return (
                       <td key={c.key} className={c.numeric ? 'numeric' : undefined}>
                         {text === 'Not defined' ? (
                           <span className="data-table__undefined">{T.notDefined}</span>
                         ) : (
                           text
+                        )}
+                        {own && (
+                          <span className="rating-flag" aria-hidden="true">
+                            {ratingFlagCopy.marker}
+                          </span>
                         )}
                       </td>
                     );

@@ -39,6 +39,8 @@ export interface MapNode {
   radius: number;
   /** Index into `fill.groups`. */
   group: number;
+  /** Gave no ratings: drawn hollow, with its own legend entry (session 4). */
+  noRatings: boolean;
 }
 
 export interface MapEdge {
@@ -538,6 +540,7 @@ export function buildMapModel(
       sizeValue,
       radius: radius(i),
       group: fill.memberGroup[i] ?? 0,
+      noRatings: result.ratingFlags[i] === 'gaveNoRatings',
     };
   });
   const weights = result.refs[edgeLayer]?.weights;

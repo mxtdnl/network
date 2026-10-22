@@ -1,8 +1,11 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Dialog } from '../components/Dialog';
 import { Switch } from '../components/Switch';
 import { exportCopy as E } from '../copy/export';
-import { exclusionApplies } from '../export/scope';
+import { computeQuality } from '../../data/quality';
+import { qualityCopy } from '../copy/quality';
+import { exclusionApplies, exportProject } from '../export/scope';
+import { QualityStatement } from './DataCheckPanel';
 import {
   exportMapFile,
   exportReportFile,
@@ -40,6 +43,11 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   const excludeSigned = project?.settings.exclude_signed_from_exports ?? false;
   const anyExcludable = project ? exclusionApplies(project, true) : false;
+  // The statement as the exports carry it: from the project they show (D105).
+  const quality = useMemo(
+    () => (project ? computeQuality(exportProject(project, excludeSigned)) : null),
+    [project, excludeSigned],
+  );
 
   const run = async (key: string, action: () => Promise<string | null>) => {
     setBusy(key);
@@ -104,6 +112,16 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           </p>
         </div>
       </section>
+
+      {quality && (
+        <section className="export__section" aria-labelledby={`${id}-quality`}>
+          <h3 id={`${id}-quality`} className="export__heading">
+            {qualityCopy.exportHeading}
+          </h3>
+          <QualityStatement quality={quality} className="export-dialog__statement" />
+          <p className="field__help">{qualityCopy.exportHelp}</p>
+        </section>
+      )}
 
       <section className="export__section" aria-labelledby={`${id}-map`}>
         <h3 id={`${id}-map`} className="export__heading">

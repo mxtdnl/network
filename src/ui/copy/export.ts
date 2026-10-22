@@ -89,7 +89,7 @@ export const exportCopy = {
     memberId: 'Member id',
     layer: 'Ties from',
     community: 'Community',
-    notDefinedReason: 'Not defined because',
+    notDefinedReason: 'Not defined because, or note',
     receivedRatings: 'Ratings received (−1 to +1 scale)',
     raters: 'Members giving them',
     measure: 'Measure',

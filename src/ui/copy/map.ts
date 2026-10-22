@@ -237,6 +237,7 @@ export const mapCopy = {
     colourUnavailable: 'Not used: the chosen layer is not enabled',
     colourExcluded: 'Not used: its layer is left out of this export',
     outlines: (layer: string) => `Community outline, detected on ${layer}`,
+    noRatings: 'Gave no ratings (hollow)',
     style: 'Edge style',
     styleVariable: 'Formal and informal collaboration',
     formal: 'Formal only',

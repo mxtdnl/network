@@ -6,7 +6,7 @@
 
 import { legendSections, type LegendExtras, type LegendSection, type Swatch } from '../map/legend';
 import type { MapModel } from '../map/model';
-import type { Scene } from '../map/scene';
+import { hollowRadius, type Scene } from '../map/scene';
 import type { ExportTheme } from './theme';
 
 export type FontRole = 'label' | 'group' | 'regular' | 'medium';
@@ -112,6 +112,18 @@ export function scenePrimitives(scene: Scene): Primitive[] {
       dash: n.dashed ? dash : [],
       alpha: n.alpha,
     });
+    if (n.hollow > 0)
+      out.push({
+        kind: 'circle',
+        x: n.x,
+        y: n.y,
+        r: n.hollow,
+        fill: t.paper,
+        stroke: n.stroke,
+        strokeWidth: n.strokeWidth,
+        dash: [],
+        alpha: n.alpha,
+      });
   }
   const ring = (x: number, y: number, r: number, stroke: string, width: number): Primitive => ({
     kind: 'circle',
@@ -508,6 +520,13 @@ export function legendPrimitives(
                 node(x + box / 2 + t.nodeMin + t.line, cy, t.nodeMin, t.fade),
               ];
             if (item.mark === 'path') return [edge(x, cy, x + box, cy, t.ink, t.focusWidth)];
+            if (item.mark === 'hollow') {
+              const r = Math.min((t.nodeMin + t.nodeMax) / 2, box / 2 - t.line);
+              return [
+                { ...node(x + box / 2, cy, r), fill: t.stone },
+                { ...node(x + box / 2, cy, hollowRadius(r, t.line)), fill: t.paper },
+              ];
+            }
             if (item.mark === 'outline') {
               // A rounded outline round a member, as on the map.
               const r = t.nodeMin + t.line + t.labelGap * 2;

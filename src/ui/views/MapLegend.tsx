@@ -7,6 +7,7 @@ import {
   type LegendSection,
 } from '../map/legend';
 import type { MapModel } from '../map/model';
+import { hollowRadius } from '../map/scene';
 import type { MapTheme } from '../map/theme';
 
 const VAL_CLASS: Record<number, string> = {
@@ -29,6 +30,7 @@ function Sample({
   condensed: boolean;
 }) {
   const box = theme.nodeMax * 2 + theme.line * 2;
+  const hollowSample = (theme.nodeMin + theme.nodeMax) / 2;
   // Line samples are one text line tall; condensed, they are a swatch wide.
   const lineH = theme.labelSize + theme.labelGap;
   const lineW = condensed ? theme.swatch : box * 1.5;
@@ -237,6 +239,21 @@ function Sample({
                       cx={box / 2 + theme.nodeMin + theme.line}
                       cy={box / 2}
                       r={theme.nodeMin}
+                    />
+                  </>
+                ) : item.mark === 'hollow' ? (
+                  <>
+                    <circle
+                      className="legend__node legend__node--ring"
+                      cx={box / 2}
+                      cy={box / 2}
+                      r={hollowSample}
+                    />
+                    <circle
+                      className="legend__node legend__node--hole"
+                      cx={box / 2}
+                      cy={box / 2}
+                      r={hollowRadius(hollowSample, theme.line)}
                     />
                   </>
                 ) : item.mark === 'outline' ? (

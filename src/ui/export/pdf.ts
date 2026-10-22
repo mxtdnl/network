@@ -698,6 +698,9 @@ export async function reportPdf(input: PdfInput): Promise<PdfOutput> {
   );
   w.y += P.body.line + (P.space[6] ?? 0);
   for (const line of report.cover) paragraph(w, { kind: 'paragraph', text: line });
+  // The data-quality statement (session 4) travels on the cover.
+  heading(w, report.statementHeading);
+  paragraph(w, { kind: 'paragraph', text: report.statement.join(' ') });
   w.y += P.space[4] ?? 0;
   const cover = w.page;
   const contentsTop = w.y;

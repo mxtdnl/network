@@ -107,6 +107,10 @@ export function memberMetricsCsv(ctx: ExportContext): ExportFile {
           reasons.add(flagCopy[flag].replace(/^Not defined: /, ''));
       }
       if (r.node.omitted) reasons.add(flagCopy.negativeSubLayer);
+      // Values resting on the member's own ratings when they gave none or few (session 4).
+      const rating = result.ratingFlags[i] ?? null;
+      if (rating && metrics.some((k) => result.ownRatingMetrics.includes(k)))
+        reasons.add(flagCopy[rating]);
       const received =
         signed && r.kind === 'positive'
           ? [cell(signed.inPositive[i] ?? NaN), cell(signed.inPositiveCount[i] ?? NaN)]

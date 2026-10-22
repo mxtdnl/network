@@ -170,6 +170,14 @@ For path-based metrics, weight is converted to distance as 1/w. The method notes
 - A configurable threshold, default 80%. Below it, a persistent warning states that whole-network metrics may be unreliable. Until the project has at least one rating, a neutral "No ratings yet" note takes the warning's place.
 - Coverage is shown as a whole percentage, or to one decimal place where whole-number rounding would reach or cross the threshold, so a rate below the threshold never reads as equal to it.
 
+**Data quality.** A "Check the data" view, beside coverage, shows whether the data can bear a conclusion:
+- coverage by group (the attribute the insight rules group by) and by level;
+- the people who gave no ratings and those who gave few, counted, and named to the analyst only;
+- each rater's style: mean rescaled rating, spread, share of the scale used, whether they gave everyone the same answer, and the share of colleagues they report as tied;
+- the share of reported ties not reported back, by group and by level.
+
+Values that depend on a member's own ratings carry a flag when the member gave no ratings or few (member panel, metrics table, member metrics export); a member who gave no ratings is drawn hollow on the map, with a legend entry. Observations that name members also state the attribute values most of those members share, and mark those who gave no ratings. A data-quality statement written from these results, naming no one, is shown in the view, at the start of a presentation, in the export settings and on the PDF report's cover. The checks describe the data; they change no metric.
+
 **Stability (optional).** A node-dropping bootstrap shows how stable the centrality rankings are. Rankings are displayed as intervals, not single ranks.
 
 **Correctness.**
@@ -213,7 +221,7 @@ The network map is an interactive node-link diagram of members and their weighte
 | Channel | Variable (default first) |
 |---|---|
 | Node size | Chosen metric, scaled by value (default) or by rank |
-| Node fill | Chosen attribute or detected community |
+| Node fill | Chosen attribute or detected community; a member who gave no ratings is drawn hollow (section 6, data quality) |
 | Community outline | Optional: an outline around each detected community, so communities can be read while fill shows another attribute |
 | Edge width | The tie strength of the layer that sets the ties shown (strength or composite); or another unsigned layer; or the same width for every tie |
 | Edge colour | Valence, on a diverging scale that is safe for colour-vision deficiencies and has a neutral midpoint, colouring negative ratings only by default with a switch to show the full scale; or another signed layer; or whether a tie stays within a group or crosses between groups; or another unsigned layer on a sequential scale; or none |
@@ -240,7 +248,7 @@ The network map is an interactive node-link diagram of members and their weighte
 
 **Saved views.** A saved view captures weights, filters, layout, positions and selection. Views are named and can be restored.
 
-**Presentation mode.** Full screen with controls hidden. Steps through saved views, with a short caption for each.
+**Presentation mode.** Full screen with controls hidden. Opens with the data-quality statement (section 6), then steps through saved views, with a short caption for each.
 
 **Anonymisation.** A global toggle replaces names with role/team codes. It applies to every view and export.
 
@@ -288,6 +296,7 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
 - PNG and SVG of the current map view, including the legend and caption.
 - CSV of node metrics and network metrics.
 - A PDF summary report generated client-side, containing:
+  - the data-quality statement (section 6) on its cover;
   - the map;
   - key metrics;
   - insights;

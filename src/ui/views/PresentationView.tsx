@@ -9,8 +9,10 @@ import { durationToken } from '../durations';
 import { readMapTheme, type MapTheme } from '../map/theme';
 import { useMapData } from '../map/useMapModel';
 import { setNamesHidden, useMemberNames } from '../state/names';
-import { goTo, step, stopPresentation } from '../state/presentation';
+import { OPENING, goTo, step, stopPresentation } from '../state/presentation';
 import { useAppStore } from '../state/store';
+import { qualityCopy } from '../copy/quality';
+import { QualityStatement, useQuality } from './DataCheckPanel';
 import { MapLegend } from './MapLegend';
 import { MapCanvas, legendExtras } from './MapView';
 
@@ -31,6 +33,7 @@ export function PresentationView() {
   const running = useAppStore((s) => s.results.status === 'running');
   const data = useMapData();
   const names = useMemberNames();
+  const quality = useQuality();
   const rootRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<MapTheme | null>(null);
@@ -40,7 +43,8 @@ export function PresentationView() {
   const titleId = useId();
 
   const views = project?.saved_views ?? [];
-  const view = views[index];
+  // The opening step (OPENING) shows the first view behind its statement.
+  const view = views[Math.max(index, 0)];
 
   // The canvas reads its label sizes from the presentation's tokens.
   useLayoutEffect(() => {
@@ -84,7 +88,7 @@ export function PresentationView() {
         step(-1);
       } else if (e.key === 'Home') {
         e.preventDefault();
-        goTo(0);
+        goTo(OPENING);
       } else if (e.key === 'End') {
         e.preventDefault();
         goTo(Number.MAX_SAFE_INTEGER);
@@ -123,12 +127,48 @@ export function PresentationView() {
   }
 
   const coverage = data?.result.coverage;
+  const opening = index === OPENING;
+  const controls = (
+    <div className="presentation__controls" role="group" aria-label={P.controls}>
+      <button
+        type="button"
+        className="button button--text"
+        disabled={opening}
+        onClick={() => {
+          step(-1);
+        }}
+      >
+        {P.previous}
+      </button>
+      <button
+        type="button"
+        className="button button--text"
+        disabled={index === views.length - 1}
+        onClick={() => {
+          step(1);
+        }}
+      >
+        {P.next}
+      </button>
+      <Switch label={shellCopy.hideNames} checked={anonymise} onChange={setNamesHidden} />
+      <button type="button" className="button button--text" onClick={stopPresentation}>
+        {P.exit}
+      </button>
+    </div>
+  );
+
   return (
     // The region takes focus on entry so screen readers announce it; keys are
     // handled on the window (above).
     <div
       ref={rootRef}
-      className={active ? 'presentation' : 'presentation presentation--idle'}
+      className={[
+        'presentation',
+        opening ? 'presentation--opening' : '',
+        active ? '' : 'presentation--idle',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       role="region"
       aria-labelledby={titleId}
       aria-describedby={instructionsId}
@@ -138,68 +178,60 @@ export function PresentationView() {
         {P.instructions}
       </p>
       <h1 id={titleId} className="presentation__title">
-        {names.text(view.name)}
+        {opening ? qualityCopy.presentationHeading : names.text(view.name)}
       </h1>
-      <div className="presentation__body">
-        <div ref={mapRef} className="presentation__map">
-          {data && theme ? (
-            <MapCanvas data={data} presentation={{ theme }} />
-          ) : (
-            <p className="map__message" role="status">
-              {mapCopy.calculating}
-            </p>
-          )}
-          {running && data && (
-            <p className="presentation__status" role="status">
-              {mapCopy.calculating}
-            </p>
-          )}
-        </div>
-        <aside className="presentation__legend" aria-label={mapCopy.legend.heading}>
-          {data && theme && (
-            <MapLegend model={data.mapModel} theme={theme} extras={legendExtras(data, 0, false)} />
-          )}
-          {coverage?.belowThreshold && (
-            <p className="presentation__coverage" role="note">
-              <Icon name="warning" />
-              {mapCopy.coverage(
-                coveragePercent(coverage.rate, coverage.threshold),
-                percent(coverage.threshold),
+      {/* The opening step: the data-quality statement before the first view (session 4). */}
+      {opening && quality && (
+        <QualityStatement quality={quality} className="presentation__statement" />
+      )}
+      {opening && (
+        <p className="presentation__counter num" aria-live="polite">
+          {P.opening(views.length)}
+        </p>
+      )}
+      {!opening && (
+        <>
+          <div className="presentation__body">
+            <div ref={mapRef} className="presentation__map">
+              {data && theme ? (
+                <MapCanvas data={data} presentation={{ theme }} />
+              ) : (
+                <p className="map__message" role="status">
+                  {mapCopy.calculating}
+                </p>
               )}
-            </p>
-          )}
-        </aside>
-      </div>
-      <p className="presentation__caption">{names.text(view.caption)}</p>
-      <p className="presentation__counter num" aria-live="polite">
-        {P.counter(index + 1, views.length)}
-      </p>
-      <div className="presentation__controls" role="group" aria-label={P.controls}>
-        <button
-          type="button"
-          className="button button--text"
-          disabled={index === 0}
-          onClick={() => {
-            step(-1);
-          }}
-        >
-          {P.previous}
-        </button>
-        <button
-          type="button"
-          className="button button--text"
-          disabled={index === views.length - 1}
-          onClick={() => {
-            step(1);
-          }}
-        >
-          {P.next}
-        </button>
-        <Switch label={shellCopy.hideNames} checked={anonymise} onChange={setNamesHidden} />
-        <button type="button" className="button button--text" onClick={stopPresentation}>
-          {P.exit}
-        </button>
-      </div>
+              {running && data && (
+                <p className="presentation__status" role="status">
+                  {mapCopy.calculating}
+                </p>
+              )}
+            </div>
+            <aside className="presentation__legend" aria-label={mapCopy.legend.heading}>
+              {data && theme && (
+                <MapLegend
+                  model={data.mapModel}
+                  theme={theme}
+                  extras={legendExtras(data, 0, false)}
+                />
+              )}
+              {coverage?.belowThreshold && (
+                <p className="presentation__coverage" role="note">
+                  <Icon name="warning" />
+                  {mapCopy.coverage(
+                    coveragePercent(coverage.rate, coverage.threshold),
+                    percent(coverage.threshold),
+                  )}
+                </p>
+              )}
+            </aside>
+          </div>
+          <p className="presentation__caption">{names.text(view.caption)}</p>
+          <p className="presentation__counter num" aria-live="polite">
+            {P.counter(index + 1, views.length)}
+          </p>
+        </>
+      )}
+      {controls}
     </div>
   );
 }

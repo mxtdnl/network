@@ -200,6 +200,36 @@ export function questionText(o: Observation, ctx: InsightContext): string {
   }
 }
 
+/**
+ * What most of the members named share, and who among them gave no ratings
+ * (build plan session 4): "Three of the five share tenure band Under 1 year."
+ * Null when there is nothing to add.
+ */
+export function membersText(o: Observation, ctx: InsightContext): string | null {
+  const n = o.members.length;
+  const word = (k: number) => (k <= 10 ? lower(countOf(k, '', '').trim()) : String(k));
+  const parts = (o.shared ?? []).map((s) => {
+    const who =
+      s.count === n
+        ? n === 2
+          ? 'Both'
+          : `All ${word(n)}`
+        : `${countOf(s.count, '', '').trim()} of the ${word(n)}`;
+    return `${who} share ${lower(ctx.attributeLabel(s.attribute))} ${s.value}.`;
+  });
+  const silent = o.noRatings?.length ?? 0;
+  if (silent > 0)
+    parts.push(
+      silent === n
+        ? `${n === 1 ? 'This member' : `All ${String(n)}`} gave no ratings, so only colleagues’ reports of their ties are counted.`
+        : `${countOf(silent, 'of them', 'of them')} gave no ratings, so only colleagues’ reports of their ties are counted.`,
+    );
+  return parts.length > 0 ? parts.join(' ') : null;
+}
+
+/** Marks a member named in an observation who gave no ratings. */
+export const noRatingsMark = 'gave no ratings';
+
 function metricLabel(key: string): string {
   const copy = (metricCopy as Partial<Record<string, { label: string }>>)[key as SizeMetric];
   return copy?.label ?? key;

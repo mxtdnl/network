@@ -3,8 +3,9 @@
 // cross the worker boundary by structured clone or transfer.
 //
 import type { CoverageResult } from '../data/coverage';
+import type { RatingFlag } from '../data/quality';
 
-export type { CoverageResult };
+export type { CoverageResult, RatingFlag };
 
 // Conventions (docs/method-notes.md):
 // - Matrices are n × n, row-major, `m[i * n + j]` for the tie i → j.
@@ -99,7 +100,12 @@ export type NodeMetricKey =
 
 /** Why a value is not defined (NaN), or why a defined value needs a note. */
 export type NodeFlag =
-  'isolated' | 'outsideLargestComponent' | 'noComponent' | 'notConverged' | 'fewerThanTwoContacts';
+  | 'isolated'
+  | 'outsideLargestComponent'
+  | 'noComponent'
+  | 'notConverged'
+  | 'fewerThanTwoContacts'
+  | RatingFlag;
 
 export interface NodeMetricTable {
   /** Only the metrics computed for this layer and view are present. */
@@ -338,6 +344,13 @@ export interface Observation {
   /** Figures quoted in the wording; which keys are present depends on the rule. */
   evidence: Record<string, number>;
   view: InsightView;
+  /**
+   * Attribute values most of `members` share, more often than members as a whole
+   * (INSIGHT_RULES.shared), most shared first.
+   */
+  shared?: { attribute: AttributeKey; value: string; count: number }[];
+  /** Members named who gave no ratings: their own view of their ties is missing. */
+  noRatings?: MemberId[];
 }
 
 export interface InsightOutcome {
@@ -368,6 +381,17 @@ export interface AnalysisResult {
   composite: CompositeFormula | null;
   /** Response rates and the threshold flag (spec §6), or null when the input had none. */
   coverage: CoverageResult | null;
+  /**
+   * Per member: gave no ratings, or fewer than QUALITY_RULES.fewRatings of those
+   * possible (from `coverage`, build plan session 4). All null without coverage.
+   */
+  ratingFlags: (RatingFlag | null)[];
+  /**
+   * The node metrics whose values depend on a member's own ratings in this
+   * view, which carry the member's rating flag: every metric when the
+   * directions are combined, all but the incoming ones when directed.
+   */
+  ownRatingMetrics: NodeMetricKey[];
   /** Every insight rule, in panel order, with its observations (spec §9). */
   insights: InsightOutcome[];
   warnings: EngineWarning[];

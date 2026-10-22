@@ -25,6 +25,7 @@ import {
   type NodeMetricKey,
   type NodeMetricTable,
   type Observation,
+  type RatingFlag,
   type RefResult,
 } from './types';
 
@@ -88,6 +89,17 @@ export const INSIGHT_RULES = {
      * peripheral list, so one finding is not reported twice.
      */
     minGroupShare: 0.5,
+  },
+  shared: {
+    /**
+     * An observation naming at least this many members states the attribute
+     * values more than this share of them have, when that share is also above
+     * the value's share among all members (build plan session 4)…
+     */
+    minMembers: 2,
+    minShare: 0.5,
+    /** …at most this many, most shared first. */
+    maxAttributes: 2,
   },
   /**
    * Layer groups the silo and peripheral rules leave out: conflict is not a
@@ -764,6 +776,53 @@ export interface InsightInput {
   groupAttribute?: AttributeKey;
   /** Layer keys the silo and peripheral rules leave out (INSIGHT_RULES.excludedLayerGroups). */
   excludedLayers?: readonly LayerKey[];
+  /** Per member, from coverage: gave no ratings or few (AnalysisResult.ratingFlags). */
+  ratingFlags?: readonly (RatingFlag | null)[];
+}
+
+/**
+ * The attribute values most members of an observation share (INSIGHT_RULES.shared),
+ * leaving out the attribute the observation is about, and the members named who
+ * gave no ratings.
+ */
+function describeMembers(
+  o: Observation,
+  ids: readonly MemberId[],
+  attributes: Readonly<Record<AttributeKey, AttributeColumn>>,
+  ratingFlags: readonly (RatingFlag | null)[],
+): Observation {
+  const S = INSIGHT_RULES.shared;
+  const at = new Map(ids.map((id, i) => [id, i]));
+  const idx = o.members.flatMap((id) => {
+    const i = at.get(id);
+    return i === undefined ? [] : [i];
+  });
+  const shared: NonNullable<Observation['shared']> = [];
+  if (idx.length >= S.minMembers)
+    for (const [key, column] of Object.entries(attributes)) {
+      if (key === o.group?.attribute || key === o.groups?.[0]?.attribute) continue;
+      const counts = new Map<string, number>();
+      for (const i of idx) {
+        const v = column.values[i];
+        if (v !== null && v !== undefined) counts.set(v, (counts.get(v) ?? 0) + 1);
+      }
+      let best: [string, number] | null = null;
+      for (const e of counts) if (!best || e[1] > best[1]) best = e;
+      if (!best || best[1] <= idx.length * S.minShare) continue;
+      const [value, count] = best;
+      const overall = column.values.filter((v) => v === value).length;
+      if (count / idx.length <= overall / ids.length) continue;
+      shared.push({ attribute: key, value, count });
+    }
+  shared.sort((a, b) => b.count - a.count);
+  const silent = idx
+    .filter((i) => ratingFlags[i] === 'gaveNoRatings')
+    .map((i) => ids[i] as MemberId);
+  return {
+    ...o,
+    ...(shared.length > 0 ? { shared: shared.slice(0, S.maxAttributes) } : {}),
+    ...(silent.length > 0 ? { noRatings: silent } : {}),
+  };
 }
 
 /**
@@ -845,7 +904,12 @@ export function observe(input: InsightInput): InsightOutcome[] {
       chosen,
     ),
   ];
-  return INSIGHT_RULE_ORDER.map(
-    (rule) => out.find((o) => o.rule === rule) ?? unavailable(rule, 'noLayers'),
-  );
+  const flags = input.ratingFlags ?? [];
+  return INSIGHT_RULE_ORDER.map((rule) => {
+    const o = out.find((x) => x.rule === rule) ?? unavailable(rule, 'noLayers');
+    return {
+      ...o,
+      observations: o.observations.map((ob) => describeMembers(ob, ids, input.attributes, flags)),
+    };
+  });
 }

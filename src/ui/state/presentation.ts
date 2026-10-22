@@ -1,5 +1,6 @@
 // Presentation mode (spec §8): full screen, controls hidden, stepping through
-// the saved views in their saved order. Entering remembers the analyst's own
+// the saved views in their saved order, after an opening step that gives the
+// data-quality statement (build plan session 4; index OPENING). Entering remembers the analyst's own
 // state as an unsaved view and leaving restores it, so presenting does not
 // disturb the workspace.
 
@@ -9,23 +10,31 @@ import { useAppStore } from './store';
 
 let before: SavedView | null = null;
 
+/** The opening step, before the first view: "About the data". */
+export const OPENING = -1;
+
 function views(): SavedView[] {
   return useAppStore.getState().data.project?.saved_views ?? [];
 }
 
-/** Shows the view at `index` (clamped); false when there is none. */
+/**
+ * Shows the step at `index` (clamped): the opening, or a view. The opening
+ * shows the first view behind it, so the map is ready when the next step comes.
+ */
 export function showStep(index: number): boolean {
   const list = views();
   if (list.length === 0) return false;
-  const i = Math.max(0, Math.min(list.length - 1, index));
-  const view = list[i];
+  const i = Math.max(OPENING, Math.min(list.length - 1, index));
+  const view = list[Math.max(i, 0)];
   if (!view) return false;
-  restoreView(view);
+  const current = useAppStore.getState().ui.presentation;
+  // Moving between the opening and the first view keeps the view as it is.
+  if (!(current && Math.max(current.index, 0) === 0 && i <= 0)) restoreView(view);
   useAppStore.getState().setPresentation({ index: i });
   return true;
 }
 
-export function startPresentation(index = 0): void {
+export function startPresentation(index = OPENING): void {
   const s = useAppStore.getState();
   if (s.ui.presentation || views().length === 0) return;
   before = captureView('');
@@ -42,7 +51,7 @@ export function step(delta: number): void {
   const current = useAppStore.getState().ui.presentation;
   if (!current) return;
   const target = current.index + delta;
-  if (target < 0 || target >= views().length) return;
+  if (target < OPENING || target >= views().length) return;
   showStep(target);
 }
 

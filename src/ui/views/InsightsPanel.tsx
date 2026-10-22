@@ -4,6 +4,8 @@ import { Icon } from '../components/Icon';
 import { coveragePercent } from '../copy/data';
 import {
   insightsCopy as I,
+  membersText,
+  noRatingsMark,
   questionText,
   ruleText,
   viewText,
@@ -174,7 +176,9 @@ function ObservationItem({
   const selectMember = useAppStore((s) => s.selectMember);
   const setRightPanel = useAppStore((s) => s.setRightPanel);
   const listId = useId();
-  const members = o.members.map((id) => ({ id, name: names.of(id) }));
+  const silent = new Set(o.noRatings ?? []);
+  const members = o.members.map((id) => ({ id, name: names.of(id), silent: silent.has(id) }));
+  const about = membersText(o, ctx);
   return (
     <div className="insight__observation">
       <p className="insight__question">{questionText(o, ctx)}</p>
@@ -194,10 +198,12 @@ function ObservationItem({
               }}
             >
               {m.name}
+              {m.silent && <span className="insight__member-flag"> ({noRatingsMark})</span>}
             </button>
           </li>
         ))}
       </ul>
+      {about && <p className="insight__shared">{about}</p>}
       <p className="insight__view">
         <span className="insight__rule-label">{I.viewLabel}</span> {viewText(o.view, ctx)}
       </p>

@@ -768,3 +768,34 @@
   max-width: var(--measure);
   margin: var(--s-3) 0 var(--s-6);
 }
+
+/* A value that rests on other members' reports: the member gave no or few ratings (session 4). */
+.rating-flag {
+  margin-inline-start: var(--s-1);
+  color: var(--graphite);
+}
+
+.data-table__flag {
+  display: block;
+  color: var(--graphite);
+  font-size: var(--t--1-size);
+  line-height: var(--t--1-line);
+  font-weight: var(--weight-regular);
+}
+
+.data-table__flag-note {
+  display: block;
+  color: var(--graphite);
+  font-size: var(--t--1-size);
+  line-height: var(--t--1-line);
+  font-weight: var(--weight-regular);
+}
+
+/* Gave no ratings (session 4): a ring of the fill round a paper centre. */
+.legend__node--ring {
+  fill: var(--stone);
+}
+
+.legend__node--hole {
+  fill: var(--paper);
+}

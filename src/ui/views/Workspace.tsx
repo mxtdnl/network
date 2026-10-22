@@ -2,10 +2,10 @@ import { lazy, Suspense, useEffect, useRef, type KeyboardEvent } from 'react';
 import { Icon } from '../components/Icon';
 import { EthicsNotice } from '../components/EthicsNotice';
 import { Tabs, type TabItem } from '../components/Tabs';
-import { coverageCopy } from '../copy/data';
+import { qualityCopy } from '../copy/quality';
 import { shellCopy } from '../copy/shell';
 import { useAppStore, type CentreView, type RightPanel } from '../state/store';
-import { CoveragePanel } from './CoveragePanel';
+import { DataCheckPanel } from './DataCheckPanel';
 import { ImportDialog } from './ImportDialog';
 import { LayerPanel } from './LayerPanel';
 import { MapControls } from './MapControls';
@@ -53,7 +53,7 @@ const rightItems: readonly TabItem<RightPanel>[] = [
   { key: 'explore', label: exploreCopy.tab, panel: <ExplorePanel /> },
   { key: 'insights', label: shellCopy.rightTabs.insights, panel: <InsightsPanel /> },
   { key: 'views', label: savedViewsCopy.tab, panel: <SavedViewsPanel /> },
-  { key: 'coverage', label: coverageCopy.tab, panel: <CoveragePanel /> },
+  { key: 'coverage', label: qualityCopy.tab, panel: <DataCheckPanel /> },
 ];
 
 // Analyst workspace, docs/design-system.md §5.1: fixed left column, fluid

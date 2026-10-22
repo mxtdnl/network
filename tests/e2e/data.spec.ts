@@ -238,7 +238,7 @@ test('demo, layer manager, coverage, project files and local persistence', async
   await shot(page, 'matrix');
 
   // Coverage panel.
-  await page.getByRole('tab', { name: 'Coverage' }).click();
+  await page.getByRole('tab', { name: 'Check the data' }).click();
   const right = page.getByRole('complementary', { name: 'Member, insights and coverage' });
   await expect(right.getByText('Overall response rate')).toBeVisible();
   await expectNoAxeViolations(page, REGION.right);

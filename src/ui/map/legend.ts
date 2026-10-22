@@ -55,7 +55,7 @@ export type LegendSection =
       kind: 'marks';
       title: string;
       variable: string;
-      items: { mark: 'group' | 'path' | 'highlight' | 'outline'; label: string }[];
+      items: { mark: 'group' | 'path' | 'highlight' | 'outline' | 'hollow'; label: string }[];
     };
 
 /** A step of a colour scale: the valence scale (−3 … +3) or the sequential ramp (1 … 5). */
@@ -227,12 +227,15 @@ export function legendSections(
   }
   const highlighted = extras?.highlight ?? 0;
   const outlined = model.outlines !== null;
-  if (outlined || (extras && (extras.group > 0 || extras.path || highlighted > 0))) {
+  // Members who gave no ratings are drawn hollow (session 4), whatever else is marked.
+  const hollow = model.nodes.some((n) => n.visible && n.noRatings);
+  if (outlined || hollow || (extras && (extras.group > 0 || extras.path || highlighted > 0))) {
     sections.push({
       kind: 'marks',
       title: L.marks,
       variable: '',
       items: [
+        ...(hollow ? [{ mark: 'hollow' as const, label: L.noRatings }] : []),
         ...(outlined ? [{ mark: 'outline' as const, label: L.outlines(layerName(model)) }] : []),
         ...(extras?.path ? [{ mark: 'path' as const, label: L.path }] : []),
         ...(extras && extras.group > 0

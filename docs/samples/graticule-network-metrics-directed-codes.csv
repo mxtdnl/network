@@ -2,175 +2,175 @@
 ,Direction of ties,,,,Directed
 ,Data coverage,,,,0.951602564102564
 ,Data coverage warning threshold,,,,0.8
-Composite of all layers,Composite formula,,,,C = 0.25·r(Connection strength) + 0.25·r⁺(Valence) + 0.25·r(Informal collaboration) + 0.25·r(Formal collaboration); C ≤ 1
+Composite of all layers,Composite formula,,,,C = (0.33·r(Connection strength) + 0.33·r(Informal collaboration) + 0.33·r(Formal collaboration)) × (1 + 0.5·s(Valence)); C ≤ 1
 Composite of all layers,Members,,,,40
-Composite of all layers,Ties,,,,873
-Composite of all layers,Density,,,,0.5596153846153846
-Composite of all layers,Ties returned (tie reciprocity),,,,0.7468499427262314
-Composite of all layers,Pairs with ties both ways (dyad reciprocity),,,,0.5959780621572212
-Composite of all layers,Pairs tied both ways,,,,326
-Composite of all layers,Pairs tied one way,,,,221
-Composite of all layers,Average clustering,,,,0.18574165963001305
+Composite of all layers,Ties,,,,715
+Composite of all layers,Density,,,,0.4583333333333333
+Composite of all layers,Ties returned (tie reciprocity),,,,0.8167832167832167
+Composite of all layers,Pairs with ties both ways (dyad reciprocity),,,,0.6903073286052009
+Composite of all layers,Pairs tied both ways,,,,292
+Composite of all layers,Pairs tied one way,,,,131
+Composite of all layers,Average clustering,,,,0.3437291458208417
 Composite of all layers,Separate parts (weakly connected components),,,,1
 Composite of all layers,Members in the largest part (weak),,,,40
 Composite of all layers,Groups that can all reach each other (strongly connected components),,,,1
 Composite of all layers,Members in the largest such group (strong),,,,40
-Composite of all layers,Centralisation of connections in,,,,0.21499013806706113
-Composite of all layers,Centralisation of connections out,,,,0.2675871137409599
-Composite of all layers,Centralisation of bridging,,,,0.009098968523560843
+Composite of all layers,Centralisation of connections in,,,,0.1873767258382643
+Composite of all layers,Centralisation of connections out,,,,0.26627218934911245
+Composite of all layers,Centralisation of bridging,,,,0.16961529017985114
 Composite of all layers,Communities (Louvain),,,,4
-Composite of all layers,Modularity,,,,0.4086965721013854
-Composite of all layers,E-I index,Team or function,,,0.36082474226804123
+Composite of all layers,Modularity,,,,0.4568236068608872
+Composite of all layers,E-I index,Team or function,,,0.21958041958041957
 Composite of all layers,"Members without a value, left out of the E-I index",Team or function,,,0
 Composite of all layers,Group size,Team or function,Finance,,8
 Composite of all layers,Ties inside the group,Team or function,Finance,,56
-Composite of all layers,Ties leaving the group,Team or function,Finance,,106
-Composite of all layers,E-I index,Team or function,Finance,,0.30864197530864196
+Composite of all layers,Ties leaving the group,Team or function,Finance,,6
+Composite of all layers,E-I index,Team or function,Finance,,-0.8064516129032258
 Composite of all layers,Group size,Team or function,Operations,,8
 Composite of all layers,Ties inside the group,Team or function,Operations,,55
-Composite of all layers,Ties leaving the group,Team or function,Operations,,239
-Composite of all layers,E-I index,Team or function,Operations,,0.6258503401360545
+Composite of all layers,Ties leaving the group,Team or function,Operations,,184
+Composite of all layers,E-I index,Team or function,Operations,,0.5397489539748954
 Composite of all layers,Group size,Team or function,Product,,8
 Composite of all layers,Ties inside the group,Team or function,Product,,56
-Composite of all layers,Ties leaving the group,Team or function,Product,,312
-Composite of all layers,E-I index,Team or function,Product,,0.6956521739130435
+Composite of all layers,Ties leaving the group,Team or function,Product,,256
+Composite of all layers,E-I index,Team or function,Product,,0.6410256410256411
 Composite of all layers,Group size,Team or function,Sales,,8
 Composite of all layers,Ties inside the group,Team or function,Sales,,56
-Composite of all layers,Ties leaving the group,Team or function,Sales,,292
-Composite of all layers,E-I index,Team or function,Sales,,0.6781609195402298
+Composite of all layers,Ties leaving the group,Team or function,Sales,,244
+Composite of all layers,E-I index,Team or function,Sales,,0.6266666666666667
 Composite of all layers,Group size,Team or function,People,,8
 Composite of all layers,Ties inside the group,Team or function,People,,56
-Composite of all layers,Ties leaving the group,Team or function,People,,239
-Composite of all layers,E-I index,Team or function,People,,0.6203389830508474
+Composite of all layers,Ties leaving the group,Team or function,People,,182
+Composite of all layers,E-I index,Team or function,People,,0.5294117647058824
 Composite of all layers,Tie density between groups,Team or function,Finance,Finance,1
-Composite of all layers,Tie density between groups,Team or function,Finance,Operations,0.1875
-Composite of all layers,Tie density between groups,Team or function,Finance,Product,0.265625
-Composite of all layers,Tie density between groups,Team or function,Finance,Sales,0.171875
-Composite of all layers,Tie density between groups,Team or function,Finance,People,0.171875
-Composite of all layers,Tie density between groups,Team or function,Operations,Finance,0.234375
+Composite of all layers,Tie density between groups,Team or function,Finance,Operations,0.046875
+Composite of all layers,Tie density between groups,Team or function,Finance,Product,0
+Composite of all layers,Tie density between groups,Team or function,Finance,Sales,0
+Composite of all layers,Tie density between groups,Team or function,Finance,People,0
+Composite of all layers,Tie density between groups,Team or function,Operations,Finance,0.046875
 Composite of all layers,Tie density between groups,Team or function,Operations,Operations,0.9821428571428571
-Composite of all layers,Tie density between groups,Team or function,Operations,Product,0.5625
-Composite of all layers,Tie density between groups,Team or function,Operations,Sales,0.546875
-Composite of all layers,Tie density between groups,Team or function,Operations,People,0.484375
-Composite of all layers,Tie density between groups,Team or function,Product,Finance,0.3125
-Composite of all layers,Tie density between groups,Team or function,Product,Operations,0.578125
+Composite of all layers,Tie density between groups,Team or function,Operations,Product,0.5
+Composite of all layers,Tie density between groups,Team or function,Operations,Sales,0.46875
+Composite of all layers,Tie density between groups,Team or function,Operations,People,0.359375
+Composite of all layers,Tie density between groups,Team or function,Product,Finance,0
+Composite of all layers,Tie density between groups,Team or function,Product,Operations,0.515625
 Composite of all layers,Tie density between groups,Team or function,Product,Product,1
 Composite of all layers,Tie density between groups,Team or function,Product,Sales,1
-Composite of all layers,Tie density between groups,Team or function,Product,People,0.609375
-Composite of all layers,Tie density between groups,Team or function,Sales,Finance,0.15625
-Composite of all layers,Tie density between groups,Team or function,Sales,Operations,0.578125
-Composite of all layers,Tie density between groups,Team or function,Sales,Product,0.953125
+Composite of all layers,Tie density between groups,Team or function,Product,People,0.546875
+Composite of all layers,Tie density between groups,Team or function,Sales,Finance,0
+Composite of all layers,Tie density between groups,Team or function,Sales,Operations,0.46875
+Composite of all layers,Tie density between groups,Team or function,Sales,Product,0.921875
 Composite of all layers,Tie density between groups,Team or function,Sales,Sales,1
-Composite of all layers,Tie density between groups,Team or function,Sales,People,0.515625
-Composite of all layers,Tie density between groups,Team or function,People,Finance,0.15625
-Composite of all layers,Tie density between groups,Team or function,People,Operations,0.5625
-Composite of all layers,Tie density between groups,Team or function,People,Product,0.59375
-Composite of all layers,Tie density between groups,Team or function,People,Sales,0.640625
+Composite of all layers,Tie density between groups,Team or function,Sales,People,0.40625
+Composite of all layers,Tie density between groups,Team or function,People,Finance,0
+Composite of all layers,Tie density between groups,Team or function,People,Operations,0.46875
+Composite of all layers,Tie density between groups,Team or function,People,Product,0.515625
+Composite of all layers,Tie density between groups,Team or function,People,Sales,0.546875
 Composite of all layers,Tie density between groups,Team or function,People,People,1
-Composite of all layers,E-I index,Level,,,0.3241695303550974
+Composite of all layers,E-I index,Level,,,0.3006993006993007
 Composite of all layers,"Members without a value, left out of the E-I index",Level,,,0
 Composite of all layers,Group size,Level,L1,,3
 Composite of all layers,Ties inside the group,Level,L1,,0
-Composite of all layers,Ties leaving the group,Level,L1,,103
+Composite of all layers,Ties leaving the group,Level,L1,,80
 Composite of all layers,E-I index,Level,L1,,1
 Composite of all layers,Group size,Level,L2,,18
-Composite of all layers,Ties inside the group,Level,L2,,192
-Composite of all layers,Ties leaving the group,Level,L2,,437
-Composite of all layers,E-I index,Level,L2,,0.38950715421303655
+Composite of all layers,Ties inside the group,Level,L2,,166
+Composite of all layers,Ties leaving the group,Level,L2,,348
+Composite of all layers,E-I index,Level,L2,,0.3540856031128405
 Composite of all layers,Group size,Level,L3,,14
-Composite of all layers,Ties inside the group,Level,L3,,95
-Composite of all layers,Ties leaving the group,Level,L3,,397
-Composite of all layers,E-I index,Level,L3,,0.6138211382113821
+Composite of all layers,Ties inside the group,Level,L3,,78
+Composite of all layers,Ties leaving the group,Level,L3,,321
+Composite of all layers,E-I index,Level,L3,,0.6090225563909775
 Composite of all layers,Group size,Level,L4,,4
-Composite of all layers,Ties inside the group,Level,L4,,8
-Composite of all layers,Ties leaving the group,Level,L4,,167
-Composite of all layers,E-I index,Level,L4,,0.9085714285714286
+Composite of all layers,Ties inside the group,Level,L4,,6
+Composite of all layers,Ties leaving the group,Level,L4,,135
+Composite of all layers,E-I index,Level,L4,,0.9148936170212766
 Composite of all layers,Group size,Level,L5,,1
 Composite of all layers,Ties inside the group,Level,L5,,0
-Composite of all layers,Ties leaving the group,Level,L5,,52
+Composite of all layers,Ties leaving the group,Level,L5,,46
 Composite of all layers,E-I index,Level,L5,,1
 Composite of all layers,Tie density between groups,Level,L1,L1,0
-Composite of all layers,Tie density between groups,Level,L1,L2,0.5
-Composite of all layers,Tie density between groups,Level,L1,L3,0.5
+Composite of all layers,Tie density between groups,Level,L1,L2,0.2962962962962963
+Composite of all layers,Tie density between groups,Level,L1,L3,0.42857142857142855
 Composite of all layers,Tie density between groups,Level,L1,L4,0.25
 Composite of all layers,Tie density between groups,Level,L1,L5,0.6666666666666666
-Composite of all layers,Tie density between groups,Level,L2,L1,0.4074074074074074
-Composite of all layers,Tie density between groups,Level,L2,L2,0.6274509803921569
-Composite of all layers,Tie density between groups,Level,L2,L3,0.5833333333333334
-Composite of all layers,Tie density between groups,Level,L2,L4,0.625
-Composite of all layers,Tie density between groups,Level,L2,L5,0.5555555555555556
+Composite of all layers,Tie density between groups,Level,L2,L1,0.2962962962962963
+Composite of all layers,Tie density between groups,Level,L2,L2,0.5424836601307189
+Composite of all layers,Tie density between groups,Level,L2,L3,0.46825396825396826
+Composite of all layers,Tie density between groups,Level,L2,L4,0.5277777777777778
+Composite of all layers,Tie density between groups,Level,L2,L5,0.5
 Composite of all layers,Tie density between groups,Level,L3,L1,0.4523809523809524
-Composite of all layers,Tie density between groups,Level,L3,L2,0.5198412698412699
-Composite of all layers,Tie density between groups,Level,L3,L3,0.521978021978022
-Composite of all layers,Tie density between groups,Level,L3,L4,0.5535714285714286
+Composite of all layers,Tie density between groups,Level,L3,L2,0.4166666666666667
+Composite of all layers,Tie density between groups,Level,L3,L3,0.42857142857142855
+Composite of all layers,Tie density between groups,Level,L3,L4,0.42857142857142855
 Composite of all layers,Tie density between groups,Level,L3,L5,0.5714285714285714
-Composite of all layers,Tie density between groups,Level,L4,L1,0.5833333333333334
-Composite of all layers,Tie density between groups,Level,L4,L2,0.6111111111111112
-Composite of all layers,Tie density between groups,Level,L4,L3,0.5178571428571429
-Composite of all layers,Tie density between groups,Level,L4,L4,0.6666666666666666
+Composite of all layers,Tie density between groups,Level,L4,L1,0.4166666666666667
+Composite of all layers,Tie density between groups,Level,L4,L2,0.5138888888888888
+Composite of all layers,Tie density between groups,Level,L4,L3,0.35714285714285715
+Composite of all layers,Tie density between groups,Level,L4,L4,0.5
 Composite of all layers,Tie density between groups,Level,L4,L5,1
-Composite of all layers,Tie density between groups,Level,L5,L1,0.6666666666666666
-Composite of all layers,Tie density between groups,Level,L5,L2,0.6111111111111112
-Composite of all layers,Tie density between groups,Level,L5,L3,0.7857142857142857
+Composite of all layers,Tie density between groups,Level,L5,L1,0.3333333333333333
+Composite of all layers,Tie density between groups,Level,L5,L2,0.5
+Composite of all layers,Tie density between groups,Level,L5,L3,0.6428571428571429
 Composite of all layers,Tie density between groups,Level,L5,L4,1
 Composite of all layers,Tie density between groups,Level,L5,L5,
-Composite of all layers,E-I index,Location,,,0.3722794959908362
+Composite of all layers,E-I index,Location,,,0.3594405594405594
 Composite of all layers,"Members without a value, left out of the E-I index",Location,,,0
 Composite of all layers,Group size,Location,Bristol,,13
-Composite of all layers,Ties inside the group,Location,Bristol,,101
-Composite of all layers,Ties leaving the group,Location,Bristol,,404
-Composite of all layers,E-I index,Location,Bristol,,0.6
+Composite of all layers,Ties inside the group,Location,Bristol,,87
+Composite of all layers,Ties leaving the group,Location,Bristol,,339
+Composite of all layers,E-I index,Location,Bristol,,0.5915492957746479
 Composite of all layers,Group size,Location,Glasgow,,13
-Composite of all layers,Ties inside the group,Location,Glasgow,,75
-Composite of all layers,Ties leaving the group,Location,Glasgow,,393
-Composite of all layers,E-I index,Location,Glasgow,,0.6794871794871795
+Composite of all layers,Ties inside the group,Location,Glasgow,,61
+Composite of all layers,Ties leaving the group,Location,Glasgow,,315
+Composite of all layers,E-I index,Location,Glasgow,,0.675531914893617
 Composite of all layers,Group size,Location,Leeds,,14
-Composite of all layers,Ties inside the group,Location,Leeds,,98
-Composite of all layers,Ties leaving the group,Location,Leeds,,401
-Composite of all layers,E-I index,Location,Leeds,,0.6072144288577155
-Composite of all layers,Tie density between groups,Location,Bristol,Bristol,0.6474358974358975
-Composite of all layers,Tie density between groups,Location,Bristol,Glasgow,0.5739644970414202
-Composite of all layers,Tie density between groups,Location,Bristol,Leeds,0.5769230769230769
-Composite of all layers,Tie density between groups,Location,Glasgow,Bristol,0.5976331360946746
-Composite of all layers,Tie density between groups,Location,Glasgow,Glasgow,0.4807692307692308
-Composite of all layers,Tie density between groups,Location,Glasgow,Leeds,0.5
-Composite of all layers,Tie density between groups,Location,Leeds,Bristol,0.554945054945055
-Composite of all layers,Tie density between groups,Location,Leeds,Glasgow,0.5714285714285714
-Composite of all layers,Tie density between groups,Location,Leeds,Leeds,0.5384615384615384
-Composite of all layers,E-I index,Tenure band,,,0.46849942726231386
+Composite of all layers,Ties inside the group,Location,Leeds,,81
+Composite of all layers,Ties leaving the group,Location,Leeds,,318
+Composite of all layers,E-I index,Location,Leeds,,0.5939849624060151
+Composite of all layers,Tie density between groups,Location,Bristol,Bristol,0.5576923076923077
+Composite of all layers,Tie density between groups,Location,Bristol,Glasgow,0.4911242603550296
+Composite of all layers,Tie density between groups,Location,Bristol,Leeds,0.4725274725274725
+Composite of all layers,Tie density between groups,Location,Glasgow,Bristol,0.5029585798816568
+Composite of all layers,Tie density between groups,Location,Glasgow,Glasgow,0.391025641025641
+Composite of all layers,Tie density between groups,Location,Glasgow,Leeds,0.3956043956043956
+Composite of all layers,Tie density between groups,Location,Leeds,Bristol,0.46703296703296704
+Composite of all layers,Tie density between groups,Location,Leeds,Glasgow,0.41208791208791207
+Composite of all layers,Tie density between groups,Location,Leeds,Leeds,0.44505494505494503
+Composite of all layers,E-I index,Tenure band,,,0.4797202797202797
 Composite of all layers,"Members without a value, left out of the E-I index",Tenure band,,,0
 Composite of all layers,Group size,Tenure band,Under 1 year,,7
 Composite of all layers,Ties inside the group,Tenure band,Under 1 year,,23
-Composite of all layers,Ties leaving the group,Tenure band,Under 1 year,,254
-Composite of all layers,E-I index,Tenure band,Under 1 year,,0.8339350180505415
+Composite of all layers,Ties leaving the group,Tenure band,Under 1 year,,211
+Composite of all layers,E-I index,Tenure band,Under 1 year,,0.8034188034188035
 Composite of all layers,Group size,Tenure band,1 to 3 years,,11
-Composite of all layers,Ties inside the group,Tenure band,1 to 3 years,,65
-Composite of all layers,Ties leaving the group,Tenure band,1 to 3 years,,377
-Composite of all layers,E-I index,Tenure band,1 to 3 years,,0.7058823529411765
+Composite of all layers,Ties inside the group,Tenure band,1 to 3 years,,54
+Composite of all layers,Ties leaving the group,Tenure band,1 to 3 years,,314
+Composite of all layers,E-I index,Tenure band,1 to 3 years,,0.7065217391304348
 Composite of all layers,Group size,Tenure band,3 to 5 years,,6
-Composite of all layers,Ties inside the group,Tenure band,3 to 5 years,,12
-Composite of all layers,Ties leaving the group,Tenure band,3 to 5 years,,220
-Composite of all layers,E-I index,Tenure band,3 to 5 years,,0.896551724137931
+Composite of all layers,Ties inside the group,Tenure band,3 to 5 years,,8
+Composite of all layers,Ties leaving the group,Tenure band,3 to 5 years,,174
+Composite of all layers,E-I index,Tenure band,3 to 5 years,,0.9120879120879121
 Composite of all layers,Group size,Tenure band,Over 5 years,,16
-Composite of all layers,Ties inside the group,Tenure band,Over 5 years,,132
-Composite of all layers,Ties leaving the group,Tenure band,Over 5 years,,431
-Composite of all layers,E-I index,Tenure band,Over 5 years,,0.5310834813499112
+Composite of all layers,Ties inside the group,Tenure band,Over 5 years,,101
+Composite of all layers,Ties leaving the group,Tenure band,Over 5 years,,359
+Composite of all layers,E-I index,Tenure band,Over 5 years,,0.5608695652173913
 Composite of all layers,Tie density between groups,Tenure band,Under 1 year,Under 1 year,0.5476190476190477
-Composite of all layers,Tie density between groups,Tenure band,Under 1 year,1 to 3 years,0.5194805194805194
-Composite of all layers,Tie density between groups,Tenure band,Under 1 year,3 to 5 years,0.5
-Composite of all layers,Tie density between groups,Tenure band,Under 1 year,Over 5 years,0.5714285714285714
-Composite of all layers,Tie density between groups,Tenure band,1 to 3 years,Under 1 year,0.5714285714285714
-Composite of all layers,Tie density between groups,Tenure band,1 to 3 years,1 to 3 years,0.5909090909090909
-Composite of all layers,Tie density between groups,Tenure band,1 to 3 years,3 to 5 years,0.6363636363636364
-Composite of all layers,Tie density between groups,Tenure band,1 to 3 years,Over 5 years,0.5852272727272727
-Composite of all layers,Tie density between groups,Tenure band,3 to 5 years,Under 1 year,0.5476190476190477
-Composite of all layers,Tie density between groups,Tenure band,3 to 5 years,1 to 3 years,0.6060606060606061
-Composite of all layers,Tie density between groups,Tenure band,3 to 5 years,3 to 5 years,0.4
-Composite of all layers,Tie density between groups,Tenure band,3 to 5 years,Over 5 years,0.5
-Composite of all layers,Tie density between groups,Tenure band,Over 5 years,Under 1 year,0.5535714285714286
-Composite of all layers,Tie density between groups,Tenure band,Over 5 years,1 to 3 years,0.6136363636363636
-Composite of all layers,Tie density between groups,Tenure band,Over 5 years,3 to 5 years,0.4791666666666667
-Composite of all layers,Tie density between groups,Tenure band,Over 5 years,Over 5 years,0.55
+Composite of all layers,Tie density between groups,Tenure band,Under 1 year,1 to 3 years,0.4675324675324675
+Composite of all layers,Tie density between groups,Tenure band,Under 1 year,3 to 5 years,0.38095238095238093
+Composite of all layers,Tie density between groups,Tenure band,Under 1 year,Over 5 years,0.45535714285714285
+Composite of all layers,Tie density between groups,Tenure band,1 to 3 years,Under 1 year,0.4805194805194805
+Composite of all layers,Tie density between groups,Tenure band,1 to 3 years,1 to 3 years,0.4909090909090909
+Composite of all layers,Tie density between groups,Tenure band,1 to 3 years,3 to 5 years,0.45454545454545453
+Composite of all layers,Tie density between groups,Tenure band,1 to 3 years,Over 5 years,0.4943181818181818
+Composite of all layers,Tie density between groups,Tenure band,3 to 5 years,Under 1 year,0.40476190476190477
+Composite of all layers,Tie density between groups,Tenure band,3 to 5 years,1 to 3 years,0.5151515151515151
+Composite of all layers,Tie density between groups,Tenure band,3 to 5 years,3 to 5 years,0.26666666666666666
+Composite of all layers,Tie density between groups,Tenure band,3 to 5 years,Over 5 years,0.3958333333333333
+Composite of all layers,Tie density between groups,Tenure band,Over 5 years,Under 1 year,0.48214285714285715
+Composite of all layers,Tie density between groups,Tenure band,Over 5 years,1 to 3 years,0.5113636363636364
+Composite of all layers,Tie density between groups,Tenure band,Over 5 years,3 to 5 years,0.40625
+Composite of all layers,Tie density between groups,Tenure band,Over 5 years,Over 5 years,0.42083333333333334
 Connection strength,Members,,,,40
 Connection strength,Ties,,,,546
 Connection strength,Density,,,,0.35

@@ -228,7 +228,7 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await page.getByRole('button', { name: 'Clear highlight' }).first().click();
   await settled(page);
 
-  await rightTab(page, 'Coverage').click();
+  await rightTab(page, 'Check the data').click();
   await panelShot(page, 'coverage', /^Overall response rate$/);
 
   // Saved views and a presentation.
@@ -257,9 +257,14 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await panelShot(page, 'saved-views', /^Formal structure$/);
 
   await page.getByRole('banner').getByRole('button', { name: 'Present' }).click();
-  await expect(page.locator('.presentation')).toBeVisible();
-  await settled(page);
+  await expect(page.locator('.presentation--opening')).toBeVisible();
   await page.mouse.move(1435, 895);
+  await page.waitForTimeout(2600);
+  await expectNoNames(page);
+  await shot(page, 'presentation-opening');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.presentation--opening')).toHaveCount(0);
+  await settled(page);
   await page.waitForTimeout(2600);
   await expectNoNames(page);
   await shot(page, 'presentation');

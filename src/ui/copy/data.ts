@@ -151,7 +151,6 @@ export const matrixCopy = {
 };
 
 export const coverageCopy = {
-  tab: 'Coverage',
   heading: 'Data coverage',
   topBar: (rate: string) => `Coverage ${rate}`,
   overall: 'Overall response rate',
@@ -167,11 +166,11 @@ export const coverageCopy = {
   threshold: 'Warn below',
   thresholdHelp: 'Below this response rate, whole-network metrics may be unreliable.',
   thresholdInvalid: 'Enter a whole number from 0 to 100.',
-  /** The warning in the compact layout's top bar; the full text is in the Coverage panel. */
+  /** The warning in the compact layout's top bar; the full text is under Check the data. */
   warningShort: (rate: string, threshold: string) =>
     `Coverage ${rate} is below the ${threshold} threshold`,
   warning: (rate: string, threshold: string) =>
-    `Coverage is ${rate}, below the ${threshold} threshold. Whole-network metrics may be unreliable. Collect the missing ratings, or lower the threshold in the Coverage panel if this is expected.`,
+    `Coverage is ${rate}, below the ${threshold} threshold. Whole-network metrics may be unreliable. Collect the missing ratings, or lower the threshold under Check the data if this is expected.`,
   columns: {
     member: 'Rater',
     rate: 'Response rate',

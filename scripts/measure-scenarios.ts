@@ -1,7 +1,9 @@
 // Prints what the engine finds in the demo and each committed scenario project
 // (src/demo/scenario-*.ona.json) under the app's default weights: coverage,
 // the composite's density, reciprocity and communities, and every insight
-// rule's outcome, in the directed view and symmetrised by mean and by min.
+// rule's outcome (with the attribute values most of the members named share,
+// and who among them gave no ratings), and the data-quality checks and
+// statement (build plan session 4), in the directed view and symmetrised by mean and by min.
 // The figures in docs/reports/initial-assessment.md come from this script.
 //
 // Run with `npm run scenarios:measure`, optionally naming slugs to measure.
@@ -10,6 +12,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { computeCoverage } from '../src/data/coverage';
 import { parseProject } from '../src/data/projectFile';
+import { computeQuality } from '../src/data/quality';
+import { qualityStatement } from '../src/ui/copy/quality';
 import { analyse } from '../src/engine/analyse';
 import { buildAnalysisInput } from '../src/engine/input';
 import type { SymmetriseRule, ViewKind } from '../src/engine/types';
@@ -51,6 +55,14 @@ for (const slug of ['demo', ...[...SCENARIOS, ...MERGED_SCENARIOS].map((s) => s.
       `${low.map((r) => `${r.id} ${f(r.rate)}`).join(', ') || 'none'}; ` +
       `declined ${String(coverage.declined)}, does not apply ${String(coverage.notApplicable)}`,
   );
+  const q = computeQuality(project);
+  console.log(
+    `quality: few ratings ${list(q.fewRatings) || 'none'}; same answer ${list(q.sameAnswer) || 'none'}; ` +
+      `rates higher ${list(q.higher) || 'none'}; lower ${list(q.lower) || 'none'}; ` +
+      `many ties ${list(q.manyTies) || 'none'}; median tied ${f(q.medianTiedShare)}${q.denseReporting ? ' (dense reporting)' : ''}; ` +
+      `one-way ${String(q.oneWay)} of ${String(q.reportedTies)} (${f(q.oneWayShare)})`,
+  );
+  console.log(`statement: ${qualityStatement(q).join(' ')}`);
   const weights = effectiveWeights(project, initialWeightState());
   for (const [view, symmetrise] of VIEWS) {
     const r = await analyse(buildAnalysisInput(project, { view, symmetrise, ...weights }, slug));
@@ -78,7 +90,11 @@ for (const slug of ['demo', ...[...SCENARIOS, ...MERGED_SCENARIOS].map((s) => s.
                 const groups = ob.groups
                   ? ` by group ${ob.groups.map((g) => `${g.value}→${g.other} ${String(g.count)}`).join(', ')};`
                   : '';
-                return `[${ob.ref}${group}: ${list(ob.members)};${groups} ${evidence}]`;
+                const shared = ob.shared
+                  ? ` shared ${ob.shared.map((x) => `${x.attribute}=${x.value} ${String(x.count)}/${String(ob.members.length)}`).join(', ')};`
+                  : '';
+                const silent = ob.noRatings ? ` no ratings ${ob.noRatings.join(', ')};` : '';
+                return `[${ob.ref}${group}: ${list(ob.members)};${groups}${shared}${silent} ${evidence}]`;
               })
               .join(' ');
       const inSilo = o.inSilo ? ` (${String(o.inSilo)} named under silos)` : '';

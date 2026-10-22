@@ -59,6 +59,17 @@ export function paint(
     ctx.lineWidth = n.strokeWidth;
     ctx.strokeStyle = n.stroke;
     ctx.stroke();
+    if (n.hollow > 0) {
+      // Gave no ratings: a paper centre inside an ink-edged ring of the fill.
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.hollow, 0, 2 * Math.PI);
+      ctx.fillStyle = theme.paper;
+      ctx.fill();
+      ctx.lineWidth = n.strokeWidth;
+      ctx.strokeStyle = n.stroke;
+      ctx.stroke();
+    }
   }
   ctx.setLineDash([]);
 

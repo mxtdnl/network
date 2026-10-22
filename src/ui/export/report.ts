@@ -10,6 +10,8 @@ import { coveragePercent, percent } from '../copy/data';
 import { exportCopy, reportCopy as R } from '../copy/export';
 import {
   insightsCopy,
+  membersText,
+  noRatingsMark,
   questionText,
   ruleText,
   viewText,
@@ -17,6 +19,8 @@ import {
 } from '../copy/insights';
 import { formatValue } from '../copy/map';
 import { coverageCopy } from '../copy/data';
+import { qualityCopy, qualityStatement } from '../copy/quality';
+import { computeQuality } from '../../data/quality';
 import type { ExportContext } from './context';
 import { insightGroup } from '../state/insightGroup';
 import { insightCaveats, reportNotes } from './methodNotes';
@@ -43,6 +47,9 @@ export interface ReportModel {
   subtitle: string;
   date: string;
   cover: string[];
+  /** The data-quality statement (session 4), from the project the export shows. */
+  statementHeading: string;
+  statement: string[];
   contents: string[];
   mapIntro: string;
   sections: ReportSection[];
@@ -242,9 +249,15 @@ function insightsSection(ctx: ExportContext, notes: string): Block[] {
       blocks.push({
         kind: 'paragraph',
         lead: R.insights.members,
-        text: o.members.map((id) => names.of(id)).join(', '),
+        text: o.members
+          .map((id) =>
+            o.noRatings?.includes(id) ? `${names.of(id)} (${noRatingsMark})` : names.of(id),
+          )
+          .join(', '),
         small: true,
       });
+      const about = membersText(o, insightCtx);
+      if (about) blocks.push({ kind: 'paragraph', text: about, small: true });
       blocks.push({
         kind: 'paragraph',
         lead: R.insights.view,
@@ -430,6 +443,8 @@ export function buildReport(
     subtitle: R.cover.subtitle,
     date: R.cover.date(date),
     cover,
+    statementHeading: qualityCopy.exportHeading,
+    statement: qualityStatement(computeQuality(project)),
     contents: [S.map, ...sections.map((s) => s.title)],
     mapIntro: R.map.intro(options.layerName),
     sections,
@@ -443,6 +458,8 @@ export function reportText(model: ReportModel): string[] {
     model.subtitle,
     model.date,
     ...model.cover,
+    model.statementHeading,
+    ...model.statement,
     ...model.contents,
     model.mapIntro,
   ];
