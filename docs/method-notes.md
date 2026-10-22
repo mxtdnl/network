@@ -555,7 +555,7 @@ Survey responses (section 9) are turned into rows and pass through the same vali
 
 ### Data coverage threshold
 
-Coverage (section 6) is compared with a threshold, 80 % by default, which the analyst can set as a whole percentage from 0 to 100 in the Coverage panel; it is saved with the project. Below it, a persistent warning under the top bar and on the map states that whole-network metrics may be unreliable, the insights panel repeats it, and the PDF report states it with the raters below the threshold. Until the project has at least one rating, a neutral "No ratings yet" note is shown instead of the warning. Coverage is shown as a whole percentage, except where rounding would reach or cross the threshold: then it keeps one decimal place, rounded away from the threshold, so 79.6 % against 80 % reads 79.6 %, and 79.98 % reads 79.9 %. Coverage counts wave 1 on enabled layers.
+Coverage (section 6) is compared with a threshold, 80 % by default, which the analyst can set as a whole percentage from 0 to 100 under Check the data; it is saved with the project. Below it, a persistent warning under the top bar and on the map states that whole-network metrics may be unreliable, the insights panel repeats it, and the PDF report states it with the raters below the threshold. Until the project has at least one rating, a neutral "No ratings yet" note is shown instead of the warning. Coverage is shown as a whole percentage, except where rounding would reach or cross the threshold: then it keeps one decimal place, rounded away from the threshold, so 79.6 % against 80 % reads 79.6 %, and 79.98 % reads 79.9 %. Coverage counts wave 1 on enabled layers.
 
 ### Map display rules
 
@@ -626,3 +626,51 @@ References follow APA style (7th edition) and were checked against the publisher
 - Zachary, W. W. (1977). An information flow model for conflict and fission in small groups. *Journal of Anthropological Research*, *33*(4), 452–473. https://doi.org/10.1086/jar.33.4.3629752
 
 **Where each is used.** Hevey (2018): general concepts only (see "Design" at the top). Cross & Parker (2004): advice seeking as a core ONA relation, and the energy layer. Mayer, Davis & Schoorman (1995): competence-based trust, kept separate from benevolence-based trust. Edmondson (1999): psychological safety, defined at team level; the interpersonal safety layer is a one-to-one (dyadic) adaptation of it. The method sources are cited where each method is described (sections 3 to 7). Library software used by the tool itself (graphology and the other dependencies) is credited, with its licence, in `README.md` and `public/THIRD-PARTY-NOTICES.txt`.
+
+## 13. Data-quality checks
+
+The "Check the data" tab (build plan session 4) shows whether the ratings can bear a conclusion, before the insights are read. Like coverage (section 6), the checks read the raw ratings of wave 1 on the enabled layers, on the main thread (`src/data/quality.ts`). They describe how the data was given, not anyone's relationships or conduct. Thresholds are in `QUALITY_RULES`; they were chosen by the owner from counts on the demo and the twelve scenario projects (CLAUDE.md D146).
+
+**Meaning.** Organisational network data rarely misses at random: a senior group that does not answer, a night shift, or a respondent who gives everyone the same answer changes the results in ways one coverage figure does not show (Q37 issues 4 and 6; consultant review §7).
+
+### Who gave no ratings, and who gave few
+
+A member **gave no ratings** when they gave none of the ratings possible for them (coverage 0, with at least one rating possible). A member **gave few ratings** when they gave at least one but fewer than half of the ratings possible (coverage below 0.5).
+
+Wherever a value depends on the member's own ratings, it carries the flag: in the member panel (marked * with the reason in the metric's explanation), the metrics table (the member's row is labelled and the values marked *) and the member metrics CSV (in the column "Not defined because, or note"). In the directed view the incoming metrics (received strength, connections in, reach from others) read only other members' ratings and are not flagged; every other metric is. In the mutual view every metric is flagged, because each tie combines both directions and a missing direction is filled from the one given (section 2). On the map a member who gave no ratings is drawn hollow: a ring of their fill colour with an ink outline round a paper centre, half the radius, with the legend entry "Gave no ratings (hollow)".
+
+### Coverage by group and by level
+
+Coverage (section 6) is also reported for the members of each group of the attribute the insight rules group by (team by default) and of each level, with how many of them gave ratings. The data-quality statement quotes the group with the lowest coverage, among groups of at least 3 members of any category attribute with two or more such groups, when that coverage is below the threshold.
+
+### How each person rates
+
+For each member who gave ratings, over every enabled scaled layer, each rating rescaled to 0–1 on its layer's scale, r = (v − min) / (max − min), signed layers included (so neutral on valence is 0.5):
+
+| Measure | Definition |
+|---|---|
+| Mean | Mean of the rescaled ratings |
+| Spread | Standard deviation of the rescaled ratings on each layer, averaged over the layers rated |
+| Scale used | Distinct values given on each layer as a share of the layer's scale points (max − min + 1), averaged over the layers rated |
+| Colleagues tied | Share of the other members (n − 1) given a rating above the scale minimum on at least one tie layer: an enabled layer that is neither signed nor in the conflict group |
+
+A rater is marked:
+
+- **Same answer for everyone** when, on every enabled scaled layer on which they gave at least 5 ratings, every rating has the same value (and there is at least one such layer).
+- **Rates higher (lower) than most** when their mean is at least 0.15 above (below) the median of the means of everyone who gave ratings.
+- **Reports many more ties than most** when their share of colleagues tied is at least 0.25 above the median share, unless the median is 1.
+- The statement adds that **most people report a tie with nearly every colleague** when the median share is at least 0.9.
+
+**Caveats.** A member with genuinely stronger ties (a supervisor, a coordinator, an integration lead) also rates higher than most and reports more ties, so these marks say where a rating habit may be at work, not that one is. On the scenarios, the 0.15 margin finds every generous and harsh rater built in, and also flags supervisors in the large department, the coordinators of the matrix organisation and the integration lead after the merger. Comparing each rating with the reverse rating was measured instead and rejected, because it marks the seniority asymmetry built into the asymmetric scenarios. A same-answer respondent may have meant every answer; the check says only that their ratings do not tell colleagues apart. Remedies (rescaling within each rater, confirmed ties only) are session 5 of the build plan; nothing here changes a metric.
+
+### Ties reported by one side only
+
+A tie i → j is reported when i rates j above the scale minimum on a tie layer. It is **reported back** when j also reports a tie to i. It is counted only when j answered about i on at least one tie layer, so a tie to a member who gave no ratings is neither one-way nor reported back. The share of reported ties that are not reported back is given overall and for each group and level, by the group of the member who reported it.
+
+### The data-quality statement
+
+A few sentences written from these results (`src/ui/copy/quality.ts`), naming no member: coverage against the threshold; how many gave no ratings (and where, by the grouping attribute, or by another attribute when the grouping attribute has one group) and how many gave few; that their results rest largely on other people's reports; the lowest group coverage when below the threshold; how many gave everyone the same answer; how many rate higher or lower than most; dense reporting; how many report many more ties than most; and the share of ties not reported back. It is shown in the Check the data tab, at the start of a presentation (an "About the data" step before the first view), in the Export dialog and on the PDF report's cover. Exports compute it from the project they show, so under "Leave out valence, energy and conflict" coverage and rating styles are counted over the remaining layers.
+
+### What the members named share
+
+An observation that names at least 2 members also states the attribute values more than half of them share, when the value is also more common among them than among all members, at most two, most shared first, leaving out the attribute the observation is about (the silo group or the pair of groups). For example: "Three of the five share tenure band Under 1 year." or "All five share location Remote." Members named who gave no ratings are marked "gave no ratings", and the observation says that only colleagues' reports of their ties are counted.

@@ -29,7 +29,10 @@ import { readExportTheme } from '../../src/ui/export/theme';
 import { exportCopy, reportCopy } from '../../src/ui/copy/export';
 import { insightsCopy } from '../../src/ui/copy/insights';
 import { withPalette, withPin } from '../../src/ui/map/palettes';
-import { DIRECTED_METRICS } from '../../src/ui/copy/metrics';
+import { DIRECTED_METRICS, flagCopy } from '../../src/ui/copy/metrics';
+import { qualityCopy, qualityStatement } from '../../src/ui/copy/quality';
+import { mapCopy } from '../../src/ui/copy/map';
+import { computeQuality } from '../../src/data/quality';
 import { effectiveWeights, type WeightState } from '../../src/ui/state/presets';
 import type { MapSettings } from '../../src/ui/state/store';
 import {
@@ -651,6 +654,67 @@ describe('report details', () => {
     expect(
       out.substituted.filter((c) => !['≥', '≤', '≠', 'γ', 'Σ', '→', '↔', '⁺', '⁻'].includes(c)),
     ).toEqual([]);
+  }, 30_000);
+});
+
+// Build plan session 4: the data-quality statement on the report cover, the
+// rating flags in the member CSV, and members who gave no ratings drawn hollow
+// with a legend entry, under every combination of the two settings.
+describe('data-quality statement and rating flags', () => {
+  const silentId = project.members[3]?.id ?? '';
+  const silentProject = {
+    ...project,
+    ties: project.ties.filter((t) => t.rater_id !== silentId),
+  };
+  describe.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])('names hidden %s, signed layers left out %s', (anonymise, excludeSigned) => {
+    it('puts the statement of the exported project on the report cover', async () => {
+      const ctx = await contextFor(silentProject, { anonymise, excludeSigned, weights: HEALTH });
+      const statement = qualityStatement(computeQuality(ctx.project));
+      const report = buildReport(ctx, { notes: methodNotes(), now: deps.now, layerName: 'x' });
+      expect(report.statement).toEqual(statement);
+      expect(report.statementHeading).toBe(qualityCopy.exportHeading);
+      // Coverage counts the layers exported (D105): energy and conflict were rated for 30 % of pairs.
+      const kept = qualityStatement(computeQuality(silentProject))[0];
+      if (excludeSigned) expect(statement[0]).not.toBe(kept);
+      else expect(statement[0]).toBe(kept);
+      const text = await pdfText((await pdfExport(ctx, mapState, deps, '')).bytes);
+      expect(text).toContain(qualityCopy.exportHeading);
+      expect(text).toContain('One of 40 people gave no ratings');
+      for (const n of NAMES) expect(report.statement.join(' ')).not.toContain(n);
+    }, 30_000);
+
+    it('gives the rating flag in the member CSV and draws the silent member hollow', async () => {
+      const ctx = await contextFor(silentProject, { anonymise, excludeSigned, weights: HEALTH });
+      const i = ctx.project.members.findIndex((m) => m.id === silentId);
+      expect(ctx.result.ratingFlags[i]).toBe('gaveNoRatings');
+      const csv = memberMetricsCsv(ctx).text;
+      const rows = csv.split('\r\n').filter((r) => r.startsWith(ctx.names.of(silentId)));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) expect(r).toContain(flagCopy.gaveNoRatings);
+      // No one else gave no ratings, so the flag appears on that member's rows only.
+      expect(csv.split(flagCopy.gaveNoRatings).length - 1).toBe(rows.length);
+      for (const type of ['png', 'svg'] as const) {
+        const out = await produce(type, ctx);
+        expect(out.text).toContain(mapCopy.legend.noRatings);
+      }
+      const { doc } = mapExport(ctx, mapState, deps, '');
+      const hole = doc.layers
+        .flatMap((l) => l.items)
+        .filter((p) => p.kind === 'circle' && p.fill === theme.map.paper && p.r > 0);
+      expect(hole.length).toBeGreaterThanOrEqual(2);
+    }, 30_000);
+  });
+
+  it('draws no hollow node and no legend entry when everyone gave ratings', async () => {
+    const ctx = await contextFor(project, { anonymise: true, excludeSigned: false });
+    expect(ctx.result.ratingFlags.includes('gaveNoRatings')).toBe(false);
+    const out = await produce('svg', ctx);
+    expect(out.text).not.toContain(mapCopy.legend.noRatings);
   }, 30_000);
 });
 

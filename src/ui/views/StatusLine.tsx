@@ -1,7 +1,7 @@
 import { Icon } from '../components/Icon';
 import { coverageCopy, coveragePercent, percent } from '../copy/data';
 import { useAppStore } from '../state/store';
-import { useCoverage } from './CoveragePanel';
+import { useCoverage } from './DataCheckPanel';
 
 // The line under the top bar: the persistent coverage warning (design-system
 // §5.1: it cannot be dismissed while the condition holds) and the result of the

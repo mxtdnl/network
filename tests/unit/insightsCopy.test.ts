@@ -15,6 +15,7 @@ import { INSIGHT_RULE_ORDER } from '../../src/engine/insights';
 import type { InsightRuleId, Observation } from '../../src/engine/types';
 import {
   insightsCopy,
+  membersText,
   questionText,
   ruleText,
   viewText,
@@ -227,7 +228,7 @@ describe('insight wording is neutral', () => {
     const rules = new Set(observations.map((o) => o.rule));
     expect([...rules].sort()).toEqual([...INSIGHT_RULE_ORDER].sort());
     for (const o of observations) {
-      for (const text of [questionText(o, ctx), viewText(o.view, ctx)]) {
+      for (const text of [questionText(o, ctx), viewText(o.view, ctx), membersText(o, ctx) ?? '']) {
         expect(findBanned(text, words), text).toEqual([]);
       }
     }

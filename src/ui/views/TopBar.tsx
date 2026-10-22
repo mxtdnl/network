@@ -14,7 +14,7 @@ import {
   type LayoutPreference,
 } from '../state/layoutMode';
 import { useAppStore } from '../state/store';
-import { useCoverage } from './CoveragePanel';
+import { useCoverage } from './DataCheckPanel';
 import { savedViewsCopy } from '../copy/savedViews';
 import { setNamesHidden, useMemberNames } from '../state/names';
 import { startPresentation } from '../state/presentation';
@@ -128,7 +128,7 @@ export function TopBar({ status }: TopBarProps) {
           disabled={views === 0}
           title={views === 0 ? savedViewsCopy.presentHelp : undefined}
           onClick={() => {
-            startPresentation(0);
+            startPresentation();
           }}
         >
           {shellCopy.present}

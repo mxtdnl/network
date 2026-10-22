@@ -282,9 +282,15 @@ test('presentation: steps through saved views with captions, keys and Escape, le
   await settled(page);
   await drawnText(page);
   await page.getByRole('banner').getByRole('button', { name: 'Present' }).click();
+  // The presentation opens on the data-quality statement (build plan session 4).
+  await expect(page.getByRole('region', { name: 'About the data' })).toBeVisible();
+  await expect(page.locator('.presentation__statement')).toContainText('Coverage 95%');
+  await expect(page.getByText('Then 3 views')).toBeVisible();
+  await expect(page.getByRole('banner')).toHaveCount(0);
+  await expectNoAxeViolations(page);
+  await page.keyboard.press('ArrowRight');
   const region = page.getByRole('region', { name: 'Potential brokers' });
   await expect(region).toBeVisible();
-  await expect(page.getByRole('banner')).toHaveCount(0);
   await expect(page.getByText('1 of 3')).toBeVisible();
   await expect(page.getByText(/lie on many of the shortest routes/)).toBeVisible();
   await settled(page);
@@ -339,12 +345,15 @@ test('presentation: steps through saved views with captions, keys and Escape, le
   await page.keyboard.press('ArrowLeft');
   await expect(page.getByText('2 of 3')).toBeVisible();
   await page.keyboard.press('Home');
+  await expect(page.getByRole('region', { name: 'About the data' })).toBeVisible();
+  await page.keyboard.press('ArrowRight');
   await expect(page.getByText('1 of 3')).toBeVisible();
   await page.keyboard.press('End');
   await expect(page.getByText('3 of 3')).toBeVisible();
 
   // Anonymised, the same presentation shows codes.
   await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowRight');
   await page.mouse.move(400, 400);
   await page.getByRole('switch', { name: 'Hide names' }).click();
   await page.mouse.move(5, 5);
@@ -440,7 +449,7 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await centreTab(page, 'Members').click();
   await check('members');
   await centreTab(page, 'Map').click();
-  for (const tab of ['Insights', 'Views', 'Coverage']) {
+  for (const tab of ['Insights', 'Views', 'Check the data']) {
     await rightTab(page, tab).click();
     await check(tab);
   }
@@ -459,8 +468,11 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
     await settled(page);
     await check(`layout ${layout}`);
   }
-  // Presentation.
+  // Presentation: the opening statement, then the first view.
   await page.getByRole('banner').getByRole('button', { name: 'Present' }).click();
+  await settled(page);
+  await check('presentation opening');
+  await page.keyboard.press('ArrowRight');
   await settled(page);
   await check('presentation');
   await page.keyboard.press('Escape');
@@ -469,6 +481,10 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
 
   // Turning names back on shows them again (the layer is live, not a copy).
   await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
-  await rightTab(page, 'Coverage').click();
-  await expect(right(page).getByText(DISPLAY_NAMES[0] ?? '', { exact: true })).toBeVisible();
+  await rightTab(page, 'Check the data').click();
+  await expect(
+    right(page)
+      .getByText(DISPLAY_NAMES[0] ?? '', { exact: true })
+      .first(),
+  ).toBeVisible();
 });

@@ -3,6 +3,7 @@
 // the worker keeps the prepared input so resilience and bootstrap requests
 // reuse it.
 
+import { ratingFlag } from '../data/quality';
 import { reciprocity, rescaleUnsigned, scaleSigned, signedPart, symmetrise } from './aggregate';
 import { compositeFormula, compositeMatrix } from './composite';
 import { denseGraph, pathGraph, tieCount, type DenseGraph } from './graphs';
@@ -34,6 +35,7 @@ import {
   type LayerKey,
   type LayerRef,
   type MemberId,
+  type NodeMetricKey,
   type RefKind,
   type PathResult,
   type RefResult,
@@ -232,8 +234,16 @@ export async function analysePrepared(
   }
   s.progress(1, 'done');
 
+  const coverage = input.coverage ?? null;
+  const raters = new Map(coverage?.raters.map((r) => [r.id, r]));
+  const ratingFlags = input.memberIds.map((id) => {
+    const c = raters.get(id);
+    return c ? ratingFlag(c) : null;
+  });
+
   const insights = observe({
     ids: input.memberIds,
+    ratingFlags,
     directed,
     refs,
     refOrder: p.refs.map((r) => r.ref),
@@ -256,11 +266,33 @@ export async function analysePrepared(
     signed,
     multiplex: mx,
     composite: p.composite,
-    coverage: input.coverage ?? null,
+    coverage,
+    ratingFlags,
+    ownRatingMetrics: OWN_RATING_METRICS.filter((m) => !directed || !INCOMING_METRICS.includes(m)),
     insights,
     warnings,
   };
 }
+
+const OWN_RATING_METRICS: NodeMetricKey[] = [
+  'inStrength',
+  'outStrength',
+  'strength',
+  'inDegree',
+  'outDegree',
+  'degree',
+  'betweenness',
+  'betweennessBinary',
+  'harmonicIn',
+  'harmonicOut',
+  'harmonic',
+  'eigenvector',
+  'constraint',
+  'effectiveSize',
+  'clustering',
+];
+/** In the directed view these read only other members' ratings of the member. */
+const INCOMING_METRICS: NodeMetricKey[] = ['inStrength', 'inDegree', 'harmonicIn'];
 
 export function analyse(input: AnalysisInput, control: RunControl = {}): Promise<AnalysisResult> {
   return analysePrepared(prepare(input), control);

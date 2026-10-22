@@ -79,7 +79,7 @@ export function SavedViewsPanel() {
           className="button button--text"
           disabled={views.length === 0}
           onClick={() => {
-            startPresentation(0);
+            startPresentation();
           }}
         >
           {V.present}

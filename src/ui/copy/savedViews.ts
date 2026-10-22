@@ -56,5 +56,7 @@ export const presentationCopy = {
   previous: 'Previous view',
   next: 'Next view',
   exit: 'Leave presentation',
+  /** The opening step's counter: what follows it. */
+  opening: (views: number) => `Then ${String(views)} ${views === 1 ? 'view' : 'views'}`,
   noViews: 'Save a view first: presentation mode steps through saved views.',
 } as const;

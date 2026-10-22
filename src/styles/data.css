@@ -791,3 +791,35 @@ a {
 .shade-signed-p3 {
   background-color: color-mix(in lab, var(--scale-p3) 60%, var(--paper));
 }
+
+/* Check the data (build plan session 4) */
+.quality-statement p,
+.export-dialog__statement p {
+  max-width: var(--measure);
+  margin-bottom: var(--s-2);
+}
+
+.quality__section {
+  margin-bottom: var(--s-5);
+}
+
+.quality__table {
+  margin-bottom: var(--s-5);
+}
+
+.quality__count {
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--s-1);
+}
+
+.quality__names {
+  margin: 0 0 var(--s-3);
+  padding-inline-start: var(--s-4);
+}
+
+.quality__note {
+  display: block;
+  color: var(--graphite);
+  font-size: var(--t--1-size);
+  line-height: var(--t--1-line);
+}

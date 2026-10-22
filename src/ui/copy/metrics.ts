@@ -5,6 +5,7 @@
 // explanation.
 
 import type { SizeMetric } from '../state/store';
+import { ratingFlagCopy } from './quality';
 
 export interface MetricCopy {
   label: string;
@@ -154,4 +155,6 @@ export const flagCopy = {
   notConverged: 'Not defined: the calculation did not settle.',
   fewerThanTwoContacts: 'This member has fewer than two contacts, so the value is 0.',
   negativeSubLayer: 'Not computed on negative ties.',
+  gaveNoRatings: ratingFlagCopy.gaveNoRatings,
+  gaveFewRatings: ratingFlagCopy.gaveFewRatings,
 } as const;

@@ -40,6 +40,7 @@
 
 .insight__rule,
 .insight__view,
+.insight__shared,
 .insight__status {
   color: var(--graphite);
   font-size: var(--t--1-size);
@@ -100,6 +101,14 @@
 
 .insight__member:hover {
   border-color: var(--ink);
+}
+
+.insight__shared {
+  margin-bottom: var(--s-2);
+}
+
+.insight__member-flag {
+  color: var(--graphite);
 }
 
 .insight__view {
@@ -354,6 +363,21 @@
   font-weight: var(--weight-medium);
 }
 
+/* The opening step (build plan session 4): the data-quality statement in the body area. */
+.presentation__statement {
+  grid-area: body;
+  align-self: start;
+  min-height: 0;
+  overflow-y: auto;
+  max-width: var(--measure);
+  font-size: var(--t-3-size);
+  line-height: var(--t-3-line);
+}
+
+.presentation__statement p {
+  margin-bottom: var(--s-4);
+}
+
 .presentation__counter {
   grid-area: counter;
   align-self: end;
@@ -383,8 +407,14 @@
 }
 
 /* Five tabs share the right column's width: Member, Explore, Insights,
-   Views and Coverage. Tighter gaps keep them on one line at --col-right. */
+   Views and Check the data. Tighter gaps and padding keep them on one line at
+   --col-right (281.5 px of labels in Fira Sans 500 at t-0). */
 .workspace__right .tabs__list {
-  gap: var(--s-3);
+  gap: var(--s-2);
+  padding-inline: var(--s-4);
   justify-content: space-between;
+}
+
+.workspace__right .tabs__tab {
+  white-space: nowrap;
 }

@@ -210,7 +210,7 @@ for (const size of SIZES) {
     await page.getByLabel('Name of the new view').fill('Formal structure');
     await page.getByRole('button', { name: 'Save view' }).click();
     await capture('16-views');
-    await rightTab(page, 'Coverage').click();
+    await rightTab(page, 'Check the data').click();
     await capture('17-coverage');
 
     for (const layout of ['Grouped', 'Circular', 'Formal hierarchy'] as const) {
@@ -375,7 +375,7 @@ test('phone: the workspace is read-only and usable at 390 px', async ({ page }) 
   await rightTab(page, 'Views').click();
   await expect(page.getByRole('button', { name: 'Save view' })).toHaveCount(0);
   await capture('11-views');
-  await rightTab(page, 'Coverage').click();
+  await rightTab(page, 'Check the data').click();
   await expect(page.getByLabel('Warn below')).toHaveAttribute('readonly', '');
   await capture('12-coverage');
 
@@ -606,14 +606,14 @@ test('compact layout: the drawer and the rails by keyboard', async ({ page }) =>
   await key('Enter');
   await expect(drawer).toHaveCount(0);
   await expect(drawerToggle(page)).toBeFocused();
-  await rightTab(page, 'Coverage').focus();
+  await rightTab(page, 'Check the data').focus();
   await key('Enter');
   await expect(drawer).toBeVisible();
   await key('Tab');
   await expect(page.locator('#workspace-drawer :focus')).toHaveCount(1);
   await key('Escape');
   await expect(drawer).toHaveCount(0);
-  await expect(rightTab(page, 'Coverage')).toBeFocused();
+  await expect(rightTab(page, 'Check the data')).toBeFocused();
 
   // Opened by selecting a member on the map: Escape inside the member panel
   // closes the panel and the drawer and returns focus to the member.

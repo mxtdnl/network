@@ -4,6 +4,7 @@ import type { AnalysisResult } from '../engineClient';
 import { Icon } from '../components/Icon';
 import { formatValue, mapCopy } from '../copy/map';
 import { DIRECTED_METRICS, SYMMETRISED_METRICS, flagCopy, metricCopy } from '../copy/metrics';
+import { ratingFlagCopy } from '../copy/quality';
 import { shellCopy } from '../copy/shell';
 import { focusMapMember } from '../map/focus';
 import { rankInterval, rankOf } from '../map/rank';
@@ -14,7 +15,15 @@ import { simulateRemoval } from '../state/tools';
 
 const P = mapCopy.panel;
 
-function MetricInfo({ metric, flag }: { metric: SizeMetric; flag: string | null }) {
+function MetricInfo({
+  metric,
+  flag,
+  rating,
+}: {
+  metric: SizeMetric;
+  flag: string | null;
+  rating: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const copy = metricCopy[metric];
@@ -55,6 +64,7 @@ function MetricInfo({ metric, flag }: { metric: SizeMetric; flag: string | null 
           <span className="metric-info__meaning">{copy.meaning}</span>
           <span className="metric-info__caveat">{copy.caveat}</span>
           {flag && <span className="metric-info__flag">{flag}</span>}
+          {rating && <span className="metric-info__flag">{rating}</span>}
           <span className="metric-info__technical">{P.technical(copy.technical)}</span>
         </span>
       )}
@@ -205,6 +215,7 @@ function Position({
       ? bootstrap.result
       : null;
   const ref = result.refs[layer];
+  const ratingFlag = result.ratingFlags[memberIndex] ?? null;
   const metrics = (result.view === 'directed' ? DIRECTED_METRICS : SYMMETRISED_METRICS).filter(
     (m) => ref?.node.columns[m] !== undefined,
   );
@@ -258,15 +269,25 @@ function Position({
             const value = column[memberIndex] as number;
             const flagKey = ref.node.flags[m]?.[memberIndex] ?? null;
             const flag = flagKey ? flagCopy[flagKey] : null;
+            // Values that rest on the member's own ratings carry their rating flag.
+            const own = result.ownRatingMetrics.includes(m) ? ratingFlag : null;
             return (
               <tr key={m}>
                 <th scope="row">
                   <span className="member__metric">
                     {metricCopy[m].label}
-                    <MetricInfo metric={m} flag={flag} />
+                    <MetricInfo metric={m} flag={flag} rating={own && flagCopy[own]} />
                   </span>
                 </th>
-                <td className="numeric">{formatValue(value)}</td>
+                <td className="numeric">
+                  {formatValue(value)}
+                  {own && (
+                    <span className="rating-flag" aria-hidden="true">
+                      {ratingFlagCopy.marker}
+                    </span>
+                  )}
+                  {own && <span className="visually-hidden">{ratingFlagCopy.short[own]}</span>}
+                </td>
                 <td className="numeric">
                   {interval && interval.metric === m
                     ? rankInterval(interval.rankLow[memberIndex], interval.rankHigh[memberIndex])
@@ -277,6 +298,11 @@ function Position({
           })}
         </tbody>
       </table>
+      {ratingFlag && (
+        <p className="member__note member__rating-flag">
+          {ratingFlagCopy.markerNote(ratingFlagCopy.short[ratingFlag])}
+        </p>
+      )}
       <p className="member__note">
         {interval
           ? P.rankIntervalNote(metricCopy[interval.metric].label, interval.replicates)

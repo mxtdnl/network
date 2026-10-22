@@ -124,7 +124,7 @@ test(
       .click();
     await settled(page);
     await page.getByRole('button', { name: 'Clear highlight' }).first().click();
-    await rightTab(page, 'Coverage').click();
+    await rightTab(page, 'Check the data').click();
     await expect(right(page).getByText('Overall response rate')).toBeVisible();
     await rightTab(page, 'Views').click();
     await page.getByLabel('Name of the new view').fill('Release check');

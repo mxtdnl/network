@@ -38,6 +38,14 @@ export interface ArrowBatch {
   coords: number[];
 }
 
+/**
+ * The paper disc inside a hollow node: half the radius, leaving a ring of the
+ * fill at least one line wide, so the group colour stays readable.
+ */
+export function hollowRadius(r: number, line: number): number {
+  return Math.max(Math.min(r * 0.5, r - line * 1.5), 0);
+}
+
 export interface NodeMark {
   index: number;
   x: number;
@@ -48,6 +56,8 @@ export interface NodeMark {
   strokeWidth: number;
   dashed: boolean;
   alpha: number;
+  /** The member gave no ratings: a paper disc inside the fill, of this radius (session 4). */
+  hollow: number;
 }
 
 export interface RingMark {
@@ -544,6 +554,7 @@ export function buildScene(
       strokeWidth: theme.line,
       dashed: hue < 0,
       alpha,
+      hollow: node.noRatings ? hollowRadius(node.radius, theme.line) : 0,
     });
     const labelled =
       visibleCount <= LABEL_ALL_BELOW ||

@@ -20,7 +20,7 @@ The empty workspace offers four ways in: run a survey, add members by hand (see 
 
 ![The empty workspace with the buttons Run a survey, Add members, Import survey data and Load demo](user-guide/empty-workspace.jpg)
 
-The workspace has three columns: settings on the left (weights, map settings and layers), views in the centre (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Coverage). While the Members or Survey tab is open, the left column holds the layers only; the weights and map settings are on the Map tab. The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
+The workspace has three columns: settings on the left (weights, map settings and layers), views in the centre (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Check the data). While the Members or Survey tab is open, the left column holds the layers only; the weights and map settings are on the Map tab. The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
 
 ### Compact and full layouts
 
@@ -285,19 +285,29 @@ Open a member's panel to see their position in the network: each metric's value 
 
 A value can be "Not defined", with the reason, for example for someone with no ties on that layer. It is never shown as 0.
 
+A value marked * rests on other people's reports, because the member gave no ratings or fewer than half of the ratings possible: their own view of their ties is missing. The note under the metrics says which, and the metric's information button gives the reason. In the directed view the incoming metrics (received strength, connections in, reach from others) do not depend on the member's own answers and are not marked. The Table labels such members and marks their values the same way, and the member metrics export gives the reason in its last column. On the map, a member who gave no ratings is drawn hollow, with its own legend entry.
+
 **Network measures** (in the network metrics export, the report and the Compare tab): density (the share of possible ties that exist), reciprocity (how often ties are returned), average clustering, components (separate parts), communities found by the Louvain method with their modularity, centralisation (how dominated the network is by one person), the E-I index and cross-group density (whether ties stay within groups or cross between them), structural balance on signed layers, and layer overlap. Each is defined in the [method notes](method-notes.md#4-network-metrics).
 
 **Ranks are not scores.** A rank orders positions in this network, on this layer, from these answers. Positions have many causes (role, tenure, location, workload, who answered the survey), and a small change in ties can change a rank. Run Rank stability in the Table to see how much each rank depends on exactly who took part; a wide range means the ranking should not be read precisely.
 
-### Coverage
+### Check the data
 
-The Coverage tab shows the share of possible ratings that were given, per rater and overall, and where the ratings came from (survey responses, imported files or matrix entry). Below the threshold, 80 % by default, a warning stays under the top bar: whole-network metrics may be unreliable, because a missing rating looks like a missing tie. You can change the threshold in the Coverage tab if a lower rate is expected. Near the threshold the figure keeps one decimal place, so 79.6 % is never shown as 80 %. Until the project has its first rating, for example while a survey is being set up, the top bar says "No ratings yet" instead of giving a warning. Ratings saved without a record of where they came from, such as the demo's, are listed as "Not recorded".
+Read this tab before the insights. It says whether the data can bear a conclusion, and its first section is the **data-quality statement**, a few sentences written from the checks below that name no one. The same statement opens a presentation, appears in the Export dialog and is printed on the report's cover.
 
-![The Coverage tab: overall response rate, sources, threshold and raters](user-guide/coverage.jpg)
+- **Coverage**: the share of possible ratings that were given, overall and per rater, and where the ratings came from (survey responses, imported files or matrix entry). Below the threshold, 80 % by default, a warning stays under the top bar: whole-network metrics may be unreliable, because a missing rating looks like a missing tie. You can change the threshold here if a lower rate is expected. Near the threshold the figure keeps one decimal place, so 79.6 % is never shown as 80 %. Until the project has its first rating, for example while a survey is being set up, the top bar says "No ratings yet" instead of giving a warning. Ratings saved without a record of where they came from, such as the demo's, are listed as "Not recorded".
+- **Coverage by group and by level**: coverage for each team (or the attribute chosen under Group members by in the Insights tab) and each level, with how many people gave ratings and the share of their ties not reported back. Overall coverage can pass the threshold while one group is mostly silent, such as a night shift.
+- **People who gave no ratings or few**: named here for you only. Their results rest largely on other people's reports. Fewer than half of the ratings possible counts as few.
+- **How each person rates**: each person's mean rating (every rating rescaled to 0 to 1), its spread, how much of each scale they used and the share of colleagues they report a tie with. A note marks someone who gave everyone the same answer, who rates higher or lower than most (0.15 or more from the median), or who reports ties with many more colleagues than most. These describe rating habits, which carry into given strength and into averaged ties; someone who really is closer to more people also rates higher, so read them as a prompt, not a finding.
+- **Ties reported by one side only**: of the ties someone reported, where the other person also answered, how many were not reported back.
+
+The checks change no figure. The definitions and thresholds are in the [method notes](method-notes.md#13-data-quality-checks).
+
+![The Check the data tab: the data-quality statement, then coverage overall and by group](user-guide/coverage.jpg)
 
 ### Insights
 
-The Insights tab lists rule-based observations: potential brokers, peripheral members, possible overload, silos, negative clusters, negative ratings not returned, and formal ties with no informal counterpart (and the reverse). Each is written as a question to explore with the people involved, never as a finding about anyone, and each shows the rule and thresholds that produced it. Show on the map sets the map up to show the observation; Save as view keeps it for a presentation. The rules are in the [method notes](method-notes.md#8-insight-rules).
+The Insights tab lists rule-based observations: potential brokers, peripheral members, possible overload, silos, negative clusters, negative ratings not returned, and formal ties with no informal counterpart (and the reverse). Each is written as a question to explore with the people involved, never as a finding about anyone, and each shows the rule and thresholds that produced it. Under the members named, an observation says what most of them have in common when it is more common among them than in the project as a whole, for example "Three of the five share tenure band Under 1 year", and marks anyone named who gave no ratings. Show on the map sets the map up to show the observation; Save as view keeps it for a presentation. The rules are in the [method notes](method-notes.md#8-insight-rules).
 
 **Group members by** chooses the attribute the silo, formal–informal and negative-ratings rules compare: team by default, or any other category, such as a programme in a matrix organisation or the former organisation after a merger. The choice is saved with the project, and each rule names it.
 
@@ -335,7 +345,9 @@ A saved view keeps the map as it is: the weights, filters, layout, node position
 
 A good presentation is a short sequence of views, each answering one question: for example the informal network, then the formal structure, then one insight shown on the map. Save an insight's view straight from the Insights tab with Save as view; its caption is the insight's question.
 
-Choose Present (top bar or Views tab) to show the views full screen, with the title, the map, the legend and the caption. Use the right arrow, Page down or Space for the next view, the left arrow or Page up for the previous one, Home and End for the first and last, and Escape to leave. Moving the pointer shows a small control bar, which includes Hide names.
+Choose Present (top bar or Views tab) to show the views full screen, with the title, the map, the legend and the caption. A presentation opens with "About the data", the data-quality statement, so the audience hears what the data can bear before the first view. Use the right arrow, Page down or Space for the next view, the left arrow or Page up for the previous one, Home for the opening and End for the last view, and Escape to leave. Moving the pointer shows a small control bar, which includes Hide names.
+
+![Presentation mode opens with the data-quality statement](user-guide/presentation-opening.jpg)
 
 ![Presentation mode: a saved view full screen with its title, legend, caption and position](user-guide/presentation.jpg)
 
@@ -343,7 +355,7 @@ Choose Present (top bar or Views tab) to show the views full screen, with the ti
 
 ## Exports
 
-Export (top bar) opens the export dialog. Every export follows its two settings:
+Export (top bar) opens the export dialog. Under its settings it shows the data-quality statement as the exports carry it; the report prints it on its cover. Every export follows its two settings:
 
 - **Hide names**: names are replaced by codes, including names written in captions and titles.
 - **Leave out valence, energy and conflict**: these layers hold negative ratings of named colleagues. When left out, the exports are calculated again without them, so no figure depends on them. The setting is saved with the project.
@@ -353,11 +365,11 @@ Export (top bar) opens the export dialog. Every export follows its two settings:
 | Export | Contents |
 |---|---|
 | Map (PNG or SVG) | The map as on screen, with its legend and an optional caption. PNG at screen, double or print resolution (300 dpi across A4 landscape); SVG with its fonts embedded, for print and editing |
-| Member metrics (CSV) | Every member's metrics on every layer and the composite, one row per member and layer, unrounded |
+| Member metrics (CSV) | Every member's metrics on every layer and the composite, one row per member and layer, unrounded, with why a value is not defined or, for someone who gave no or few ratings, that it rests on others' reports |
 | Network metrics (CSV) | Density, reciprocity, components, communities, centralisation, mixing between groups and more, per layer |
 | Formal and informal ties (CSV) | Every pair classified as formal only, informal only, both or neither |
 | Table (CSV, from the Table tab) | The rows and columns shown, in their order |
-| Report (PDF) | The map, key network metrics, insights, method notes, data coverage with survey response rates, and an ethics statement. For a signed layer's negative ratings, the metrics table gives ties, density and reciprocity, but not separate parts, communities, modularity or the centralisation of bridging, which describe how a network holds together |
+| Report (PDF) | The data-quality statement on the cover, the map, key network metrics, insights, method notes, data coverage with survey response rates, and an ethics statement. For a signed layer's negative ratings, the metrics table gives ties, density and reciprocity, but not separate parts, communities, modularity or the centralisation of bridging, which describe how a network holds together |
 
 In CSV files an empty cell means not defined or not rated. File names end in `-codes` when names are hidden and `-no-signed` when those layers were left out. Exports are ordinary files: store and share them as personal data unless names are hidden and you are sure no code identifies anyone.
 
