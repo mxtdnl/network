@@ -44,8 +44,9 @@ export function insightMapPatch(
     groupBy: view.groupBy ?? map.groupBy,
     filters: view.filters.map((f) => ({ key: f.key, values: [...f.values] })),
     highlight: [...view.highlight],
-    // The rule counted every tie, so every tie is drawn (CLAUDE.md D129).
+    // The rule counted every tie, so every tie is drawn (CLAUDE.md D129, D141).
     threshold: 0,
+    thresholdTo: 1,
     layerToggles: toggles,
     ego: null,
     search: '',

@@ -19,6 +19,7 @@ import { sharedLayout } from '../map/useMapModel';
 import { currentNames } from './names';
 import { analysisKey } from './analysisSync';
 import {
+  DEFAULT_THRESHOLD_TO,
   initialMapSettings,
   useAppStore,
   type AppState,
@@ -52,6 +53,7 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
         ? { kind: 'attribute', key: map.fill.key }
         : { kind: 'community' },
     threshold: map.threshold,
+    thresholdTo: map.thresholdTo,
     layerToggles: { ...map.layerToggles },
     hideOffLayers: map.hideOffLayers,
     filters: map.filters.map((f) => ({ key: f.key, values: [...f.values] })),
@@ -75,6 +77,8 @@ export function savedToMap(saved: SavedMapSettings, project: Project): MapSettin
     ...saved,
     // An unknown metric is corrected by the map (effectiveSettings) to one the layer has.
     sizeMetric: saved.sizeMetric as SizeMetric,
+    // Absent in views saved before the range (D141): no upper bound.
+    thresholdTo: saved.thresholdTo ?? DEFAULT_THRESHOLD_TO,
     layerToggles: { ...saved.layerToggles },
     filters: saved.filters.map((f) => ({ key: f.key, values: [...f.values] })),
     ego: saved.ego && ids.has(saved.ego.member) ? { ...saved.ego } : null,

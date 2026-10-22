@@ -172,10 +172,38 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
       )?.[1],
     );
   const before = await tiesOf(/^Lior Theodolite/);
-  await page.getByLabel('Tie strength at least').fill('0.5');
+  const from = page.getByRole('slider', { name: 'Tie strength from', exact: true });
+  const to = page.getByRole('slider', { name: 'Tie strength to', exact: true });
+  await expect(from).toHaveValue('0.3');
+  await expect(to).toHaveValue('1');
+  await from.fill('0.5');
   await expect(legend.getByText('Ties below 0.50 hidden')).toBeVisible();
   expect(await tiesOf(/^Lior Theodolite/)).toBeLessThan(before);
-  await page.getByLabel('Tie strength at least').fill('0');
+
+  // The range by keyboard (D141): each slider steps by 0.05, says its value, and
+  // moving one past the other moves both.
+  await from.fill('0.3');
+  await to.focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowLeft');
+  await expect(to).toHaveValue('0.5');
+  await expect(to).toHaveAttribute('aria-valuetext', '0.50');
+  await expect(legend.getByText('Ties outside 0.30–0.50 hidden')).toBeVisible();
+  await expect(legend.getByText('Every metric uses all ties, hidden or not')).toBeVisible();
+  await expectNoAxeViolations(page, REGION.left);
+  await from.focus();
+  await page.keyboard.press('End');
+  await expect(from).toHaveValue('1');
+  await expect(to).toHaveValue('1');
+  await expect(legend.getByText('Ties below 1.00 hidden')).toBeVisible();
+  await to.focus();
+  await page.keyboard.press('Home');
+  await expect(to).toHaveValue('0');
+  await expect(from).toHaveValue('0');
+  await expect(legend.getByText('Ties above 0.00 hidden')).toBeVisible();
+  await expect(map.getByText(/Widen the tie strength range/)).toBeVisible();
+  await page.keyboard.press('End');
+  await expect(to).toHaveValue('1');
+  await expect(legend.getByText(/Ties (below|above|outside)/)).toHaveCount(0);
 
   // Filter: only Finance members remain on the map and in the table.
   await page.getByLabel('Attribute', { exact: true }).selectOption({ label: 'Team or function' });
@@ -424,7 +452,7 @@ test('palettes and pinned group colours (D127): legend, matrix, canvas and the p
 
   // The canvas draws the pinned hue and the purple steps; every tie is drawn, as the
   // demo's most negative ties fall below the default threshold (D129).
-  await page.getByLabel('Tie strength at least').fill('0');
+  await page.getByLabel('Tie strength from').fill('0');
   await settled(page);
   const drawn = await page.locator('canvas.map__canvas').evaluate((c: HTMLCanvasElement) => {
     const ctx = c.getContext('2d');

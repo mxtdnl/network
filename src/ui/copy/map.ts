@@ -49,7 +49,7 @@ export const mapCopy = {
   calculating: 'Calculating the network…',
   failed: (reason: string) => `The network could not be calculated. ${reason}`,
   noTies:
-    'No ties are shown. Lower the tie strength threshold, clear a filter or choose another layer.',
+    'No ties are shown. Widen the tie strength range, clear a filter or choose another layer.',
   noMembers: 'No members match the filters. Remove a filter to show members again.',
   coverage: (rate: string, threshold: string) =>
     `Data coverage is ${rate}, below the ${threshold} threshold. Whole-network metrics may be unreliable.`,
@@ -117,7 +117,9 @@ export const mapCopy = {
     mean: 'Average',
     min: 'Weaker of the two',
     max: 'Stronger of the two',
-    threshold: 'Tie strength at least',
+    tieRange: 'Tie strength',
+    threshold: 'Tie strength from',
+    thresholdTo: 'to',
     size: 'Node size',
     fill: 'Node fill',
     community: 'Community',
@@ -208,6 +210,8 @@ export const mapCopy = {
     notRatedOn: (layer: string) => `Not rated on ${layer}`,
     tiesFrom: (layer: string) => `Ties drawn from ${layer}`,
     threshold: (value: string) => `Ties below ${value} hidden`,
+    thresholdTo: (value: string) => `Ties above ${value} hidden`,
+    thresholdRange: (from: string, to: string) => `Ties outside ${from}–${to} hidden`,
     hiddenLayers: (labels: string[]) => `Ties on ${labels.join(' and ')} hidden`,
     metricsUseAllTies: 'Every metric uses all ties, hidden or not',
     colour: 'Edge colour',

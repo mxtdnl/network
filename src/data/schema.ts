@@ -139,7 +139,10 @@ export interface SavedMapSettings {
   /** Node-size metric (engine NodeMetricKey). */
   sizeMetric: string;
   fill: { kind: 'attribute'; key: AttributeKey } | { kind: 'community' };
+  /** Lower bound of the tie-strength range drawn. */
   threshold: number;
+  /** Upper bound of the range (D141); absent means 1. Added to schema 4 in place, before release. */
+  thresholdTo?: number;
   layerToggles: Record<LayerKey, boolean>;
   hideOffLayers: boolean;
   filters: AttributeFilter[];

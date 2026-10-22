@@ -99,8 +99,10 @@ export interface MapSettings {
   layer: string;
   sizeMetric: SizeMetric;
   fill: NodeFill;
-  /** Display only (plan Q6): ties below this weight on `layer` are hidden. */
+  /** Display only (plan Q6): ties on `layer` weaker than this are hidden (lower bound of the range, D141). */
   threshold: number;
+  /** Display only: ties on `layer` stronger than this are hidden (upper bound, D141). */
+  thresholdTo: number;
   /** Layers switched off on the map; with `hideOffLayers`, their ties are hidden (D59). */
   layerToggles: Record<LayerKey, boolean>;
   /** When true, a layer switched off also hides its ties (CLAUDE.md D59). */
@@ -235,6 +237,8 @@ export function initialToolsState(): ToolsState {
 
 /** The tie strength below which the map hides ties when it opens (D129). */
 export const DEFAULT_THRESHOLD = 0.3;
+/** The tie strength above which the map hides ties when it opens: none (D141). */
+export const DEFAULT_THRESHOLD_TO = 1;
 
 export function initialMapSettings(): MapSettings {
   return {
@@ -245,6 +249,7 @@ export function initialMapSettings(): MapSettings {
     fill: { kind: 'attribute', key: 'team' },
     // Display only: the map opens with ties below 0.3 hidden (CLAUDE.md D129).
     threshold: DEFAULT_THRESHOLD,
+    thresholdTo: DEFAULT_THRESHOLD_TO,
     layerToggles: {},
     hideOffLayers: false,
     filters: [],

@@ -13,6 +13,7 @@ import { legendSections } from '../../src/ui/map/legend';
 import {
   averageRanks,
   buildMapModel,
+  inTieRange,
   nextMember,
   NOT_RECORDED,
   valenceMatrix,
@@ -141,6 +142,59 @@ describe('map model', () => {
       expect(e.width).toBeGreaterThanOrEqual(theme.edgeMin);
       expect(e.width).toBeLessThanOrEqual(theme.edgeMax);
     }
+  });
+
+  it('draws only ties within the tie-strength range, bounds included (D141)', async () => {
+    const all = await model({ layer: 'connection_strength', threshold: 0 });
+    const band = await model({ layer: 'connection_strength', threshold: 0.4, thresholdTo: 0.6 });
+    expect(band.edges.length).toBeGreaterThan(0);
+    expect(band.edges.length).toBeLessThan(all.edges.length);
+    // A drawn pair's weight combines directions that are each within the range.
+    expect(band.edges.every((e) => e.weight >= 0.4 - 1e-9 && e.weight <= 0.6 + 1e-9)).toBe(true);
+    const below = await model({ layer: 'connection_strength', threshold: 0, thresholdTo: 0.4 });
+    const above = await model({ layer: 'connection_strength', threshold: 0.6, thresholdTo: 1 });
+    expect(below.edges.every((e) => e.weight <= 0.4 + 1e-9)).toBe(true);
+    expect(above.edges.every((e) => e.weight >= 0.6 - 1e-9)).toBe(true);
+    // Mutual view and a point range: only ties equal to the bound.
+    const point = await model({
+      layer: 'connection_strength',
+      view: 'symmetrised',
+      threshold: 0.5,
+      thresholdTo: 0.5,
+    });
+    expect(point.edges.every((e) => Math.abs(e.weight - 0.5) <= 1e-9)).toBe(true);
+  });
+
+  it('compares the bounds with a tolerance of 1e-9 (D141)', () => {
+    const third = 1 / 3;
+    expect(inTieRange(0.1 + 0.2, 0.3, 1)).toBe(true);
+    expect(inTieRange(0.7, 0, 0.1 + 0.2 + 0.4)).toBe(true);
+    expect(inTieRange(third * 3, 0, 1)).toBe(true);
+    expect(inTieRange(0.3 - 1e-8, 0.3, 1)).toBe(false);
+    expect(inTieRange(0.5 + 1e-8, 0, 0.5)).toBe(false);
+  });
+
+  it('draws a pair as one line only when both directions are within the range (D131, D141)', async () => {
+    const r = await resultFor(demo, initialMapSettings());
+    const w = r.refs.connection_strength?.weights ?? new Float64Array();
+    const n = demo.members.length;
+    const [from, to] = [0.3, 0.6];
+    const m = await model({ layer: 'connection_strength', threshold: from, thresholdTo: to });
+    const inside = (k: number) => {
+      const x = w[k] as number;
+      return x > 0 && inTieRange(x, from, to);
+    };
+    let both = 0;
+    let one = 0;
+    for (let i = 0; i < n; i++)
+      for (let j = i + 1; j < n; j++) {
+        const a = inside(i * n + j);
+        const b = inside(j * n + i);
+        if (a && b) both += 1;
+        else if (a || b) one += 1;
+      }
+    expect(m.edges.filter((e) => e.reciprocated).length).toBe(both);
+    expect(m.edges.filter((e) => !e.reciprocated).length).toBe(one);
   });
 
   it('draws one edge per pair in both views, a one-way tie in its direction', async () => {
@@ -391,6 +445,20 @@ describe('legend', () => {
     expect(width?.variable).toBe('Connection strength');
     expect(width?.kind === 'width' && width.notes).toEqual([
       'Ties below 0.40 hidden',
+      'Every metric uses all ties, hidden or not',
+    ]);
+    const notes = async (threshold: number, thresholdTo: number) => {
+      const x = legendSections(await model({ threshold, thresholdTo }), theme).find(
+        (y) => y.kind === 'width',
+      );
+      return x?.kind === 'width' ? x.notes : [];
+    };
+    expect(await notes(0, 0.5)).toEqual([
+      'Ties above 0.50 hidden',
+      'Every metric uses all ties, hidden or not',
+    ]);
+    expect(await notes(0.3, 0.5)).toEqual([
+      'Ties outside 0.30–0.50 hidden',
       'Every metric uses all ties, hidden or not',
     ]);
     // With every tie drawn there is nothing hidden to explain.

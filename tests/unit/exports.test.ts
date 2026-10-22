@@ -305,6 +305,12 @@ const ENCODINGS: {
     excluded: ['Edge style', 'Formal only'],
   },
   {
+    name: 'a tie-strength range (D141)',
+    map: { threshold: 0.3, thresholdTo: 0.5 },
+    kept: ['Ties outside 0.30–0.50 hidden', 'Every metric uses all ties, hidden or not'],
+    excluded: ['Ties outside 0.30–0.50 hidden', 'Every metric uses all ties, hidden or not'],
+  },
+  {
     name: 'size by rank',
     map: { sizeScale: 'rank' },
     kept: ['Bridging, by rank', 'Rank 1'],
@@ -664,6 +670,22 @@ describe('export files', () => {
     expect(svg).toContain('One way, from rater to rated member');
     expect(svg).toContain('Both ways: one line, the two directions averaged');
     expect(svg).not.toContain('Edge style');
+  });
+
+  it('draws only the ties within the tie-strength range (D141)', async () => {
+    const edges = async (threshold: number, thresholdTo: number) => {
+      const ctx = await contextFor(project, {
+        anonymise: true,
+        excludeSigned: false,
+        map: { threshold, thresholdTo },
+      });
+      return mapExport(ctx, mapState, deps, '').map.model.edges;
+    };
+    const all = await edges(0, 1);
+    const band = await edges(0.3, 0.5);
+    expect(band.length).toBeGreaterThan(0);
+    expect(band.length).toBeLessThan(all.length);
+    expect(band.every((e) => e.weight >= 0.3 - 1e-9 && e.weight <= 0.5 + 1e-9)).toBe(true);
   });
 
   it('sizes the print PNG to the printable width of A4 landscape at 300 dpi', async () => {

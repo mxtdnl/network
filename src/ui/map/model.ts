@@ -144,7 +144,9 @@ export interface MapModel {
   directions: { oneWay: boolean; bothWays: boolean };
   /** How the two directions of a pair are combined. */
   symmetrise: MapSettings['symmetrise'];
+  /** The tie-strength range drawn, inclusive (D141). */
   threshold: number;
+  thresholdTo: number;
   /** Layers switched off whose ties are hidden (keys). */
   hiddenLayers: string[];
   hiddenLabels: string[];
@@ -428,6 +430,14 @@ export function refLabel(project: Project, ref: string): string {
   return project.layers.find((l) => l.key === key)?.label ?? ref;
 }
 
+/** Tolerance of the tie-strength range: composite weights are sums of fractions (D141). */
+export const TIE_RANGE_TOLERANCE = 1e-9;
+
+/** Whether a weight lies within the tie-strength range, bounds included (D141). */
+export function inTieRange(w: number, from: number, to: number): boolean {
+  return w >= from - TIE_RANGE_TOLERANCE && w <= to + TIE_RANGE_TOLERANCE;
+}
+
 /** Members within `depth` steps of `centre` along the given neighbour lists. */
 export function egoSet(neighbours: readonly (readonly number[])[], centre: number, depth: number) {
   const seen = new Set<number>([centre]);
@@ -567,7 +577,7 @@ export function buildMapModel(
   const shown = (k: number) => {
     if (hiddenWeights.some((hw) => (hw[k] as number) > 0)) return false;
     const w = weights ? (weights[k] as number) : NaN;
-    return w > 0 && w >= settings.threshold;
+    return w > 0 && inTieRange(w, settings.threshold, settings.thresholdTo);
   };
   const buildEdges = () => {
     const edges: MapEdge[] = [];
@@ -728,6 +738,7 @@ export function buildMapModel(
     },
     symmetrise: settings.symmetrise,
     threshold: settings.threshold,
+    thresholdTo: settings.thresholdTo,
     hiddenLayers: hidden.map((h) => h.key),
     hiddenLabels: hidden.map((h) => project.layers.find((l) => l.key === h.key)?.label ?? h.key),
     searchMatches,

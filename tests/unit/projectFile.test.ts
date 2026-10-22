@@ -427,6 +427,13 @@ describe('saved views: every encoding field is checked on load', () => {
     ['edgeStyle', { edgeStyle: 'formal' }, 'has an invalid edge style'],
     ['sizeScale', { sizeScale: 'log' }, 'has an invalid node-size scale'],
     ['communityOutlines', { communityOutlines: 'yes' }, 'whether communities are outlined'],
+    ['thresholdTo', { thresholdTo: 1.5 }, 'has an invalid upper tie strength'],
+    ['thresholdTo type', { thresholdTo: '0.5' }, 'has an invalid upper tie strength'],
+    [
+      'thresholdTo order',
+      { threshold: 0.6, thresholdTo: 0.4 },
+      'has an invalid upper tie strength',
+    ],
   ])('refuses an invalid %s', (_name, patch, message) => {
     expect(() => parseProject(withMap(patch))).toThrow(message);
   });
@@ -440,6 +447,14 @@ describe('saved views: every encoding field is checked on load', () => {
     ['communityOutlines', 'whether communities are outlined'],
   ])('refuses a view without %s', (field, message) => {
     expect(() => parseProject(withMap({}, field))).toThrow(message);
+  });
+
+  it('keeps a tie-strength range, and reads a view without an upper bound as up to 1 (D141)', () => {
+    const range = parseProject(withMap({ threshold: 0.3, thresholdTo: 0.5 }));
+    expect(range.saved_views[0]?.map).toMatchObject({ threshold: 0.3, thresholdTo: 0.5 });
+    expect(parseProject(serialiseProject(range))).toStrictEqual(range);
+    const open = parseProject(withMap({ threshold: 0.3 }, 'thresholdTo'));
+    expect(open.saved_views[0]?.map.thresholdTo).toBeUndefined();
   });
 
   it('accepts a layer that is not enabled: the map falls back', () => {
