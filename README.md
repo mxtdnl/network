@@ -73,7 +73,8 @@ The demo is a seeded, fictional organisation of 40 people in five teams. Its gen
 
 ```sh
 npm run demo        # writes src/demo/demo.ona.json from scripts/generate-demo.ts (seed 20260926)
-npm run scenarios   # writes the seven src/demo/scenario-*.ona.json test projects (docs/scenarios.md)
+npm run scenarios   # writes the twelve src/demo/scenario-*.ona.json test projects (docs/scenarios.md)
+npm run scenarios:measure   # prints what the engine finds in each scenario
 
 python3 -m pip install -r scripts/requirements-fixtures.txt   # NetworkX 3.6.1, SciPy 1.17.1, NumPy 2.4.6
 npm run fixtures    # python3 scripts/generate_fixtures.py: writes tests/fixtures/*.json
@@ -84,7 +85,7 @@ npm run fonts       # re-copies the self-hosted Fira files from @fontsource into
 
 Regenerate the fixtures whenever the demo, the fixture script or a metric convention changes: the demo fixture records the demo file's SHA-256, and a unit test fails if they disagree. CI uses the committed fixtures and does not need Python. A unit test also checks that `src/demo/demo.ona.json` and each scenario file are byte-identical to their generator's output.
 
-Seven further fictional projects model real-world survey conditions (non-response, asymmetric and compressed ratings, a matrix organisation, a large department without teams, a dense team and a post-merger company). Open one with Project → Open project… from `src/demo/scenario-*.ona.json`; `docs/scenarios.md` describes each and what the tool shows with it.
+Twelve further fictional projects model real-world survey conditions (non-response, asymmetric and compressed ratings, a matrix organisation, a large department without teams, a dense team and a post-merger company), seven singly and five in combination. Open one with Project → Open project… from `src/demo/scenario-*.ona.json`; `docs/scenarios.md` describes each, and `docs/reports/initial-assessment.md` reports the issues found with them.
 
 ## Deployment
 

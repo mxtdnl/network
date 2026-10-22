@@ -6,7 +6,7 @@ Graticule is a browser-only organisational network analysis (ONA) tool for teams
 
 `spec.md` is the single source of truth. This file records decisions made during the build. If this file and `spec.md` conflict, stop and ask the owner; do not resolve the conflict silently.
 
-Supporting documents: `docs/user-guide.md` (the analyst's guide, with screenshots in `docs/user-guide/`), `docs/respondent-help.md` (one page for survey participants), `docs/plan.md` (architecture, schema, metric definitions), `docs/design-system.md` (tokens and wireframes), `docs/method-notes.md` (every metric's meaning, formula and caveats, and the differences from NetworkX; the in-app explanations are drawn from it). Screenshots of each phase are in `docs/screenshots/phase-N/`.
+Supporting documents: `docs/user-guide.md` (the analyst's guide, with screenshots in `docs/user-guide/`), `docs/respondent-help.md` (one page for survey participants), `docs/plan.md` (architecture, schema, metric definitions), `docs/design-system.md` (tokens and wireframes), `docs/method-notes.md` (every metric's meaning, formula and caveats, and the differences from NetworkX; the in-app explanations are drawn from it), `docs/scenarios.md` (the twelve fictional scenario projects) and `docs/reports/initial-assessment.md` (the tool assessed on them, with open issues). Screenshots of each phase are in `docs/screenshots/phase-N/`.
 
 ## Decisions
 
@@ -212,6 +212,7 @@ Requested by the owner on 2026-10-22: assess the tool on data with real-world co
 | # | Date | Decision | Status | Where |
 |---|---|---|---|---|
 | D138 | 2026-10-22 | Seven fictional scenario projects beside the demo: partial response, asymmetric ratings, compressed ratings, matrix organisation, large department, dense team, post-merger (`docs/scenarios.md`). Written by `scripts/generate-scenarios.ts` (`npm run scenarios`, seeds 20261101–20261107, mulberry32 as D32) to `src/demo/scenario-<slug>.ona.json`, so D21's existing exception covers them and Prettier skips them; not bundled or offered in the app (spec §5 names one demo), opened with Project → Open. Every tie has `source: 'imported'`. Names pair first names with a different field's terms per scenario. `tests/unit/scenarios.test.ts` checks byte-identity with the generator, each built-in condition and an analysis in both views without engine warnings; `tests/e2e/scenarios.spec.ts` opens each in the built site with no console error (`SCENARIO_DIR=docs/screenshots/scenarios` writes screenshots). The assessment in `docs/scenarios.md` lists eight issues found with this data (silo rule on a single group and on conflict layers, conflict in the composite, non-response shown as zeros, relative rules without a floor, rater habits not visible, rules limited to team, one copy glitch); none was changed, and each awaits the owner | Proposed | `scripts/generate-scenarios.ts`, `src/demo/`, `docs/scenarios.md`, `tests/` |
+| D139 | 2026-10-22 | Five merged scenario projects (owner): silent leaders (partial response × asymmetric), polite dense team (compressed × dense), merger matrix (matrix × post-merger, conflict layers), single team on shifts (large department × partial response × conflict layers), messy survey (partial × asymmetric × compressed, new joiner, coverage 79.6 %). `scripts/generate-merged-scenarios.ts` (seeds 20261108–20261112); the shared helpers moved to `scripts/scenario-kit.ts` with the seven D138 files unchanged byte for byte; `npm run scenarios` writes all twelve and `npm run scenarios:measure` (`scripts/measure-scenarios.ts`) prints what the engine finds in each. The assessment moved from `docs/scenarios.md` to an initial report for the deep dive, `docs/reports/initial-assessment.md`: nine issues with evidence, code locations and proposed directions (issue 9, one-way negativity hard to see, and the compounding effects of non-response came from the merged sets). None is fixed; see Q37 | Proposed | `scripts/`, `src/demo/`, `docs/reports/initial-assessment.md`, `tests/` |
 
 ## Respondent mode (spec §15)
 
@@ -378,6 +379,8 @@ On 2026-09-26 the owner approved `docs/plan.md` §6 Q1–Q17 with their proposed
 ## Open questions
 
 Q35 (the release check against the live site), under Phase 9.
+
+Q37 (scenario assessment, 2026-10-22): `docs/reports/initial-assessment.md` lists nine issues found on the scenario projects (D138, D139). Each changes a rule or default the owner approved (D26, D72, D130, Q26, plan Q3), so each needs the owner's decision before it is built; a deep-dive session is to propose fixes with measured effects.
 
 ## Phase status
 

@@ -1,9 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SCENARIOS, scenarioFile } from '../../scripts/generate-scenarios';
+import { MERGED_SCENARIOS } from '../../scripts/generate-merged-scenarios';
+import { SCENARIOS } from '../../scripts/generate-scenarios';
+import { scenarioFile } from '../../scripts/scenario-kit';
 
-// The scenario projects (CLAUDE.md D138) open through Project → Open in the
+// The scenario projects (CLAUDE.md D138, D139) open through Project → Open in the
 // built site and draw a map, with no console or page error. With SCENARIO_DIR
 // set (SCENARIO_DIR=docs/screenshots/scenarios), each map is saved there as a
 // screenshot with names hidden and the insights panel open.
@@ -14,7 +16,7 @@ const nodes = (page: Page) =>
 
 test.use({ actionTimeout: 20_000 });
 
-for (const { slug } of SCENARIOS) {
+for (const { slug } of [...SCENARIOS, ...MERGED_SCENARIOS]) {
   test(`scenario ${slug} opens and draws its map`, async ({ page }) => {
     test.setTimeout(90_000);
     const problems: string[] = [];

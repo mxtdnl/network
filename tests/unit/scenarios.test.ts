@@ -1,11 +1,14 @@
-// The scenario projects (scripts/generate-scenarios.ts, CLAUDE.md D138): each
+// The scenario projects (scripts/generate-scenarios.ts and
+// scripts/generate-merged-scenarios.ts, CLAUDE.md D138, D139): each
 // committed file is the generator's output, opens through parseProject, holds
 // the condition it was built to contain, and analyses in both views.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { SCENARIOS, scenarioFile } from '../../scripts/generate-scenarios';
+import { MERGED_SCENARIOS } from '../../scripts/generate-merged-scenarios';
+import { SCENARIOS } from '../../scripts/generate-scenarios';
+import { scenarioFile } from '../../scripts/scenario-kit';
 import { computeCoverage } from '../../src/data/coverage';
 import { parseProject, serialiseProject } from '../../src/data/projectFile';
 import type { Project } from '../../src/data/schema';
@@ -28,7 +31,7 @@ const rating = (p: Project, a: string, b: string, variable: string) =>
 const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
 describe('scenario projects', () => {
-  it.each(SCENARIOS.map((s) => [s.slug, s] as const))(
+  it.each([...SCENARIOS, ...MERGED_SCENARIOS].map((s) => [s.slug, s] as const))(
     '%s is deterministic, fictional and analyses in both views',
     async (slug, { generate }) => {
       const text = committed(slug);
@@ -215,5 +218,115 @@ describe('scenario projects', () => {
     );
     expect(joiner.filter((t) => t.not_applicable).length).toBeGreaterThan(60);
     expect(legacy.get('CUS12')).toBe('Joined after the merger');
+  });
+
+  it('silent leaders: the partners and one lead gave no ratings, so coverage is below 80 %', () => {
+    const p = scenario('silent-leaders');
+    const c = computeCoverage(p);
+    expect(c.raters.filter((r) => r.rated === 0).map((r) => r.id)).toEqual([
+      'PAR01',
+      'PAR02',
+      'PAR03',
+      'PAR04',
+      'ANA01',
+    ]);
+    expect(c.belowThreshold).toBe(true);
+    // No tie at all between two members who both stayed silent.
+    expect(rating(p, 'PAR02', 'PAR03', 'connection_strength')).toBeUndefined();
+    expect(rating(p, 'PAR03', 'PAR02', 'connection_strength')).toBeUndefined();
+    const toPartner = p.ties.filter(
+      (t) =>
+        t.ratee_id === 'PAR04' &&
+        t.rater_id.startsWith('OPE') &&
+        t.rater_id !== 'OPE01' &&
+        t.variable === 'connection_strength',
+    );
+    // Operations staff depend on PAR04 for sign-off; their lead is rated as any lead.
+    expect(toPartner.every((t) => (t.value as number) >= 4)).toBe(true);
+    const means = p.members
+      .filter((m) => given(p, m.id, 'connection_strength').length > 0)
+      .map((m) => [m.id, mean(given(p, m.id, 'connection_strength'))] as const)
+      .sort((a, b) => b[1] - a[1]);
+    expect(means[0]?.[0]).toBe('ADV04');
+    expect(means.at(-1)?.[0]).toBe('ANA05');
+  });
+
+  it('polite dense team: every pair rated 2 or more, a part-timer and a one-sided strain', () => {
+    const p = scenario('polite-dense-team');
+    const strength = p.ties.filter((t) => t.variable === 'connection_strength');
+    expect(strength).toHaveLength(20 * 19);
+    const others = strength.filter((t) => t.ratee_id !== 'RES04' && t.rater_id !== 'RES04');
+    expect(others.every((t) => (t.value as number) >= 2)).toBe(true);
+    const received = (id: string) =>
+      mean(strength.filter((t) => t.ratee_id === id).map((t) => t.value as number));
+    for (const m of p.members.filter((m) => m.id !== 'RES04')) {
+      expect(received('RES04')).toBeLessThan(received(m.id) - 0.5);
+    }
+    expect(rating(p, 'DES02', 'ENG03', 'valence')).toBeLessThan(0);
+    expect(rating(p, 'ENG03', 'DES02', 'valence')).toBeGreaterThanOrEqual(0);
+  });
+
+  it('merger matrix: leniency by legacy organisation, conflict layers, programmes', () => {
+    const p = scenario('merger-matrix');
+    expect(p.layers.filter((l) => l.enabled).map((l) => l.key)).toEqual(
+      expect.arrayContaining(['conflict_task', 'conflict_personal']),
+    );
+    const legacy = new Map(p.members.map((m) => [m.id, m.attributes.legacy_org]));
+    const byLegacy = (org: string) =>
+      mean(
+        p.ties
+          .filter((t) => t.variable === 'connection_strength' && legacy.get(t.rater_id) === org)
+          .map((t) => t.value as number),
+      );
+    expect(byLegacy('Eastgate')).toBeGreaterThan(byLegacy('Westmoor') + 0.5);
+    const friction = p.ties.filter(
+      (t) => t.variable === 'conflict_personal' && (t.value as number) > 0,
+    );
+    const team = new Map(p.members.map((m) => [m.id, m.attributes.team]));
+    expect(friction.length).toBeGreaterThan(30);
+    expect(friction.every((t) => team.get(t.rater_id) === team.get(t.ratee_id))).toBe(true);
+    expect(new Set(p.members.map((m) => m.attributes.programme))).toEqual(
+      new Set(['Harbour', 'Lighthouse', 'Pier', null]),
+    );
+  });
+
+  it('single team on shifts: one team value, most of the night shift silent', () => {
+    const p = scenario('single-team-shifts');
+    expect(new Set(p.members.map((m) => m.attributes.team))).toEqual(new Set(['Contact Centre']));
+    const c = computeCoverage(p);
+    const silent = c.raters.filter((r) => r.rated === 0).map((r) => r.id);
+    const shift = new Map(p.members.map((m) => [m.id, m.attributes.shift]));
+    expect(silent).toHaveLength(8);
+    expect(silent.every((id) => shift.get(id) === 'Night')).toBe(true);
+    // Overall coverage still clears the threshold.
+    expect(c.belowThreshold).toBe(false);
+    expect(c.notApplicable).toBeGreaterThan(1000);
+  });
+
+  it('messy survey: coverage just below 80 %, mixed response styles, a hidden negative pocket', () => {
+    const p = scenario('messy-survey');
+    const c = computeCoverage(p);
+    expect(c.rate).toBeGreaterThan(0.78);
+    expect(c.rate).toBeLessThan(0.8);
+    expect(c.raters.filter((r) => r.rated === 0).map((r) => r.id)).toEqual([
+      'CLI08',
+      'LAB06',
+      'ADM04',
+    ]);
+    expect(c.declined).toBe(5);
+    // Of the strained four, only CLI03 and CLI05 rate each other negatively in both directions.
+    const pocket = ['CLI03', 'CLI05', 'CLI06', 'CLI08'];
+    const mutual = pocket.flatMap((a) =>
+      pocket
+        .filter((b) => a < b)
+        .filter(
+          (b) =>
+            ((rating(p, a, b, 'valence') as number | undefined) ?? 0) < 0 &&
+            ((rating(p, b, a, 'valence') as number | undefined) ?? 0) < 0,
+        )
+        .map((b) => `${a}-${b}`),
+    );
+    expect(mutual).toEqual(['CLI03-CLI05']);
+    expect(new Set(given(p, 'LAB07', 'connection_strength'))).toEqual(new Set([3]));
   });
 });
