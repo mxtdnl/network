@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { Switch } from '../components/Switch';
-import { percent } from '../copy/data';
+import { coveragePercent, percent } from '../copy/data';
 import { mapCopy } from '../copy/map';
 import { presentationCopy as P } from '../copy/savedViews';
 import { shellCopy } from '../copy/shell';
@@ -162,7 +162,10 @@ export function PresentationView() {
           {coverage?.belowThreshold && (
             <p className="presentation__coverage" role="note">
               <Icon name="warning" />
-              {mapCopy.coverage(percent(coverage.rate), percent(coverage.threshold))}
+              {mapCopy.coverage(
+                coveragePercent(coverage.rate, coverage.threshold),
+                percent(coverage.threshold),
+              )}
             </p>
           )}
         </aside>

@@ -141,6 +141,8 @@ export function Workspace() {
   const centre = readOnly ? centreItems.filter((item) => !editing(item.key)) : centreItems;
   const centreView = readOnly && editing(ui.centreView) ? 'map' : ui.centreView;
   const showMapControls = hasProject && centreView === 'map';
+  // Building the roster or a survey needs the layers, not the analysis settings.
+  const showWeights = hasProject && !editing(centreView);
 
   if (ui.presentation) {
     return (
@@ -153,7 +155,10 @@ export function Workspace() {
 
   const controls = (
     <>
-      {hasProject && (
+      {hasProject && !showWeights && (
+        <p className="workspace__elsewhere">{shellCopy.left.elsewhere}</p>
+      )}
+      {showWeights && (
         <section className="workspace__section" aria-labelledby="weights-heading">
           <h2 id="weights-heading" className="panel-heading">
             {weightsCopy.heading}

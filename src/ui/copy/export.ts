@@ -238,6 +238,10 @@ export const reportCopy = {
     allGroups: 'All groups',
     formalInformal: 'Formal and informal collaboration, pairs',
     notDefined: 'Not defined',
+    /** A structural measure left out for negative ties (CLAUDE.md D140). */
+    notReported: '–',
+    negativeNote:
+      'For negative ties, “–” marks a measure that is not reported. Separate parts, communities, modularity and the centralisation of bridging describe how a network holds together, which negative ties do not: with few of them, nearly every member is a part and a community of their own.',
     none: 'No layer has ties to measure.',
   },
   insights: {
@@ -277,6 +281,8 @@ export const reportCopy = {
     rate: 'Response rate',
     sources: 'Where the ratings came from',
     source: 'Source',
+    notRecorded:
+      'Not recorded: the project does not say how these ratings were collected. Graticule records whether a rating came from a survey response, an imported file or entry in the matrix; ratings written by older versions or by other tools, and the demo’s ratings, carry no source. They are analysed like every other rating.',
     surveys: 'Survey response rates',
     survey: 'Survey',
     status: 'Status',

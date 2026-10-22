@@ -6,7 +6,7 @@
 
 import { DEFAULT_WAVE, isCategorical } from '../../data/schema';
 import { surveyStatus } from '../../survey/model';
-import { percent } from '../copy/data';
+import { coveragePercent, percent } from '../copy/data';
 import { exportCopy, reportCopy as R } from '../copy/export';
 import {
   insightsCopy,
@@ -61,6 +61,14 @@ function metricsSection(ctx: ExportContext): Block[] {
     label,
     ...nets.map((_, i) => value(pick(i))),
   ];
+  // Separate parts, communities, modularity and centralisation of bridging
+  // describe how a network holds together; on negative ties they are degenerate
+  // (every member a part of their own), so those columns leave them out (D140).
+  const negative = refs.map((ref) => ref.endsWith('-'));
+  const structural = (label: string, pick: (i: number) => number | undefined): string[] => [
+    label,
+    ...nets.map((_, i) => (negative[i] ? R.metrics.notReported : value(pick(i)))),
+  ];
   const directed = result.view === 'directed';
   const rows: string[][] = [
     row(M.members, (i) => nets[i]?.network.members),
@@ -70,19 +78,19 @@ function metricsSection(ctx: ExportContext): Block[] {
     row(M.averageClustering, (i) => nets[i]?.network.averageClustering),
     ...(directed
       ? [
-          row(M.weakComponents, (i) => nets[i]?.network.components.weak?.length),
-          row(M.largestWeak, (i) => nets[i]?.network.components.weak?.[0]),
+          structural(M.weakComponents, (i) => nets[i]?.network.components.weak?.length),
+          structural(M.largestWeak, (i) => nets[i]?.network.components.weak?.[0]),
           row(M.centralisationIn, (i) => nets[i]?.network.centralisation.inDegree),
           row(M.centralisationOut, (i) => nets[i]?.network.centralisation.outDegree),
         ]
       : [
-          row(M.components, (i) => nets[i]?.network.components.connected?.length),
-          row(M.largestComponent, (i) => nets[i]?.network.components.connected?.[0]),
+          structural(M.components, (i) => nets[i]?.network.components.connected?.length),
+          structural(M.largestComponent, (i) => nets[i]?.network.components.connected?.[0]),
           row(M.centralisationDegree, (i) => nets[i]?.network.centralisation.degree),
         ]),
-    row(M.centralisationBetweenness, (i) => nets[i]?.network.centralisation.betweenness),
-    row(M.communities, (i) => nets[i]?.communities?.count),
-    row(M.modularity, (i) => nets[i]?.communities?.modularity),
+    structural(M.centralisationBetweenness, (i) => nets[i]?.network.centralisation.betweenness),
+    structural(M.communities, (i) => nets[i]?.communities?.count),
+    structural(M.modularity, (i) => nets[i]?.communities?.modularity),
   ];
   blocks.push({
     kind: 'table',
@@ -92,6 +100,8 @@ function metricsSection(ctx: ExportContext): Block[] {
     ],
     rows,
   });
+  if (negative.some(Boolean))
+    blocks.push({ kind: 'paragraph', text: R.metrics.negativeNote, tone: 'graphite', small: true });
   if (result.composite) {
     blocks.push({
       kind: 'paragraph',
@@ -197,7 +207,10 @@ function insightsSection(ctx: ExportContext, notes: string): Block[] {
   };
   const blocks: Block[] = [{ kind: 'paragraph', text: R.insights.intro, tone: 'graphite' }];
   if (result.coverage?.belowThreshold) {
-    blocks.push({ kind: 'warning', text: insightsCopy.coverage(percent(result.coverage.rate)) });
+    blocks.push({
+      kind: 'warning',
+      text: insightsCopy.coverage(coveragePercent(result.coverage.rate, result.coverage.threshold)),
+    });
   }
   const directed = result.view === 'directed';
   for (const outcome of result.insights) {
@@ -264,12 +277,14 @@ function coverageSection(ctx: ExportContext): Block[] {
   if (!cov || !Number.isFinite(cov.rate)) {
     blocks.push({ kind: 'paragraph', text: coverageCopy.noData });
   } else {
-    const rate = percent(cov.rate);
+    const rate = coveragePercent(cov.rate, cov.threshold);
     const threshold = percent(cov.threshold);
     blocks.push(
-      cov.belowThreshold
-        ? { kind: 'warning', text: C.warning(rate, threshold) }
-        : { kind: 'paragraph', text: C.fine(rate, threshold) },
+      cov.rated === 0
+        ? { kind: 'paragraph', text: coverageCopy.noRatingsNote }
+        : cov.belowThreshold
+          ? { kind: 'warning', text: C.warning(rate, threshold) }
+          : { kind: 'paragraph', text: C.fine(rate, threshold) },
     );
     blocks.push({ kind: 'paragraph', text: C.counts(cov.rated, cov.possible) });
     blocks.push({
@@ -301,7 +316,7 @@ function coverageSection(ctx: ExportContext): Block[] {
           { label: C.rater, numeric: false },
           { label: C.rate, numeric: true },
         ],
-        rows: low.map((r) => [ctx.names.of(r.id), percent(r.rate)]),
+        rows: low.map((r) => [ctx.names.of(r.id), coveragePercent(r.rate, cov.threshold)]),
       });
     }
   }
@@ -326,6 +341,9 @@ function coverageSection(ctx: ExportContext): Block[] {
       ],
       rows: sources.map((k) => [coverageCopy.sources[k], value(counts[k])]),
     });
+    // A reader cannot tell what "Not recorded" means without this (D140).
+    if (counts.none > 0)
+      blocks.push({ kind: 'paragraph', text: C.notRecorded, tone: 'graphite', small: true });
   }
 
   // Survey response rates (spec §14, Phase 7): read from the open project, since

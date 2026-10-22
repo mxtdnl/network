@@ -167,7 +167,8 @@ For path-based metrics, weight is converted to distance as 1/w. The method notes
 
 **Data coverage.**
 - Response rate per rater and overall. Ratings marked "does not apply" are left out of the ratings that were possible.
-- A configurable threshold, default 80%. Below it, a persistent warning states that whole-network metrics may be unreliable.
+- A configurable threshold, default 80%. Below it, a persistent warning states that whole-network metrics may be unreliable. Until the project has at least one rating, a neutral "No ratings yet" note takes the warning's place.
+- Coverage is shown as a whole percentage, or to one decimal place where whole-number rounding would reach or cross the threshold, so a rate below the threshold never reads as equal to it.
 
 **Stability (optional).** A node-dropping bootstrap shows how stable the centrality rankings are. Rankings are displayed as intervals, not single ranks.
 

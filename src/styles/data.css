@@ -34,7 +34,8 @@
   gap: var(--s-1);
 }
 
-.top-bar__indicator {
+.top-bar__indicator,
+.top-bar__coverage--none {
   color: var(--graphite);
 }
 
@@ -437,6 +438,10 @@ a {
 .coverage__row-flag {
   margin-inline-end: var(--s-1);
   vertical-align: text-bottom;
+}
+
+.coverage__none {
+  margin-bottom: var(--s-3);
 }
 
 .coverage__counts,

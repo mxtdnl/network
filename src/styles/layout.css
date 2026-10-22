@@ -227,7 +227,7 @@
 }
 
 /* The coverage warning in the top bar: emphasised like the status line's. */
-:root[data-layout='compact'] .top-bar__coverage[role='note'] {
+:root[data-layout='compact'] .top-bar__coverage[role='note']:not(.top-bar__coverage--none) {
   font-weight: var(--weight-medium);
 }
 
@@ -246,6 +246,10 @@
   position: absolute;
   top: var(--s-3);
   inset-inline-end: var(--s-3);
+}
+
+:root[data-layout='compact'] .workspace__elsewhere {
+  padding-inline-end: var(--control-height); /* clear of the collapse button */
 }
 
 :root[data-layout='compact'] .workspace__left.workspace__rail {
@@ -358,7 +362,14 @@
 }
 
 :root[data-layout='compact'] .workspace:has(.tabs__drawer) .legend--condensed {
-  max-width: calc(100% - var(--col-right-compact) - var(--map-zoom-button) * 2 - var(--s-4) * 3);
+  max-width: calc(
+    100% -
+      var(
+        --map-tools-end,
+        calc(var(--col-right-compact) + var(--map-zoom-button) * 2 + var(--s-4))
+      ) -
+      var(--s-4) * 2
+  );
 }
 
 :root[data-layout='compact'] .workspace:has(.tabs__drawer) .legend--beside {

@@ -2,6 +2,9 @@
  * rules: desktop-first, the workspace's type and control sizes. */
 
 .survey {
+  /* The containing block of its visually hidden labels, so they cannot extend the
+     page below the workspace and let the window scroll to a blank area (D140). */
+  position: relative;
   height: 100%;
   overflow-y: auto;
   max-width: calc(var(--dialog-width-wide) + var(--s-6));

@@ -1,5 +1,5 @@
 import { Icon } from '../components/Icon';
-import { coverageCopy, percent } from '../copy/data';
+import { coverageCopy, coveragePercent, percent } from '../copy/data';
 import { useAppStore } from '../state/store';
 import { useCoverage } from './CoveragePanel';
 
@@ -18,7 +18,10 @@ export function StatusLine({ inline = false }: { inline?: boolean }) {
       {warn && !inline && (
         <p className="status-line__warning" role="note">
           <Icon name="warning" />
-          {coverageCopy.warning(percent(coverage.rate), percent(coverage.threshold))}
+          {coverageCopy.warning(
+            coveragePercent(coverage.rate, coverage.threshold),
+            percent(coverage.threshold),
+          )}
         </p>
       )}
       <p className="status-line__message" role="status">

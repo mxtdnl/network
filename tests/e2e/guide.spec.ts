@@ -63,6 +63,38 @@ async function shot(page: Page, name: string, target?: ReturnType<Page['locator'
   else await page.screenshot(options);
 }
 
+/** Width and height of a baseline or progressive JPEG, read from its frame header. */
+function jpegSize(path: string): { width: number; height: number } {
+  const b = readFileSync(path);
+  let i = 2;
+  while (i < b.length - 9) {
+    if (b[i] !== 0xff) {
+      i += 1;
+      continue;
+    }
+    const marker = b[i + 1] ?? 0;
+    if (marker >= 0xc0 && marker <= 0xc2)
+      return { height: b.readUInt16BE(i + 5), width: b.readUInt16BE(i + 7) };
+    i += 2 + b.readUInt16BE(i + 2);
+  }
+  throw new Error(`No JPEG frame header in ${path}`);
+}
+
+/**
+ * A right-column panel. At 1440 × 900 the layout is compact (D125), so the panels
+ * open in the drawer beside the 40 px rail: the shot is of the drawer, and the
+ * image must be as wide as the drawer and show the panel (review A1, D140).
+ */
+async function panelShot(page: Page, name: string, shows: RegExp) {
+  const drawer = page.locator('#workspace-drawer');
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText(shows).first()).toBeVisible();
+  const box = await drawer.boundingBox();
+  expect(box?.width ?? 0).toBeGreaterThanOrEqual(280);
+  await shot(page, name, drawer);
+  expect(jpegSize(join(guideDir, `${name}.jpg`)).width).toBeGreaterThanOrEqual(280);
+}
+
 async function expectNoAxeViolations(page: Page, label: string) {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -167,7 +199,7 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await nodes(page).first().focus();
   await page.keyboard.press('Enter');
   await settled(page);
-  await shot(page, 'member-panel', right(page));
+  await panelShot(page, 'member-panel', /^Position in the network$/);
   await shot(page, 'compact-layout');
 
   await page.getByRole('radio', { name: 'Grouped' }).check();
@@ -186,7 +218,7 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await page.getByRole('main').getByRole('button', { name: 'Clear path' }).click();
 
   await rightTab(page, 'Insights').click();
-  await shot(page, 'insights', right(page));
+  await panelShot(page, 'insights', /^Silos$/);
   await right(page)
     .getByRole('button', { name: /^Show on the map/ })
     .first()
@@ -197,7 +229,7 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await settled(page);
 
   await rightTab(page, 'Coverage').click();
-  await shot(page, 'coverage', right(page));
+  await panelShot(page, 'coverage', /^Overall response rate$/);
 
   // Saved views and a presentation.
   await rightTab(page, 'Views').click();
@@ -222,7 +254,7 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await right(page).getByLabel('Caption').nth(1).blur();
   await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
   await settled(page);
-  await shot(page, 'saved-views', right(page));
+  await panelShot(page, 'saved-views', /^Formal structure$/);
 
   await page.getByRole('banner').getByRole('button', { name: 'Present' }).click();
   await expect(page.locator('.presentation')).toBeVisible();
@@ -319,12 +351,14 @@ test(
     await page.evaluate(() => {
       document.querySelector('.survey')?.scrollTo(0, 0);
     });
-    await page.screenshot({
-      path: join(guideDir, 'survey-setup.jpg'),
-      type: 'jpeg',
-      quality: 88,
-      fullPage: true,
-    });
+    // The setup scrolls inside the Survey tab; the window itself must not scroll,
+    // or a full-page shot is mostly blank (review A1). The shot is of the window.
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
+      900,
+    );
+    await shot(page, 'survey-setup');
+    expect(jpegSize(join(guideDir, 'survey-setup.jpg'))).toEqual({ width: 1440, height: 900 });
+    await expect(page.getByRole('heading', { name: 'Set up a survey' })).toBeInViewport();
     await page.getByLabel('Passphrase', { exact: true }).fill(PASSPHRASE);
     await page.getByLabel('Type the passphrase again').fill(PASSPHRASE);
     await page.getByRole('button', { name: 'Create the key' }).click();

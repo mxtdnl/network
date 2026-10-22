@@ -20,7 +20,7 @@ The empty workspace offers four ways in: run a survey, add members by hand (see 
 
 ![The empty workspace with the buttons Run a survey, Add members, Import survey data and Load demo](user-guide/empty-workspace.jpg)
 
-The workspace has three columns: settings on the left (weights, map settings and layers), views in the centre (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Coverage). The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
+The workspace has three columns: settings on the left (weights, map settings and layers), views in the centre (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Coverage). While the Members or Survey tab is open, the left column holds the layers only; the weights and map settings are on the Map tab. The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
 
 ### Compact and full layouts
 
@@ -290,7 +290,7 @@ A value can be "Not defined", with the reason, for example for someone with no t
 
 ### Coverage
 
-The Coverage tab shows the share of possible ratings that were given, per rater and overall, and where the ratings came from (survey responses, imported files or matrix entry). Below the threshold, 80 % by default, a warning stays under the top bar: whole-network metrics may be unreliable, because a missing rating looks like a missing tie. You can change the threshold in the Coverage tab if a lower rate is expected.
+The Coverage tab shows the share of possible ratings that were given, per rater and overall, and where the ratings came from (survey responses, imported files or matrix entry). Below the threshold, 80 % by default, a warning stays under the top bar: whole-network metrics may be unreliable, because a missing rating looks like a missing tie. You can change the threshold in the Coverage tab if a lower rate is expected. Near the threshold the figure keeps one decimal place, so 79.6 % is never shown as 80 %. Until the project has its first rating, for example while a survey is being set up, the top bar says "No ratings yet" instead of giving a warning. Ratings saved without a record of where they came from, such as the demo's, are listed as "Not recorded".
 
 ![The Coverage tab: overall response rate, sources, threshold and raters](user-guide/coverage.jpg)
 
@@ -345,7 +345,7 @@ Export (top bar) opens the export dialog. Every export follows its two settings:
 | Network metrics (CSV) | Density, reciprocity, components, communities, centralisation, mixing between groups and more, per layer |
 | Formal and informal ties (CSV) | Every pair classified as formal only, informal only, both or neither |
 | Table (CSV, from the Table tab) | The rows and columns shown, in their order |
-| Report (PDF) | The map, key network metrics, insights, method notes, data coverage with survey response rates, and an ethics statement |
+| Report (PDF) | The map, key network metrics, insights, method notes, data coverage with survey response rates, and an ethics statement. For a signed layer's negative ratings, the metrics table gives ties, density and reciprocity, but not separate parts, communities, modularity or the centralisation of bridging, which describe how a network holds together |
 
 In CSV files an empty cell means not defined or not rated. File names end in `-codes` when names are hidden and `-no-signed` when those layers were left out. Exports are ordinary files: store and share them as personal data unless names are hidden and you are sure no code identifies anyone.
 

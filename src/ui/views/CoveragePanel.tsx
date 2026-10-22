@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import { computeCoverage } from '../../data/coverage';
 import { Icon } from '../components/Icon';
-import { coverageCopy, percent } from '../copy/data';
+import { coverageCopy, coveragePercent } from '../copy/data';
 import { useReadOnly } from '../state/layoutMode';
 import { useMemberNames } from '../state/names';
 import { useAppStore } from '../state/store';
@@ -38,7 +38,7 @@ export function CoveragePanel() {
       <dl className="definition-list definition-list--wide">
         <dt>{coverageCopy.overall}</dt>
         <dd className="num">
-          {percent(coverage.rate)}
+          {coveragePercent(coverage.rate, coverage.threshold)}
           {coverage.belowThreshold && (
             <span className="coverage__flag">
               <Icon name="warning" />
@@ -47,6 +47,12 @@ export function CoveragePanel() {
           )}
         </dd>
       </dl>
+      {/* Until the first rating, a neutral note instead of a warning (D140). */}
+      {coverage.rated === 0 && (
+        <p className="coverage__none" role="note">
+          {coverageCopy.noRatingsNote}
+        </p>
+      )}
       <p className="coverage__counts num">
         {coverageCopy.counts(coverage.rated, coverage.possible)}
       </p>
@@ -117,7 +123,8 @@ export function CoveragePanel() {
         </thead>
         <tbody>
           {raters.map((r) => {
-            const below = Number.isFinite(r.rate) && r.rate < coverage.threshold;
+            const below =
+              coverage.rated > 0 && Number.isFinite(r.rate) && r.rate < coverage.threshold;
             return (
               <tr key={r.id}>
                 <th scope="row" className="coverage__name">
@@ -130,7 +137,7 @@ export function CoveragePanel() {
                       <span className="visually-hidden">{coverageCopy.below}</span>
                     </span>
                   )}
-                  {percent(r.rate)}
+                  {coveragePercent(r.rate, coverage.threshold)}
                 </td>
                 <td className="numeric">{r.declined}</td>
                 <td className="numeric">{r.notApplicable}</td>
@@ -142,7 +149,7 @@ export function CoveragePanel() {
         <tfoot>
           <tr>
             <th scope="row">{coverageCopy.totals}</th>
-            <td className="numeric">{percent(coverage.rate)}</td>
+            <td className="numeric">{coveragePercent(coverage.rate, coverage.threshold)}</td>
             <td className="numeric">{coverage.declined}</td>
             <td className="numeric">{coverage.notApplicable}</td>
             <td className="numeric">{coverage.notEntered}</td>

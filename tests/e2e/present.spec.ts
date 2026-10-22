@@ -350,6 +350,8 @@ test('presentation: steps through saved views with captions, keys and Escape, le
 });
 
 test('anonymisation: no display name in the DOM or on the canvas in any view', async ({ page }) => {
+  // About 27 s alone, so close to the default 30 s that load tips it over (as D114).
+  test.setTimeout(60_000);
   await start(page);
   await loadDemo(page);
   await rightTab(page, 'Views').click();

@@ -29,6 +29,8 @@ export const shellCopy = {
   left: {
     heading: 'Layers',
     map: 'Map',
+    /** While the Members or Survey tab is open, the left column holds the layers only. */
+    elsewhere: 'Weights and map settings are on the Map tab.',
   },
   centreTabs: {
     map: 'Map',
