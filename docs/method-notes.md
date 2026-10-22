@@ -546,7 +546,7 @@ Survey responses (section 9) are turned into rows and pass through the same vali
 
 ### Data coverage threshold
 
-Coverage (section 6) is compared with a threshold, 80 % by default, which the analyst can set as a whole percentage from 0 to 100 in the Coverage panel; it is saved with the project. Below it, a persistent warning under the top bar and on the map states that whole-network metrics may be unreliable, the insights panel repeats it, and the PDF report states it with the raters below the threshold. Coverage counts wave 1 on enabled layers.
+Coverage (section 6) is compared with a threshold, 80 % by default, which the analyst can set as a whole percentage from 0 to 100 in the Coverage panel; it is saved with the project. Below it, a persistent warning under the top bar and on the map states that whole-network metrics may be unreliable, the insights panel repeats it, and the PDF report states it with the raters below the threshold. Until the project has at least one rating, a neutral "No ratings yet" note is shown instead of the warning. Coverage is shown as a whole percentage, except where rounding would reach or cross the threshold: then it keeps one decimal place, rounded away from the threshold, so 79.6 % against 80 % reads 79.6 %, and 79.98 % reads 79.9 %. Coverage counts wave 1 on enabled layers.
 
 ### Map display rules
 

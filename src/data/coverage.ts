@@ -34,6 +34,10 @@ export interface CoverageResult {
   possible: number;
   rate: number;
   threshold: number;
+  /**
+   * Below the threshold, with at least one rating given. Until the first rating
+   * exists the views show "No ratings yet" instead of a warning (CLAUDE.md D140).
+   */
   belowThreshold: boolean;
   layerCount: number;
 }
@@ -83,7 +87,7 @@ export function computeCoverage(project: Project): CoverageResult {
     possible,
     rate,
     threshold,
-    belowThreshold: Number.isFinite(rate) && rate < threshold,
+    belowThreshold: Number.isFinite(rate) && totalRated > 0 && rate < threshold,
     layerCount: enabled.size,
   };
 }

@@ -1,7 +1,7 @@
 import { useId, useMemo } from 'react';
 import type { InsightOutcome, Observation } from '../engineClient';
 import { Icon } from '../components/Icon';
-import { percent } from '../copy/data';
+import { coveragePercent } from '../copy/data';
 import {
   insightsCopy as I,
   questionText,
@@ -53,7 +53,7 @@ export function InsightsPanel() {
       {coverage?.belowThreshold && (
         <p className="insights__coverage" role="note">
           <Icon name="warning" />
-          {I.coverage(percent(coverage.rate))}
+          {I.coverage(coveragePercent(coverage.rate, coverage.threshold))}
         </p>
       )}
       {highlight.length > 0 && (

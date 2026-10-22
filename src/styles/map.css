@@ -116,7 +116,10 @@
 .legend {
   position: absolute;
   inset-inline-start: var(--s-4);
-  inset-inline-end: calc(var(--map-zoom-button) + var(--s-4) * 2);
+  /* Clear of the zoom group: --map-tools-end is measured by MapView (D140). */
+  inset-inline-end: calc(
+    var(--map-tools-end, calc(var(--map-zoom-button) + var(--s-4))) + var(--s-4)
+  );
   inset-block-end: var(--s-4);
   max-height: 50%;
   overflow-y: auto;
@@ -690,7 +693,9 @@
    in the rest of the map. */
 .legend--condensed {
   inset-inline-end: auto;
-  max-width: calc(100% - var(--map-zoom-button) * 2 - var(--s-4) * 3);
+  max-width: calc(
+    100% - var(--map-tools-end, calc(var(--map-zoom-button) * 2 + var(--s-4))) - var(--s-4) * 2
+  );
   max-height: 25%;
   grid-template-columns: minmax(0, auto);
   gap: 0; /* the rows' line height separates them */
@@ -755,4 +760,11 @@
   flex-direction: column;
   align-items: flex-end;
   gap: var(--s-2);
+}
+
+/* While Members or Survey is open, a line in place of the weights (CLAUDE.md D140) */
+.workspace__elsewhere {
+  color: var(--graphite);
+  max-width: var(--measure);
+  margin: var(--s-3) 0 var(--s-6);
 }

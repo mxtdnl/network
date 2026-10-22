@@ -15,7 +15,7 @@ import { pageBase } from '../../../survey/payload';
 import { fileTransport, type IncomingText } from '../../../survey/transport';
 import { ConfirmDialog } from '../../components/Dialog';
 import { Icon } from '../../components/Icon';
-import { percent } from '../../copy/data';
+import { coveragePercent, percent } from '../../copy/data';
 import { surveyCopy } from '../../copy/survey';
 import { useMemberNames } from '../../state/names';
 import { useAppStore } from '../../state/store';
@@ -105,7 +105,11 @@ export function SurveyDashboard({
         <dt>{D.rate}</dt>
         <dd className="num">
           {status.rate < threshold && <Icon name="warning" />}
-          {D.rateAgainst(percent(status.rate), percent(threshold), status.rate < threshold)}
+          {D.rateAgainst(
+            coveragePercent(status.rate, threshold),
+            percent(threshold),
+            status.rate < threshold,
+          )}
         </dd>
         <dt>{D.duplicates}</dt>
         <dd className="num">{status.duplicates}</dd>

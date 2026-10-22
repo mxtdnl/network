@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { Icon } from '../components/Icon';
 import { durationToken } from '../durations';
-import { percent } from '../copy/data';
+import { coveragePercent, percent } from '../copy/data';
 import { formatValue, mapCopy } from '../copy/map';
 import { metricCopy } from '../copy/metrics';
 import { MapController } from '../map/controller';
@@ -117,6 +117,8 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
   const legendRef = useRef<HTMLElement>(null);
   const noteRef = useRef<HTMLDivElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<HTMLDivElement>(null);
+  const toolsEnd = useRef(-1);
   const controllerRef = useRef<MapController | null>(null);
   const measureRef = useRef<() => void>(() => undefined);
   const buttons = useRef(new Map<number, HTMLButtonElement>());
@@ -185,6 +187,20 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
     controllerRef.current = controller;
     if (analyst) registerMapViewport(() => controller.viewport());
     const measure = () => {
+      // The legend stops short of the zoom group, whatever the selection tools and
+      // the drawer make its width (D140): the distance from the map's right edge to
+      // the group's left edge, as whole pixels multiplied by a 1 px token (as D31).
+      const zoom = zoomRef.current;
+      const map = zoom?.parentElement;
+      if (zoom && map) {
+        const end = Math.ceil(
+          map.getBoundingClientRect().right - zoom.getBoundingClientRect().left,
+        );
+        if (end !== toolsEnd.current) {
+          toolsEnd.current = end;
+          map.style.setProperty('--map-tools-end', `calc(${String(end)} * var(--line-width))`);
+        }
+      }
       const rect = container.getBoundingClientRect();
       // Fit to view keeps members clear of the legend (unless it has its own column)…
       const legend = legendRef.current?.classList.contains('legend--beside')
@@ -212,6 +228,7 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
     if (legendRef.current) observer.observe(legendRef.current);
     if (noteRef.current) observer.observe(noteRef.current);
     if (toolsRef.current) observer.observe(toolsRef.current);
+    if (zoomRef.current) observer.observe(zoomRef.current);
     return () => {
       observer.disconnect();
       if (analyst) registerMapViewport(null);
@@ -437,7 +454,10 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
           {coverage?.belowThreshold && (
             <p className="map__coverage" role="note">
               <Icon name="warning" />
-              {mapCopy.coverage(percent(coverage.rate), percent(coverage.threshold))}
+              {mapCopy.coverage(
+                coveragePercent(coverage.rate, coverage.threshold),
+                percent(coverage.threshold),
+              )}
             </p>
           )}
           {model.ego && (
@@ -564,7 +584,7 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
       )}
 
       {analyst && (
-        <div className="map__zoom" role="group" aria-label={mapCopy.zoom.group}>
+        <div ref={zoomRef} className="map__zoom" role="group" aria-label={mapCopy.zoom.group}>
           {/* In the compact layout the selection tools join the zoom group, freeing the top edge. */}
           {compact && (
             <div className="map__zoom-tools" role="group" aria-label={mapCopy.tools.group}>

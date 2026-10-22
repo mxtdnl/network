@@ -6,6 +6,26 @@ const count = (value: number, one: string, many: string) =>
 export const percent = (rate: number) =>
   Number.isFinite(rate) ? `${String(Math.round(rate * 100))}%` : 'Not defined';
 
+/**
+ * A coverage rate shown beside its threshold (CLAUDE.md D140). A whole percentage,
+ * unless rounding to one would reach or cross the threshold: then one decimal
+ * place, rounded away from the threshold, so 79.6 % against 80 % reads "79.6%"
+ * and 79.98 % reads "79.9%", never "80%".
+ */
+export function coveragePercent(rate: number, threshold: number): string {
+  if (!Number.isFinite(rate)) return percent(rate);
+  const below = rate < threshold;
+  // In hundredths of a percent, so 0.8 × 100 compares as exactly 80.
+  const t = Math.round(threshold * 10000) / 100;
+  const whole = Math.round(rate * 100);
+  if (below ? whole < t : whole >= t) return `${String(whole)}%`;
+  const tenths = rate * 1000;
+  let d = Math.round(tenths) / 10;
+  if (below && d >= t) d = Math.floor(tenths) / 10;
+  if (!below && d < t) d = Math.ceil(tenths) / 10;
+  return `${d.toFixed(1)}%`;
+}
+
 export const projectCopy = {
   menu: 'Project',
   newProject: 'New project',
@@ -164,6 +184,10 @@ export const coverageCopy = {
   tableCaption: 'Raters, lowest response rate first',
   below: 'Below threshold',
   noData: 'Coverage appears here once the project has members and at least one enabled layer.',
+  /** In place of the coverage figure and warning until a rating exists (CLAUDE.md D140). */
+  noRatings: 'No ratings yet',
+  noRatingsNote:
+    'No ratings yet. Coverage is measured once ratings are imported, entered or collected by a survey.',
   counts: (rated: number, possible: number) =>
     `${rated.toLocaleString('en-GB')} of ${possible.toLocaleString('en-GB')} possible ratings`,
 };

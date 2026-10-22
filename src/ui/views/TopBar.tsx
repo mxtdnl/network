@@ -3,7 +3,7 @@ import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
 import { MenuButton } from '../components/MenuButton';
 import { Switch } from '../components/Switch';
-import { coverageCopy, percent, persistenceCopy, projectCopy } from '../copy/data';
+import { coverageCopy, coveragePercent, percent, persistenceCopy, projectCopy } from '../copy/data';
 import { shellCopy } from '../copy/shell';
 import { clearAllLocalData, setPersistenceOn } from '../state/persistenceSync';
 import { loadDemo, openProjectFile, saveProjectFile } from '../state/projectActions';
@@ -100,16 +100,25 @@ export function TopBar({ status }: TopBarProps) {
         </p>
       )}
       <div className="top-bar__actions">
-        {/* In the compact layout the coverage warning is here, in its short form (D125). */}
-        {coverage && Number.isFinite(coverage.rate) && (
+        {/* In the compact layout the coverage warning is here, in its short form (D125).
+            Until the first rating, a neutral note takes its place (D140). */}
+        {coverage && Number.isFinite(coverage.rate) && coverage.rated === 0 && (
+          <p className="top-bar__coverage top-bar__coverage--none" role="note">
+            {coverageCopy.noRatings}
+          </p>
+        )}
+        {coverage && Number.isFinite(coverage.rate) && coverage.rated > 0 && (
           <p
             className="top-bar__coverage num"
             role={status && coverage.belowThreshold ? 'note' : undefined}
           >
             {coverage.belowThreshold && <Icon name="warning" />}
             {status && coverage.belowThreshold
-              ? coverageCopy.warningShort(percent(coverage.rate), percent(coverage.threshold))
-              : coverageCopy.topBar(percent(coverage.rate))}
+              ? coverageCopy.warningShort(
+                  coveragePercent(coverage.rate, coverage.threshold),
+                  percent(coverage.threshold),
+                )
+              : coverageCopy.topBar(coveragePercent(coverage.rate, coverage.threshold))}
           </p>
         )}
         <Switch label={shellCopy.hideNames} checked={anonymise} onChange={setNamesHidden} />

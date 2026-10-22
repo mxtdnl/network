@@ -24,7 +24,9 @@ import {
   metricsTableCsv,
   networkMetricsCsv,
 } from '../../src/ui/export/tables';
+import { buildReport, type Block } from '../../src/ui/export/report';
 import { readExportTheme } from '../../src/ui/export/theme';
+import { exportCopy, reportCopy } from '../../src/ui/copy/export';
 import { withPalette, withPin } from '../../src/ui/map/palettes';
 import { DIRECTED_METRICS } from '../../src/ui/copy/metrics';
 import { effectiveWeights, type WeightState } from '../../src/ui/state/presets';
@@ -565,6 +567,56 @@ describe('report details', () => {
     expect(ctx.result.coverage?.belowThreshold).toBe(true);
     const text = await pdfText((await pdfExport(ctx, mapState, deps, '')).bytes);
     expect(text).toMatch(/Coverage is \d+ ?%, below the 80 ?% threshold/);
+  }, 30_000);
+
+  // Consultant review, Appendix A (D140).
+  const sectionBlocks = (ctx: ExportContext, title: string): Block[] => {
+    const report = buildReport(ctx, { notes: methodNotes(), now: deps.now, layerName: 'x' });
+    return report.sections.find((sec) => sec.title === title)?.blocks ?? [];
+  };
+
+  it('leaves the structural measures out for negative ties, and keeps ties, density and reciprocity (A7)', async () => {
+    const ctx = await contextFor(project, { anonymise: true, excludeSigned: false });
+    const blocks = sectionBlocks(ctx, reportCopy.sections.metrics);
+    const table = blocks.find((b) => b.kind === 'table');
+    if (table?.kind !== 'table') throw new Error('no metrics table');
+    const negative = table.columns.findIndex((c) => c.label.includes('negative'));
+    const positive = table.columns.findIndex((c) => c.label.includes('positive'));
+    expect(negative).toBeGreaterThan(0);
+    const cell = (measure: string, col: number) => table.rows.find((r) => r[0] === measure)?.[col];
+    const M = exportCopy.csv.measures;
+    for (const m of [
+      M.weakComponents,
+      M.largestWeak,
+      M.centralisationBetweenness,
+      M.communities,
+      M.modularity,
+    ]) {
+      expect(cell(m, negative)).toBe(reportCopy.metrics.notReported);
+      expect(cell(m, positive)).not.toBe(reportCopy.metrics.notReported);
+    }
+    for (const m of [M.ties, M.density, M.tieReciprocity])
+      expect(cell(m, negative)).not.toBe(reportCopy.metrics.notReported);
+    expect(blocks).toContainEqual(
+      expect.objectContaining({ text: reportCopy.metrics.negativeNote }),
+    );
+
+    // Nothing is left out, and no note is given, when no negative sub-layer is reported.
+    const kept = await contextFor(project, { anonymise: true, excludeSigned: true });
+    const plain = sectionBlocks(kept, reportCopy.sections.metrics);
+    expect(plain).not.toContainEqual(
+      expect.objectContaining({ text: reportCopy.metrics.negativeNote }),
+    );
+  }, 30_000);
+
+  it('explains ratings whose source is not recorded (A8)', async () => {
+    const ctx = await contextFor(project, { anonymise: true, excludeSigned: false });
+    const blocks = sectionBlocks(ctx, reportCopy.sections.coverage);
+    const i = blocks.findIndex(
+      (b) => b.kind === 'table' && b.rows.some((r) => r[0] === 'Not recorded'),
+    );
+    expect(i).toBeGreaterThan(0);
+    expect(blocks[i + 1]).toMatchObject({ text: reportCopy.coverage.notRecorded });
   }, 30_000);
 
   it('can set every character of the report in the embedded fonts or a written-out fallback', async () => {

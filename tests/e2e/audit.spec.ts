@@ -522,6 +522,57 @@ for (const size of COMPACT_SIZES) {
   });
 }
 
+// Review A4 (D140): with the drawer open at 1440 × 900, Lasso select covered the
+// end of the legend. No map tool may overlap the legend, in either legend form
+// that sits on the map, with the drawer open or closed.
+test('compact layout: the map tools never cover the legend', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openDemo(page);
+  const overlaps = async (state: string) =>
+    page.evaluate((state) => {
+      const legend = document.querySelector('.legend')?.getBoundingClientRect();
+      const tools = [...document.querySelectorAll<HTMLElement>('.map__zoom button')];
+      if (!legend || tools.length < 4) throw new Error(`no legend or tools: ${state}`);
+      return tools
+        .map((b) => ({
+          name: b.getAttribute('aria-label') ?? b.textContent,
+          r: b.getBoundingClientRect(),
+        }))
+        .filter(
+          ({ r }) =>
+            r.left < legend.right &&
+            legend.left < r.right &&
+            r.top < legend.bottom &&
+            legend.top < r.bottom,
+        )
+        .map(({ name }) => `${state}: ${name}`);
+    }, state);
+  const found: string[] = [];
+  const legendForm = page.getByRole('combobox', { name: 'Legend' });
+  for (const size of [
+    { width: 1280, height: 720 },
+    { width: 1366, height: 768 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(size);
+    await expect(page.locator('html')).toHaveAttribute('data-layout', 'compact');
+    for (const form of ['Condensed', 'Full']) {
+      await legendForm.selectOption({ label: form });
+      await settled(page);
+      const label = `${String(size.width)}x${String(size.height)} ${form}`;
+      found.push(...(await overlaps(`${label}, drawer closed`)));
+      await rightTab(page, 'Insights').click();
+      await expect(page.locator('#workspace-drawer')).toBeVisible();
+      await settled(page);
+      found.push(...(await overlaps(`${label}, drawer open`)));
+      await drawerToggle(page).click();
+      await expect(page.locator('#workspace-drawer')).toHaveCount(0);
+    }
+  }
+  expect(found).toEqual([]);
+});
+
 test('compact layout: the drawer and the rails by keyboard', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
