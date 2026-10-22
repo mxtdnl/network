@@ -224,7 +224,7 @@ The network map is an interactive node-link diagram of members and their weighte
 **Default density.** The map opens showing fewer ties than the full network, so its structure can be read; the legend states which ties are hidden and that metrics are computed on all ties.
 
 **Interaction.**
-- Layer toggles, a tie-strength threshold slider, attribute filters and search.
+- Layer toggles, a tie-strength range (a lower and an upper bound; ties outside it are hidden from the drawing only), attribute filters and search.
 - Hovering highlights a member's neighbourhood. Clicking opens a member panel with metrics, ranks, and ties by layer.
 - Ego view at 1- or 2-step depth.
 - Shortest path between any two members.

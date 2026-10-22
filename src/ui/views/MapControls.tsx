@@ -59,7 +59,7 @@ const MAX_MATCHES = 8;
 
 // Map controls (left column, design-system §5.1 "Show" group): the layer the
 // map draws, layer toggles, direction and symmetrisation, the tie-strength
-// threshold, node encodings, attribute filters and search.
+// range, node encodings, attribute filters and search.
 export function MapControls() {
   const data = useMapData();
   const setMap = useAppStore((s) => s.setMap);
@@ -77,6 +77,7 @@ export function MapControls() {
     show: useId(),
     combine: useId(),
     threshold: useId(),
+    thresholdTo: useId(),
     size: useId(),
     fill: useId(),
     filter: useId(),
@@ -432,6 +433,7 @@ export function MapControls() {
         </div>
       )}
 
+      {/* The tie-strength range (D141): two ordered sliders; moving one past the other moves both. */}
       <div className="field">
         <div className="field__row">
           <label htmlFor={ids.threshold} className="field__label">
@@ -451,7 +453,31 @@ export function MapControls() {
           value={settings.threshold}
           aria-valuetext={formatWeight(settings.threshold)}
           onChange={(e) => {
-            setMap({ threshold: Number(e.currentTarget.value) });
+            const from = Number(e.currentTarget.value);
+            setMap({ threshold: from, thresholdTo: Math.max(from, settings.thresholdTo) });
+          }}
+        />
+        <div className="field__row">
+          <label htmlFor={ids.thresholdTo} className="field__label">
+            <span className="visually-hidden">{C.tieRange} </span>
+            {C.thresholdTo}
+          </label>
+          <output htmlFor={ids.thresholdTo} className="field__value">
+            {formatWeight(settings.thresholdTo)}
+          </output>
+        </div>
+        <input
+          id={ids.thresholdTo}
+          type="range"
+          className="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={settings.thresholdTo}
+          aria-valuetext={formatWeight(settings.thresholdTo)}
+          onChange={(e) => {
+            const to = Number(e.currentTarget.value);
+            setMap({ thresholdTo: to, threshold: Math.min(to, settings.threshold) });
           }}
         />
       </div>

@@ -41,6 +41,7 @@ describe('saving a view', () => {
       sizeMetric: 'eigenvector',
       fill: { kind: 'community' },
       threshold: 0.4,
+      thresholdTo: 0.75,
       layerToggles: { valence: false, formal_collaboration: true },
       hideOffLayers: true,
       filters: [{ key: 'team', values: ['Finance', 'Sales'] }],
@@ -77,6 +78,7 @@ describe('saving a view', () => {
         sizeMetric: 'eigenvector',
         fill: { kind: 'community' },
         threshold: 0.4,
+        thresholdTo: 0.75,
         layerToggles: { valence: false, formal_collaboration: true },
         hideOffLayers: true,
         filters: [{ key: 'team', values: ['Finance', 'Sales'] }],
@@ -194,6 +196,24 @@ describe('restoring a view', () => {
     expect(after.ui.centreView).toBe('map');
   });
 
+  it('restores a range, and a view saved without an upper bound draws up to 1 (D141)', () => {
+    const s = state();
+    s.setMap({ threshold: 0.3, thresholdTo: 0.5 });
+    const ranged = saveCurrentView('Band');
+    if (!ranged) throw new Error('no view');
+    const older = { ...ranged.map };
+    delete older.thresholdTo;
+    s.updateProjectViews((p) => ({
+      ...p,
+      saved_views: [...p.saved_views, { ...ranged, id: 'older', map: older }],
+    }));
+    s.setMap({ threshold: 0, thresholdTo: 0.2 });
+    restoreViewById(ranged.id);
+    expect(state().map).toMatchObject({ threshold: 0.3, thresholdTo: 0.5 });
+    restoreViewById('older');
+    expect(state().map).toMatchObject({ threshold: 0.3, thresholdTo: 1 });
+  });
+
   it('drops members that are no longer in the project', () => {
     const view = captureView('x');
     if (!view) throw new Error('no view');
@@ -284,9 +304,13 @@ describe('an insight shown on the map', () => {
     expect(one.edgeStyle).toBeUndefined();
   });
 
-  it('draws every tie, since the rule counted every tie (D129)', () => {
+  it('draws every tie, since the rule counted every tie (D129, D141)', () => {
     const s = state();
     expect(s.map.threshold).toBe(0.3);
-    expect(insightMapPatch({ ...view, show: [] }, s.map, s.data.project).threshold).toBe(0);
+    expect(s.map.thresholdTo).toBe(1);
+    s.setMap({ threshold: 0.3, thresholdTo: 0.5 });
+    const patch = insightMapPatch({ ...view, show: [] }, s.map, s.data.project);
+    expect(patch.threshold).toBe(0);
+    expect(patch.thresholdTo).toBe(1);
   });
 });

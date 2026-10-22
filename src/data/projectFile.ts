@@ -359,6 +359,14 @@ export function checkSavedView(v: Obj): string[] {
     );
     need(isNum(m.threshold) && m.threshold >= 0 && m.threshold <= 1, 'has an invalid threshold.');
     need(
+      m.thresholdTo === undefined ||
+        (isNum(m.thresholdTo) &&
+          m.thresholdTo >= 0 &&
+          m.thresholdTo <= 1 &&
+          (!isNum(m.threshold) || m.thresholdTo >= m.threshold)),
+      'has an invalid upper tie strength.',
+    );
+    need(
       isObj(m.layerToggles) && Object.values(m.layerToggles).every(isBool),
       'has invalid layer toggles.',
     );

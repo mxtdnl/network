@@ -142,6 +142,17 @@ export function legendSections(
   const tiesFrom = model.edgeLayer === model.layer ? layerName(model) : model.edgeLayerLabel;
   const width = model.width;
   const widthLabel = width.kind === 'layer' ? width.layerLabel : tiesFrom;
+  // The tie-strength range: which ties it hides, if any (D141).
+  const lower = model.threshold > 0;
+  const upper = model.thresholdTo < 1;
+  const rangeNote =
+    lower && upper
+      ? L.thresholdRange(formatWeight(model.threshold), formatWeight(model.thresholdTo))
+      : lower
+        ? L.threshold(formatWeight(model.threshold))
+        : upper
+          ? L.thresholdTo(formatWeight(model.thresholdTo))
+          : null;
   sections.push({
     kind: 'width',
     title: L.width,
@@ -159,9 +170,9 @@ export function legendSections(
         : null,
     notes: [
       ...(width.kind === 'tiesFrom' ? [] : [L.tiesFrom(tiesFrom)]),
-      ...(model.threshold > 0 ? [L.threshold(formatWeight(model.threshold))] : []),
+      ...(rangeNote ? [rangeNote] : []),
       ...(model.hiddenLayers.length > 0 ? [L.hiddenLayers(model.hiddenLabels)] : []),
-      ...(model.threshold > 0 || model.hiddenLayers.length > 0 ? [L.metricsUseAllTies] : []),
+      ...(rangeNote || model.hiddenLayers.length > 0 ? [L.metricsUseAllTies] : []),
     ],
   });
 
