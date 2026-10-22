@@ -253,19 +253,25 @@ describe('map model', () => {
     const w = r.refs.connection_strength?.weights ?? new Float64Array();
     const v = valenceMatrix(demo, initialMapSettings()) ?? new Float64Array();
     const n = demo.members.length;
-    for (const rule of ['mean', 'min', 'max'] as const) {
+    for (const rule of ['mean', 'min', 'max', 'both'] as const) {
       // The rule only combines directions on the map; the directed analysis is the same.
       const m = await model({ layer: 'connection_strength', symmetrise: rule, threshold: 0 });
       const pick = (a: number, b: number) =>
-        Number.isNaN(a)
-          ? b
-          : Number.isNaN(b)
-            ? a
-            : rule === 'mean'
-              ? (a + b) / 2
-              : rule === 'min'
-                ? Math.min(a, b)
-                : Math.max(a, b);
+        rule === 'both'
+          ? Number.isNaN(a) || Number.isNaN(b)
+            ? NaN
+            : a * b > 0
+              ? Math.sign(a) * Math.min(Math.abs(a), Math.abs(b))
+              : 0
+          : Number.isNaN(a)
+            ? b
+            : Number.isNaN(b)
+              ? a
+              : rule === 'mean'
+                ? (a + b) / 2
+                : rule === 'min'
+                  ? Math.min(a, b)
+                  : Math.max(a, b);
       for (const e of m.edges) {
         const k = e.source * n + e.target;
         const back = e.target * n + e.source;

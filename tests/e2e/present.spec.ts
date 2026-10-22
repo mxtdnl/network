@@ -453,6 +453,12 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
     await rightTab(page, tab).click();
     await check(tab);
   }
+  // The data remedies' previews name members (build plan session 5).
+  await right(page).getByRole('button', { name: 'Preview the effect on the insights' }).click();
+  await expect(right(page).getByRole('button', { name: 'Preview again' })).toBeVisible({
+    timeout: 60_000,
+  });
+  await check('data remedies preview');
   // Every insight view.
   await rightTab(page, 'Insights').click();
   for (const b of await right(page)

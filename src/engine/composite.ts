@@ -100,6 +100,8 @@ export function compositeMatrix(
   layers: readonly EngineLayer[],
   ratings: readonly Float64Array[],
   n: number,
+  /** Weights to use instead of rescaling a layer's ratings (standardised layers, engine/remedies.ts). */
+  scaledOverride: ReadonlyMap<LayerKey, Float64Array> = new Map(),
 ): Float64Array {
   const byKey = new Map<LayerKey, { layer: EngineLayer; ratings: Float64Array }>();
   layers.forEach((layer, k) => {
@@ -108,6 +110,8 @@ export function compositeMatrix(
   const scaled = (key: LayerKey): Float64Array => {
     const entry = byKey.get(key);
     if (!entry) throw new Error(`composite: unknown layer ${key}`);
+    const override = scaledOverride.get(key);
+    if (override) return override;
     return entry.layer.signed
       ? scaleSigned(entry.ratings, entry.layer)
       : rescaleUnsigned(entry.ratings, entry.layer);

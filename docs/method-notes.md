@@ -37,11 +37,14 @@ In the symmetrised view each pair has one tie, combined from the two directions 
 
 - mean: (w_ij + w_ji) / 2;
 - minimum: min(w_ij, w_ji), a tie only if both sides report one;
-- maximum: max(w_ij, w_ji), a tie if either side reports one.
+- maximum: max(w_ij, w_ji), a tie if either side reports one;
+- both report a tie: min(w_ij, w_ji) when both are above 0, otherwise 0; missing when either direction is missing.
 
-If only one of the two has rated the other, that rating is used on its own (mean, minimum and maximum then agree). If neither has, the pair is missing. Signed layers are combined before they are split, so when A rates B positively and B rates A negatively the pair's sign follows the rule: the sign of the mean, negative under minimum, positive under maximum.
+If only one of the two has rated the other, that rating is used on its own under mean, minimum and maximum (they then agree). Under "both report a tie" it is not: the pair is missing, so a member who gave no ratings has no ties at all in this view. If neither has rated the other, the pair is missing under every rule. Signed layers are combined before they are split, so when A rates B positively and B rates A negatively the pair's sign follows the rule: the sign of the mean, negative under minimum, positive under maximum, and no tie under "both report a tie", which keeps a pair only when both ratings have the same sign (the one nearer zero).
 
-Caveat: the minimum rule makes the network sparser and the maximum rule denser; metrics can change markedly between them. The chosen rule is part of every result.
+The minimum rule is often described as "a tie only if both sides report one", and it is when both have answered; but because a missing direction is filled from the one given, a tie to someone who did not answer survives it. "Both report a tie" is the rule for confirmed ties only (build plan session 5; section 14).
+
+Caveat: the minimum rule and "both report a tie" make the network sparser and the maximum rule denser; metrics can change markedly between them. "Both report a tie" turns non-response into absent ties, so below full coverage it removes real ties along with unconfirmed ones. The chosen rule is part of every result.
 
 ### 1.4 Distance for path-based metrics
 
@@ -379,7 +382,7 @@ With only the four core layers enabled, Formal structure is formal collaboration
 | `karate-directed.json` | Karate club ties with four deterministic, asymmetric layers (strength, valence, informal and formal collaboration), including rated zeros and missing directions |
 | `demo.json` | The demo project's four core layers and the composite; the file's SHA-256 is recorded and checked |
 
-Each case is computed in four views: directed, and symmetrised by mean, minimum and maximum. The fixtures record the NetworkX, SciPy, NumPy and Python versions (NetworkX 3.6.1, SciPy 1.17.1, NumPy 2.4.6, Python 3.11.15 at the time of writing). `tests/unit/engine.fixtures.test.ts` asserts that the engine matches them: within 10⁻⁹ absolute for every metric except eigenvector centrality (10⁻⁶, an iterative method), and exactly for counts.
+Each case is computed in five views: directed, and symmetrised by mean, minimum, maximum and "both report a tie". The fixtures record the NetworkX, SciPy, NumPy and Python versions (NetworkX 3.6.1, SciPy 1.17.1, NumPy 2.4.6, Python 3.11.17 at the time of writing). `tests/unit/engine.fixtures.test.ts` asserts that the engine matches them: within 10⁻⁹ absolute for every metric except eigenvector centrality (10⁻⁶, an iterative method), and exactly for counts.
 
 Regenerate after changing the demo, the fixture script or a convention:
 
@@ -661,7 +664,7 @@ A rater is marked:
 - **Reports many more ties than most** when their share of colleagues tied is at least 0.25 above the median share, unless the median is 1.
 - The statement adds that **most people report a tie with nearly every colleague** when the median share is at least 0.9.
 
-**Caveats.** A member with genuinely stronger ties (a supervisor, a coordinator, an integration lead) also rates higher than most and reports more ties, so these marks say where a rating habit may be at work, not that one is. On the scenarios, the 0.15 margin finds every generous and harsh rater built in, and also flags supervisors in the large department, the coordinators of the matrix organisation and the integration lead after the merger. Comparing each rating with the reverse rating was measured instead and rejected, because it marks the seniority asymmetry built into the asymmetric scenarios. A same-answer respondent may have meant every answer; the check says only that their ratings do not tell colleagues apart. Remedies (rescaling within each rater, confirmed ties only) are session 5 of the build plan; nothing here changes a metric.
+**Caveats.** A member with genuinely stronger ties (a supervisor, a coordinator, an integration lead) also rates higher than most and reports more ties, so these marks say where a rating habit may be at work, not that one is. On the scenarios, the 0.15 margin finds every generous and harsh rater built in, and also flags supervisors in the large department, the coordinators of the matrix organisation and the integration lead after the merger. Comparing each rating with the reverse rating was measured instead and rejected, because it marks the seniority asymmetry built into the asymmetric scenarios. A same-answer respondent may have meant every answer; the check says only that their ratings do not tell colleagues apart. The checks themselves change no metric; the remedies the analyst can apply are in section 14.
 
 ### Ties reported by one side only
 
@@ -674,3 +677,48 @@ A few sentences written from these results (`src/ui/copy/quality.ts`), naming no
 ### What the members named share
 
 An observation that names at least 2 members also states the attribute values more than half of them share, when the value is also more common among them than among all members, at most two, most shared first, leaving out the attribute the observation is about (the silo group or the pair of groups). For example: "Three of the five share tenure band Under 1 year." or "All five share location Remote." Members named who gave no ratings are marked "gave no ratings", and the observation says that only colleagues' reports of their ties are counted.
+
+## 14. Data remedies
+
+Four analysis options counter what the data-quality checks (section 13) show (build plan session 5; CLAUDE.md D150–D153). Each is off by default, applies to the whole analysis (map, tables, insights and exports), is saved with views, and is stated wherever results leave the app: in the map legend, on the report cover and in the network metrics CSV ("Analysis option"). "Check the data" previews each one: it runs the analysis on screen again with that option switched, on a worker of its own, and lists the insight observations it would change, so the analyst can judge an option by its effect before applying it. The engine code is `src/engine/remedies.ts`.
+
+**Measured on the demo and the twelve scenario projects** (`npm run scenarios:remedies`, under the app's default weights). Where everyone answered (the asymmetric, compressed, matrix, dense and polite projects), the options about non-response change nothing. "Both report a tie" against the minimum rule changes nothing in those projects either, and changes most where members gave no ratings: partial response 95 → 55 composite ties and 3 → 6 communities, silent leaders 161 → 79, messy survey 271 → 180. Leaving out non-respondents removes the potential brokers FIE01 (partial response) and PAR04 (silent leaders) in the mutual view, and the silent night-shift members from the peripheral list of the shift scenario. Reconstruction adds 35 to 82 directed ties in the projects with non-respondents. Rank standardisation never changes which ties exist; it finds two potential brokers in the compressed-ratings project in the directed view, where the compressed ratings left none, and otherwise mostly reorders members (rank correlation of received strength with the unstandardised analysis 0.86–0.98 directed).
+
+### Both report a tie
+
+**Meaning.** A tie counts only where each member reports one with the other: confirmed ties only.
+
+**Formula.** Section 1.3: min(w_ij, w_ji) when both are above 0 (same sign on a signed layer), 0 when either is 0 or the signs differ, missing when either is missing. It is a fourth way to combine the two directions, chosen under Direction on the Map tab or switched in "Check the data" (which moves to the mutual view).
+
+**Caveats.** Below full coverage it cannot tell an unconfirmed tie from one whose other side was never asked, so every tie of a member who gave no ratings disappears; combine it with reconstruction (below) only where the relation is mutual by nature. Reciprocity (section 2) is the network-level counterpart and is reported in every view.
+
+### Members who gave no ratings
+
+**Meaning.** A member who gave none of the ratings possible for them (section 13) still appears through other members' ratings of them. Their outgoing values, and in the mutual view all their values, rest on those reports alone (D147).
+
+**Marked (default).** Values that depend on their own ratings are shown and marked * (section 13).
+
+**Left out.** Those values are not defined, with the reason "this member gave no ratings, and the analysis leaves out values that depend on their own ratings": in the directed view every metric except received strength, connections in and reach from others; in the mutual view every metric. Potential brokers, peripheral members and possible overload neither name them nor count their values in the quantiles and medians they compare against. The group rules (silos, the formal–informal gaps, negative ratings) are unchanged, because they count ties of a group, not values of a member. The member stays on the map and in every tie count: leaving out changes what is reported about them, not the network.
+
+**Caveat.** Leaving out hides members about whom something is known (colleagues' reports), so a member who is genuinely peripheral and did not answer is no longer listed. The data-quality statement still counts them.
+
+### Reconstruction from colleagues' ratings
+
+**Meaning.** For a relation that is mutual by nature, such as working together, a colleague's report of the tie is also evidence of the other direction.
+
+**Formula.** On each enabled layer marked mutual by nature, for each member j who gave no ratings and each colleague i who rated j: if j → i is missing, j → i := i → j (after rater standardisation, when that is on). Only missing directions are filled, never a rating given, and never between two members who both gave no ratings. A layer is mutual by nature when its "Mutual by nature" switch (layer manager, edit) is on; by default connection strength, formal collaboration and informal collaboration, and no other layer. Advice, trust, influence, dependency, awareness, idea sharing, safety, valence, energy and conflict describe one person's experience of another, so they are not reconstructed unless the analyst marks them.
+
+Reconstructed directions are labelled as reconstructed: in the member panel's ties ("reconstructed", with a note), in the map legend ("n tie directions reconstructed from colleagues' ratings") and in the member metrics CSV's note column. Coverage and the data-quality checks are unchanged: a reconstructed rating is not a rating.
+
+**Caveats.** Reconstruction assumes the relation is symmetric; where colleagues over-report ties to a senior member, the reconstructed member inherits the over-report. Under mean, minimum and maximum it changes nothing in the mutual view, which already fills a missing direction from the other; it matters in the directed view and under "both report a tie".
+
+### Rater standardisation (ranks within each rater)
+
+**Meaning.** Some raters rate everyone high and others everyone low (section 13, "How each person rates"). Standardising within each rater compares each rating with that rater's own other ratings, so habits of the scale do not decide who appears strong.
+
+**Formula.** On each unsigned layer, for each rater i with k ties (rescaled weights above 0), each tie's weight is replaced by (rank − 0.5) / k, where rank is its position among i's ties from weakest (1) to strongest (k), and equal weights share their average rank. A rater's ties therefore spread evenly between 0 and 1; a rater whose ties are all equal, or who has one, gets 0.5 for each. A rated 0 stays 0 and a missing rating stays missing, so which ties exist does not change, and binary measures (degree, connections, density, components, E-I) are unchanged. Signed layers are not standardised. The standardised weights replace the rescaled ones before the composite and every weighted metric (strength, betweenness and harmonic closeness through 1/w distances, eigenvector centrality, constraint, effective size, clustering, communities). Members who gave no ratings have nothing to standardise.
+
+**Why ranks.** The owner chose ranks over z-scores at the session's checkpoint. Ranks need no assumption that scale points are equally spaced (section 1.2), no clamping and no pooled mean to map back to; z-scores within each rater collapsed every same-answer rater to the overall mean (rank correlation of strength 0.04 with the unstandardised analysis in the polite dense team, mutual view, against 0.68 for ranks).
+
+**Caveats.** Ranks discard the size of the gaps between ratings, and a rater with few ties gets coarse values (two ties: 0.25 and 0.75). A rater who really is closer to everyone than most loses that difference, which the section 13 caveats also note. The composite's rescaled terms then mix standardised unsigned layers with unstandardised signed treatments.
+

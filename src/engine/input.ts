@@ -5,13 +5,14 @@
 // it is computed here from the project (src/data/coverage.ts, D29).
 
 import { computeCoverage } from '../data/coverage';
-import { DEFAULT_WAVE, isCategorical, type Project } from '../data/schema';
+import { DEFAULT_WAVE, isCategorical, isMutualLayer, type Project } from '../data/schema';
 import type { AnalysisInput, AttributeColumn, EngineLayer, EngineSettings } from './types';
 
 export type AnalysisOptions = Pick<
   EngineSettings,
   'view' | 'symmetrise' | 'weights' | 'signedTreatment'
->;
+> &
+  Partial<Pick<EngineSettings, 'nonRespondents' | 'reconstruct' | 'standardise'>>;
 
 export function engineSettings(project: Project, options: AnalysisOptions): EngineSettings {
   return {
@@ -21,6 +22,13 @@ export function engineSettings(project: Project, options: AnalysisOptions): Engi
     signedTreatment: { ...options.signedTreatment },
     seed: project.settings.random_seed,
     ...(project.settings.insight_group ? { insightGroup: project.settings.insight_group } : {}),
+    ...(options.nonRespondents && options.nonRespondents !== 'mark'
+      ? { nonRespondents: options.nonRespondents }
+      : {}),
+    ...(options.reconstruct ? { reconstruct: true } : {}),
+    ...(options.standardise && options.standardise !== 'none'
+      ? { standardise: options.standardise }
+      : {}),
   };
 }
 
@@ -43,6 +51,7 @@ export function buildAnalysisInput(
     ...(l.role === undefined ? {} : { role: l.role }),
     ...(l.group === undefined ? {} : { group: l.group }),
     defaultWeight: l.default_weight,
+    ...(isMutualLayer(l) ? { mutual: true } : {}),
   }));
   const layerIndex = new Map(defs.map((l, k) => [l.key, k]));
   const ratings = defs.map(() => new Float64Array(n * n).fill(NaN));

@@ -42,8 +42,20 @@ export function signedPart(s: Float64Array, sign: 1 | -1): Float64Array {
   return out;
 }
 
-/** Combines the two directions of a dyad. When one is missing the other is used (plan Q3). */
+/**
+ * Combines the two directions of a dyad. Under mean, min and max a missing
+ * direction is filled from the one given (plan Q3). Under 'both' a pair is
+ * a tie only when both directions report one of the same sign: the weaker of
+ * the two, 0 when either is 0 or the signs differ, missing when either
+ * direction is missing (build plan session 5).
+ */
 export function combine(a: number, b: number, rule: SymmetriseRule): number {
+  if (rule === 'both') {
+    if (Number.isNaN(a) || Number.isNaN(b)) return NaN;
+    if (a > 0 && b > 0) return Math.min(a, b);
+    if (a < 0 && b < 0) return Math.max(a, b);
+    return 0;
+  }
   if (Number.isNaN(a)) return b;
   if (Number.isNaN(b)) return a;
   if (rule === 'mean') return (a + b) / 2;

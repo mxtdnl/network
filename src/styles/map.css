@@ -611,7 +611,8 @@
 }
 
 .member__note,
-.member__none {
+.member__none,
+.member__reconstructed {
   color: var(--graphite);
   font-size: var(--t--1-size);
   line-height: var(--t--1-line);

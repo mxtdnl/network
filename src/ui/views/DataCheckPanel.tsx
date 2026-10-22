@@ -7,6 +7,7 @@ import { qualityCopy, qualityStatement } from '../copy/quality';
 import { useReadOnly } from '../state/layoutMode';
 import { useMemberNames, type MemberNames } from '../state/names';
 import { useAppStore } from '../state/store';
+import { RemediesSection } from './RemediesSection';
 
 const Q = qualityCopy;
 
@@ -148,6 +149,7 @@ export function DataCheckPanel() {
       {rated && <Silent quality={quality} names={names} />}
       {rated && <Styles quality={quality} names={names} />}
       {rated && <OneWay quality={quality} />}
+      {rated && <RemediesSection />}
 
       <table className="coverage__table">
         <caption id={tableId} className="coverage__caption">

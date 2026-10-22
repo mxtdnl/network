@@ -5,6 +5,7 @@ import { Icon } from '../components/Icon';
 import { formatValue, mapCopy } from '../copy/map';
 import { DIRECTED_METRICS, SYMMETRISED_METRICS, flagCopy, metricCopy } from '../copy/metrics';
 import { ratingFlagCopy } from '../copy/quality';
+import { remediesCopy } from '../copy/remedies';
 import { shellCopy } from '../copy/shell';
 import { focusMapMember } from '../map/focus';
 import { rankInterval, rankOf } from '../map/rank';
@@ -78,6 +79,8 @@ interface TieRow {
   /** A number, 'na' for "does not apply" (D102), or null for not rated. */
   given: number | 'na' | null;
   received: number | 'na' | null;
+  /** The given rating is reconstructed from the colleague's rating (build plan session 5). */
+  reconstructed: boolean;
 }
 
 const sortable = (v: number | 'na' | null) => (typeof v === 'number' ? v : -Infinity);
@@ -87,13 +90,14 @@ function tiesFor(
   names: MemberNames,
   memberId: string,
   layer: LayerDefinition,
+  reconstructed: ReadonlySet<string>,
 ): TieRow[] {
   const known = new Set(project.members.map((m) => m.id));
   const rows = new Map<string, TieRow>();
   const row = (id: string) => {
     let r = rows.get(id);
     if (!r) {
-      r = { id, name: names.of(id), given: null, received: null };
+      r = { id, name: names.of(id), given: null, received: null, reconstructed: false };
       rows.set(id, r);
     }
     return r;
@@ -104,6 +108,13 @@ function tiesFor(
     if (v === null) continue;
     if (t.rater_id === memberId && known.has(t.ratee_id)) row(t.ratee_id).given = v;
     else if (t.ratee_id === memberId && known.has(t.rater_id)) row(t.rater_id).received = v;
+  }
+  for (const id of reconstructed) {
+    const r = rows.get(id);
+    if (r && r.given === null && typeof r.received === 'number') {
+      r.given = r.received;
+      r.reconstructed = true;
+    }
   }
   return [...rows.values()].sort(
     (a, b) =>
@@ -116,14 +127,30 @@ function tiesFor(
 const rating = (v: number | 'na' | null) =>
   v === null ? P.notRated : v === 'na' ? P.notApplicable : formatValue(v);
 
+/** Per layer, the colleagues whose rating of member `index` was reconstructed as theirs. */
+function reconstructedFor(result: AnalysisResult | null, index: number): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  if (!result) return out;
+  for (const [layer, pairs] of Object.entries(result.reconstructed)) {
+    const ids = new Set<string>();
+    for (const [rater, rated] of pairs)
+      if (rater === index) ids.add(result.memberIds[rated] as string);
+    if (ids.size > 0) out.set(layer, ids);
+  }
+  return out;
+}
+
 function TiesByLayer({
   project,
   memberId,
   active,
+  reconstructed,
 }: {
   project: Project;
   memberId: string;
   active: string;
+  /** Colleagues whose rating of the member was taken as the member's own, per layer. */
+  reconstructed: ReadonlyMap<string, ReadonlySet<string>>;
 }) {
   const layers = project.layers.filter((l) => l.enabled && !isCategorical(l));
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -137,7 +164,8 @@ function TiesByLayer({
       </h3>
       {layers.map((layer) => {
         const expanded = open[layer.key] ?? layer.key === firstOpen;
-        const rows = expanded ? tiesFor(project, names, memberId, layer) : [];
+        const rebuilt = reconstructed.get(layer.key) ?? new Set<string>();
+        const rows = expanded ? tiesFor(project, names, memberId, layer, rebuilt) : [];
         const panelId = `${headingId}-${layer.key}`;
         return (
           <div key={layer.key} className="member__layer">
@@ -176,13 +204,24 @@ function TiesByLayer({
                       {rows.map((r) => (
                         <tr key={r.id}>
                           <th scope="row">{r.name}</th>
-                          <td className="numeric">{rating(r.given)}</td>
+                          <td className="numeric">
+                            {rating(r.given)}
+                            {r.reconstructed && (
+                              <span className="member__reconstructed">
+                                {' '}
+                                {remediesCopy.reconstructedRating}
+                              </span>
+                            )}
+                          </td>
                           <td className="numeric">{rating(r.received)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 ))}
+              {expanded && rows.some((r) => r.reconstructed) && (
+                <p className="member__note">{remediesCopy.reconstructedHelp}</p>
+              )}
             </div>
           </div>
         );
@@ -270,7 +309,9 @@ function Position({
             const flagKey = ref.node.flags[m]?.[memberIndex] ?? null;
             const flag = flagKey ? flagCopy[flagKey] : null;
             // Values that rest on the member's own ratings carry their rating flag.
-            const own = result.ownRatingMetrics.includes(m) ? ratingFlag : null;
+            // Values the analysis leaves out (build plan session 5) say so instead.
+            const own =
+              flagKey !== 'leftOut' && result.ownRatingMetrics.includes(m) ? ratingFlag : null;
             return (
               <tr key={m}>
                 <th scope="row">
@@ -440,7 +481,12 @@ export function MemberPanel() {
           setPanelLayer({ follow: settings.layer, layer: l });
         }}
       />
-      <TiesByLayer project={project} memberId={member.id} active={layer} />
+      <TiesByLayer
+        project={project}
+        memberId={member.id}
+        active={layer}
+        reconstructed={reconstructedFor(result, index)}
+      />
     </article>
   );
 }

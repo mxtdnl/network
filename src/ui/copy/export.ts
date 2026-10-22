@@ -117,9 +117,15 @@ export const exportCopy = {
     view: 'Direction',
     directed: 'Directed',
     symmetrised: (rule: string) => `Mutual, combined by ${rule}`,
-    rules: { mean: 'average', min: 'the weaker of the two', max: 'the stronger of the two' },
+    rules: {
+      mean: 'average',
+      min: 'the weaker of the two',
+      max: 'the stronger of the two',
+      both: 'both report a tie',
+    },
     measures: {
       view: 'Direction of ties',
+      option: 'Analysis option',
       members: 'Members',
       ties: 'Ties',
       density: 'Density',
@@ -202,6 +208,7 @@ export const reportCopy = {
     named: 'Members are named. Handle this report as personal data.',
     excluded:
       'Signed layers (rated from negative to positive) and conflict layers are left out: every figure in this report was calculated without them.',
+    remedy: (text: string) => `Analysis option: ${text.charAt(0).toLowerCase()}${text.slice(1)}.`,
     excludedNone:
       'The signed-layer exclusion is on; this project has none of those layers enabled.',
     descriptive:

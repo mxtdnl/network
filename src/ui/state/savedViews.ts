@@ -55,6 +55,9 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
     threshold: map.threshold,
     thresholdTo: map.thresholdTo,
     negativeOutsideRange: map.negativeOutsideRange,
+    nonRespondents: map.nonRespondents,
+    reconstruct: map.reconstruct,
+    standardise: map.standardise,
     layerToggles: { ...map.layerToggles },
     hideOffLayers: map.hideOffLayers,
     filters: map.filters.map((f) => ({ key: f.key, values: [...f.values] })),
@@ -82,6 +85,10 @@ export function savedToMap(saved: SavedMapSettings, project: Project): MapSettin
     thresholdTo: saved.thresholdTo ?? DEFAULT_THRESHOLD_TO,
     // Absent in views saved before the switch (D145): off.
     negativeOutsideRange: saved.negativeOutsideRange === true,
+    // Absent in views saved before the remedies (D150, D151): off.
+    nonRespondents: saved.nonRespondents ?? 'mark',
+    reconstruct: saved.reconstruct === true,
+    standardise: saved.standardise ?? 'none',
     layerToggles: { ...saved.layerToggles },
     filters: saved.filters.map((f) => ({ key: f.key, values: [...f.values] })),
     ego: saved.ego && ids.has(saved.ego.member) ? { ...saved.ego } : null,

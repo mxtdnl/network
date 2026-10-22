@@ -2,6 +2,7 @@
 // engine run directly, fonts read from src/assets/fonts, and a demo project
 // with every kind of layer the signed-layer exclusion removes.
 
+import { analysisOptions } from '../../src/ui/state/remedies';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { inflateSync } from 'node:zlib';
@@ -126,6 +127,7 @@ export async function screenResult(
       {
         view: map.view,
         symmetrise: map.symmetrise,
+        ...analysisOptions(map),
         weights: w.weights,
         signedTreatment: w.signedTreatment,
       },

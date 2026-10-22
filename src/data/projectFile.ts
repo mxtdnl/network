@@ -170,6 +170,10 @@ export function checkProject(file: Obj): string[] {
         l.role === undefined || l.role === 'formal' || l.role === 'informal',
         `${name} has an invalid role.`,
       );
+      need(
+        l.mutual === undefined || typeof l.mutual === 'boolean',
+        `${name} has an invalid mutual flag.`,
+      );
     });
 
   // Ties
@@ -356,7 +360,7 @@ export function checkSavedView(v: Obj): string[] {
     problems.push('has no map settings.');
   } else {
     need(m.view === 'directed' || m.view === 'symmetrised', 'has an unknown view.');
-    need(['mean', 'min', 'max'].includes(m.symmetrise as string), 'has an unknown rule.');
+    need(['mean', 'min', 'max', 'both'].includes(m.symmetrise as string), 'has an unknown rule.');
     need(isStr(m.layer) && isStr(m.sizeMetric), 'has no layer or node-size metric.');
     const fill = m.fill;
     need(
@@ -375,6 +379,20 @@ export function checkSavedView(v: Obj): string[] {
     need(
       m.negativeOutsideRange === undefined || isBool(m.negativeOutsideRange),
       'has an invalid setting for negative ratings outside the range.',
+    );
+    need(
+      m.nonRespondents === undefined ||
+        m.nonRespondents === 'mark' ||
+        m.nonRespondents === 'leaveOut',
+      'has an invalid setting for members who gave no ratings.',
+    );
+    need(
+      m.reconstruct === undefined || isBool(m.reconstruct),
+      'has an invalid reconstruction setting.',
+    );
+    need(
+      m.standardise === undefined || m.standardise === 'none' || m.standardise === 'rank',
+      'has an invalid standardisation setting.',
     );
     need(
       isObj(m.layerToggles) && Object.values(m.layerToggles).every(isBool),

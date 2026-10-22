@@ -429,7 +429,9 @@ export function MapControls() {
             <option value="mean">{C.mean}</option>
             <option value="min">{C.min}</option>
             <option value="max">{C.max}</option>
+            <option value="both">{C.both}</option>
           </select>
+          {settings.symmetrise === 'both' && <p className="field__help">{C.bothHelp}</p>}
         </div>
       )}
 

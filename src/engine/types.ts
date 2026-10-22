@@ -21,8 +21,13 @@ export type AttributeKey = string;
 export type LayerRef = string;
 
 export type ViewKind = 'directed' | 'symmetrised';
-export type SymmetriseRule = 'mean' | 'min' | 'max';
+/** 'both': a tie only where both directions report one (build plan session 5). */
+export type SymmetriseRule = 'mean' | 'min' | 'max' | 'both';
 export type SignedTreatment = 'positive' | 'filterNegative' | 'multiplier';
+/** Rater standardisation of unsigned layers (engine/remedies.ts, build plan session 5). */
+export type StandardiseMethod = 'none' | 'rank';
+/** Members who gave no ratings: marked in the results (default) or left out (engine/remedies.ts). */
+export type NonRespondentTreatment = 'mark' | 'leaveOut';
 
 export const COMPOSITE: LayerRef = 'composite';
 
@@ -36,6 +41,8 @@ export interface EngineLayer {
   /** The layer's group (plan §2); the insight rules leave out INSIGHT_RULES.excludedLayerGroups. */
   group?: string;
   defaultWeight: number;
+  /** The relation is mutual by nature, so a missing direction may be reconstructed (engine/remedies.ts). */
+  mutual?: boolean;
 }
 
 export interface EngineSettings {
@@ -49,6 +56,12 @@ export interface EngineSettings {
   seed: number;
   /** Attribute the silo, formal–informal and one-way rules group members by (settings.insight_group). */
   insightGroup?: AttributeKey;
+  /** Members who gave no ratings (build plan session 5); absent means 'mark'. */
+  nonRespondents?: NonRespondentTreatment;
+  /** Reconstruct the ties of members who gave no ratings on mutual layers; absent means off. */
+  reconstruct?: boolean;
+  /** Rater standardisation of unsigned layers; absent means 'none'. */
+  standardise?: StandardiseMethod;
 }
 
 export interface AttributeColumn {
@@ -105,6 +118,8 @@ export type NodeFlag =
   | 'noComponent'
   | 'notConverged'
   | 'fewerThanTwoContacts'
+  /** Not defined because the member gave no ratings and the analysis leaves them out (engine/remedies.ts). */
+  | 'leftOut'
   | RatingFlag;
 
 export interface NodeMetricTable {
@@ -392,6 +407,17 @@ export interface AnalysisResult {
    * directions are combined, all but the incoming ones when directed.
    */
   ownRatingMetrics: NodeMetricKey[];
+  /** The data remedies applied (build plan session 5), as given in the settings. */
+  remedies: {
+    nonRespondents: NonRespondentTreatment;
+    reconstruct: boolean;
+    standardise: StandardiseMethod;
+  };
+  /**
+   * Directions reconstructed from the other side's rating, per layer, as
+   * [rater index, rated index] pairs (engine/remedies.ts); empty without reconstruction.
+   */
+  reconstructed: Record<LayerKey, [number, number][]>;
   /** Every insight rule, in panel order, with its observations (spec §9). */
   insights: InsightOutcome[];
   warnings: EngineWarning[];

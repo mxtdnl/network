@@ -128,7 +128,7 @@ The passphrase and the decrypted private key are never stored.
 
 **Tie aggregation.**
 - The user chooses a directed view or a symmetrised view.
-- The symmetrised view combines the two directions by mean, minimum or maximum.
+- The symmetrised view combines the two directions by mean, minimum or maximum, or keeps a tie only where both directions report one ("both report a tie": the weaker of the two; a missing direction gives no tie, where the other rules use the one rating given).
 - Reciprocity is reported in both views.
 
 **Node metrics.** Computed per layer and for the composite:
@@ -177,6 +177,12 @@ For path-based metrics, weight is converted to distance as 1/w. The method notes
 - the share of reported ties not reported back, by group and by level.
 
 Values that depend on a member's own ratings carry a flag when the member gave no ratings or few (member panel, metrics table, member metrics export); a member who gave no ratings is drawn hollow on the map, with a legend entry. Observations that name members also state the attribute values most of those members share, and mark those who gave no ratings. A data-quality statement written from these results, naming no one, is shown in the view, at the start of a presentation, in the export settings and on the PDF report's cover. The checks describe the data; they change no metric.
+
+**Data remedies.** Analysis options that counter what the checks show, each off by default, saved with views, stated in exports, explained in the method notes, and previewed in "Check the data" by their effect on the insight observations before they are applied:
+- "both report a tie" as the way to combine the two directions (above);
+- members who gave no ratings either marked (the default) or left out: values that depend on their own ratings are then not defined, and the member-level insight rules neither name nor count them;
+- for relations that are mutual by nature (marked per layer; by default connection strength, formal and informal collaboration), an optional reconstruction of the ties of members who gave no ratings from colleagues' ratings of them, labelled as reconstructed wherever it is shown;
+- rater standardisation: on unsigned layers, each rater's ratings above the scale minimum are replaced by their rank among that rater's own ties, before the composite and every weighted metric; which ties exist does not change.
 
 **Stability (optional).** A node-dropping bootstrap shows how stable the centrality rankings are. Rankings are displayed as intervals, not single ranks.
 

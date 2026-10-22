@@ -74,6 +74,24 @@ export interface LayerDefinition {
   group?: string;
   /** Marks the pair used by the formal–informal comparison. */
   role?: 'formal' | 'informal';
+  /**
+   * The relation is mutual by nature, so a missing direction may be
+   * reconstructed from the other (build plan session 5). Absent: true for
+   * the layers in MUTUAL_LAYER_KEYS, false otherwise (isMutualLayer). Added
+   * to schema 4 in place, before release.
+   */
+  mutual?: boolean;
+}
+
+/** Layers mutual by nature when `mutual` is not set: working together involves both people. */
+export const MUTUAL_LAYER_KEYS: readonly string[] = [
+  'connection_strength',
+  'formal_collaboration',
+  'informal_collaboration',
+];
+
+export function isMutualLayer(layer: Pick<LayerDefinition, 'key' | 'mutual'>): boolean {
+  return layer.mutual ?? MUTUAL_LAYER_KEYS.includes(layer.key);
 }
 
 export interface Tie {
@@ -133,7 +151,8 @@ export type EdgeWidthChoice =
 
 export interface SavedMapSettings {
   view: 'directed' | 'symmetrised';
-  symmetrise: 'mean' | 'min' | 'max';
+  /** 'both' added to schema 4 in place, before release (build plan session 5). */
+  symmetrise: 'mean' | 'min' | 'max' | 'both';
   /** The layer the map draws ties from: a layer key or 'composite'. */
   layer: LayerRef;
   /** Node-size metric (engine NodeMetricKey). */
@@ -146,6 +165,12 @@ export interface SavedMapSettings {
   /** Ties with a negative rating drawn outside the range (D145); absent means false. Added to
    *  schema 4 in place, before release. */
   negativeOutsideRange?: boolean;
+  /** Members who gave no ratings: marked (absent) or left out (build plan session 5; schema 4 in place). */
+  nonRespondents?: 'mark' | 'leaveOut';
+  /** Reconstruct their ties on mutual layers from colleagues' ratings; absent means false. */
+  reconstruct?: boolean;
+  /** Rater standardisation of unsigned layers; absent means none. */
+  standardise?: 'none' | 'rank';
   layerToggles: Record<LayerKey, boolean>;
   hideOffLayers: boolean;
   filters: AttributeFilter[];

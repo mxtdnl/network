@@ -8,6 +8,8 @@
 
 import type { SizeMetric } from '../state/store';
 import { FI_CLASS } from '../engineClient';
+import { remediesCopy } from '../copy/remedies';
+import { appliedRemedies } from '../state/remedies';
 import { exportCopy } from '../copy/export';
 import { DIRECTED_METRICS, SYMMETRISED_METRICS, flagCopy, metricCopy } from '../copy/metrics';
 import { mapCopy } from '../copy/map';
@@ -91,6 +93,8 @@ export function memberMetricsCsv(ctx: ExportContext): ExportFile {
     ...(anySigned ? [C.receivedRatings, C.raters] : []),
   ];
   const rows: string[][] = [header];
+  // Members whose ties were reconstructed from colleagues' ratings (build plan session 5).
+  const rebuilt = new Set(Object.values(result.reconstructed).flatMap((p) => p.map(([i]) => i)));
   for (const ref of exportRefs(ctx)) {
     const r = result.refs[ref];
     if (!r) continue;
@@ -111,6 +115,7 @@ export function memberMetricsCsv(ctx: ExportContext): ExportFile {
       const rating = result.ratingFlags[i] ?? null;
       if (rating && metrics.some((k) => result.ownRatingMetrics.includes(k)))
         reasons.add(flagCopy[rating]);
+      if (rebuilt.has(i)) reasons.add(remediesCopy.reconstructedHelp);
       const received =
         signed && r.kind === 'positive'
           ? [cell(signed.inPositive[i] ?? NaN), cell(signed.inPositiveCount[i] ?? NaN)]
@@ -146,6 +151,7 @@ export function networkMetricsCsv(ctx: ExportContext): ExportFile {
     project.attribute_definitions.find((a) => a.key === key)?.label ?? key;
 
   add('', M.view, viewText(ctx));
+  for (const id of appliedRemedies(result)) add('', M.option, remediesCopy.applied[id]);
   const coverage = result.coverage;
   if (coverage) {
     add('', M.coverage, cell(coverage.rate));

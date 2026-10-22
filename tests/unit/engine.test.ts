@@ -85,7 +85,7 @@ describe('negative weights never reach path algorithms (spec §6)', () => {
     const valence = demoInput().layers.findIndex((l) => l.key === 'valence');
     expect(Array.from(demoInput().ratings[valence] ?? []).some((v) => v < 0)).toBe(true);
     for (const view of ['directed', 'symmetrised'] as const) {
-      for (const symmetriseRule of ['mean', 'min', 'max'] as const) {
+      for (const symmetriseRule of ['mean', 'min', 'max', 'both'] as const) {
         for (const treatment of ['positive', 'filterNegative', 'multiplier'] as const) {
           const input = demoInput({
             view,
@@ -204,6 +204,19 @@ describe('input and aggregation', () => {
     expect([s[1], s[2]]).toEqual([1, 1]);
   });
 
+  it('under "both report a tie" keeps only pairs both directions report (build plan session 5)', () => {
+    expect(combine(0.2, 0.8, 'both')).toBe(0.2);
+    expect(combine(0, 0.8, 'both')).toBe(0);
+    // A missing direction gives no tie, where "weaker of the two" falls back to the one rating.
+    expect(combine(NaN, 0.4, 'both')).toBeNaN();
+    expect(combine(NaN, 0.4, 'min')).toBe(0.4);
+    // Signed: the same sign both ways keeps the weaker; opposite signs are no tie.
+    expect(combine(-0.5, -1, 'both')).toBe(-0.5);
+    expect(combine(1, -1, 'both')).toBe(0);
+    const s = symmetrise(tensor(3, { '0,1': 1, '1,0': 0.6, '0,2': 1 }), 3, 'both');
+    expect([s[1], s[3], s[2], s[6]]).toEqual([0.6, 0.6, NaN, NaN]);
+  });
+
   it('reports reciprocity from the directed ties in both views', async () => {
     expect(reciprocity(tensor(3, { '0,1': 1, '1,0': 1, '1,2': 1 }), 3)).toEqual({
       overall: 2 / 3,
@@ -227,12 +240,15 @@ describe('input and aggregation', () => {
       ratings: [tensor(3, { '0,1': 3, '1,0': -1, '1,2': 3, '0,2': 3 })],
       settings: settings({ view: 'symmetrised' }),
     };
-    const t = async (rule: 'mean' | 'min' | 'max') =>
+    const t = async (rule: 'mean' | 'min' | 'max' | 'both') =>
       (await analyse({ ...input, settings: settings({ view: 'symmetrised', symmetrise: rule }) }))
         .signed.v?.triads;
     expect((await t('mean'))?.ppp).toBe(1); // (1 − 1/3)/2 > 0
     expect((await t('min'))?.ppn).toBe(1);
     expect((await t('max'))?.ppp).toBe(1);
+    // Opposite signs are no tie under 'both', so the triad is not closed.
+    expect((await t('both'))?.balanced).toBe(0);
+    expect((await t('both'))?.unbalanced).toBe(0);
   });
 });
 

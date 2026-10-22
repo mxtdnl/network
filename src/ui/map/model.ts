@@ -161,6 +161,10 @@ export interface MapModel {
   outlines: number[] | null;
   /** The project's palettes (D127): renderers take their colours from the theme's palette of that id. */
   palette: PaletteChoice;
+  /** Tie directions reconstructed from colleagues' ratings, all layers (build plan session 5). */
+  reconstructed: number;
+  /** Each rater's ratings on unsigned layers are ranks within the rater (build plan session 5). */
+  standardised: boolean;
 }
 
 export interface Radii {
@@ -238,6 +242,12 @@ export function isToggledOn(settings: MapSettings, layer: Pick<LayerDefinition, 
 
 /** Combines the two directions of a pair as the engine does (engine/aggregate.ts `combine`). */
 export function combineDirections(a: number, b: number, rule: MapSettings['symmetrise']): number {
+  if (rule === 'both') {
+    if (Number.isNaN(a) || Number.isNaN(b)) return NaN;
+    if (a > 0 && b > 0) return Math.min(a, b);
+    if (a < 0 && b < 0) return Math.max(a, b);
+    return 0;
+  }
   if (Number.isNaN(a)) return b;
   if (Number.isNaN(b)) return a;
   if (rule === 'mean') return (a + b) / 2;
@@ -779,6 +789,8 @@ export function buildMapModel(
     highlighted,
     outlines,
     palette: paletteChoice(project),
+    reconstructed: Object.values(result.reconstructed).reduce((s, p) => s + p.length, 0),
+    standardised: result.remedies.standardise === 'rank',
   };
 }
 
