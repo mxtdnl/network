@@ -4,7 +4,7 @@ Organisational network analysis that runs entirely in the browser.
 
 **Live site: <https://mxtdnl.github.io/network/>**
 
-> **Never commit real participant data to this repository.** It is public. Project files (`.ona.json`), survey responses, key backups, link lists and any spreadsheet of names or ratings are personal data. `.gitignore` excludes `*.ona.json` project files, `data/private/`, and any `.csv` or `.xlsx` outside `public/templates/`, but it is a safety net, not a guarantee: check `git status` before every commit. The only data committed here is fictional (the seeded demo, the test fixtures and the anonymised samples of the demo).
+> **Never commit real participant data to this repository.** It is public. Project files (`.ona.json`), survey responses, key backups, link lists and any spreadsheet of names or ratings are personal data. `.gitignore` excludes `*.ona.json` project files, `data/private/`, and any `.csv` or `.xlsx` outside `public/templates/`, but it is a safety net, not a guarantee: check `git status` before every commit. The only data committed here is fictional (the seeded demo and scenario projects, the test fixtures and the anonymised samples of the demo).
 
 ## What it does
 
@@ -73,6 +73,7 @@ The demo is a seeded, fictional organisation of 40 people in five teams. Its gen
 
 ```sh
 npm run demo        # writes src/demo/demo.ona.json from scripts/generate-demo.ts (seed 20260926)
+npm run scenarios   # writes the seven src/demo/scenario-*.ona.json test projects (docs/scenarios.md)
 
 python3 -m pip install -r scripts/requirements-fixtures.txt   # NetworkX 3.6.1, SciPy 1.17.1, NumPy 2.4.6
 npm run fixtures    # python3 scripts/generate_fixtures.py: writes tests/fixtures/*.json
@@ -81,7 +82,9 @@ npm run templates   # rebuilds the XLSX import templates from the CSV ones in pu
 npm run fonts       # re-copies the self-hosted Fira files from @fontsource into src/assets/fonts/
 ```
 
-Regenerate the fixtures whenever the demo, the fixture script or a metric convention changes: the demo fixture records the demo file's SHA-256, and a unit test fails if they disagree. CI uses the committed fixtures and does not need Python. A unit test also checks that `src/demo/demo.ona.json` is byte-identical to the generator's output.
+Regenerate the fixtures whenever the demo, the fixture script or a metric convention changes: the demo fixture records the demo file's SHA-256, and a unit test fails if they disagree. CI uses the committed fixtures and does not need Python. A unit test also checks that `src/demo/demo.ona.json` and each scenario file are byte-identical to their generator's output.
+
+Seven further fictional projects model real-world survey conditions (non-response, asymmetric and compressed ratings, a matrix organisation, a large department without teams, a dense team and a post-merger company). Open one with Project → Open project… from `src/demo/scenario-*.ona.json`; `docs/scenarios.md` describes each and what the tool shows with it.
 
 ## Deployment
 

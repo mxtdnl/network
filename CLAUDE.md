@@ -205,6 +205,14 @@ Q36 (map labels) is resolved by D137.
 
 Build order: D125; D131, D133 and D135 (no schema change); D128 with D126, D132, D134 and D136 (built 2026-10-21); D127; D129 and D130 (built 2026-10-21); then the user guide and screenshots; then Q36 (D137).
 
+## Scenario test data
+
+Requested by the owner on 2026-10-22: assess the tool on data with real-world constraints, generate six or seven sets of demo data, and add them to the repository as test data that can be loaded into the tool.
+
+| # | Date | Decision | Status | Where |
+|---|---|---|---|---|
+| D138 | 2026-10-22 | Seven fictional scenario projects beside the demo: partial response, asymmetric ratings, compressed ratings, matrix organisation, large department, dense team, post-merger (`docs/scenarios.md`). Written by `scripts/generate-scenarios.ts` (`npm run scenarios`, seeds 20261101–20261107, mulberry32 as D32) to `src/demo/scenario-<slug>.ona.json`, so D21's existing exception covers them and Prettier skips them; not bundled or offered in the app (spec §5 names one demo), opened with Project → Open. Every tie has `source: 'imported'`. Names pair first names with a different field's terms per scenario. `tests/unit/scenarios.test.ts` checks byte-identity with the generator, each built-in condition and an analysis in both views without engine warnings; `tests/e2e/scenarios.spec.ts` opens each in the built site with no console error (`SCENARIO_DIR=docs/screenshots/scenarios` writes screenshots). The assessment in `docs/scenarios.md` lists eight issues found with this data (silo rule on a single group and on conflict layers, conflict in the composite, non-response shown as zeros, relative rules without a floor, rater habits not visible, rules limited to team, one copy glitch); none was changed, and each awaits the owner | Proposed | `scripts/generate-scenarios.ts`, `src/demo/`, `docs/scenarios.md`, `tests/` |
+
 ## Respondent mode (spec §15)
 
 Added to the spec on 2026-09-26 at the owner's request. The owner approved the spec change and D83–D92 with their proposed defaults (Q29–Q32) on 2026-09-27. D93–D101 record the Phase 6R build. D102–D104 record the owner's answer to Q33 (2026-09-27), which amends D88, D96 and D100.

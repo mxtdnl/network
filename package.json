@@ -18,6 +18,7 @@
     "test:e2e": "playwright test",
     "fonts": "node scripts/copy-fonts.mjs",
     "demo": "tsx scripts/generate-demo.ts",
+    "scenarios": "tsx scripts/generate-scenarios.ts",
     "templates": "tsx scripts/make-templates.ts",
     "fixtures": "python3 scripts/generate_fixtures.py",
     "notices": "node scripts/third-party-notices.mjs"
