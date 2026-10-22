@@ -313,6 +313,12 @@ export function checkProject(file: Obj): string[] {
         `settings.group_colours must give each attribute value a different hue from 0 to ${String(PALETTE_HUES - 1)}.`,
       );
     }
+    // A key no longer among the attributes is allowed: the rules then fall back to team.
+    if (s.insight_group !== undefined)
+      need(
+        isStr(s.insight_group) && s.insight_group !== '',
+        'settings.insight_group must name an attribute.',
+      );
   }
 
   return problems;
@@ -365,6 +371,10 @@ export function checkSavedView(v: Obj): string[] {
           m.thresholdTo <= 1 &&
           (!isNum(m.threshold) || m.thresholdTo >= m.threshold)),
       'has an invalid upper tie strength.',
+    );
+    need(
+      m.negativeOutsideRange === undefined || isBool(m.negativeOutsideRange),
+      'has an invalid setting for negative ratings outside the range.',
     );
     need(
       isObj(m.layerToggles) && Object.values(m.layerToggles).every(isBool),

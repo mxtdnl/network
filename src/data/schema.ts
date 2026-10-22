@@ -143,6 +143,9 @@ export interface SavedMapSettings {
   threshold: number;
   /** Upper bound of the range (D141); absent means 1. Added to schema 4 in place, before release. */
   thresholdTo?: number;
+  /** Ties with a negative rating drawn outside the range (D145); absent means false. Added to
+   *  schema 4 in place, before release. */
+  negativeOutsideRange?: boolean;
   layerToggles: Record<LayerKey, boolean>;
   hideOffLayers: boolean;
   filters: AttributeFilter[];
@@ -203,6 +206,9 @@ export interface ProjectSettings {
   /** Hues pinned to attribute values (D127): attribute key → value → hue index (0-based) in the
    *  categorical palette. A hue is pinned to at most one value of an attribute. */
   group_colours?: Record<string, Record<string, number>>;
+  /** Attribute the silo, formal–informal and one-way negative rules group members by
+   *  (build plan session 3); absent means team. */
+  insight_group?: string;
 }
 
 export interface ProjectMeta {

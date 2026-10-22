@@ -54,6 +54,7 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
         : { kind: 'community' },
     threshold: map.threshold,
     thresholdTo: map.thresholdTo,
+    negativeOutsideRange: map.negativeOutsideRange,
     layerToggles: { ...map.layerToggles },
     hideOffLayers: map.hideOffLayers,
     filters: map.filters.map((f) => ({ key: f.key, values: [...f.values] })),
@@ -79,6 +80,8 @@ export function savedToMap(saved: SavedMapSettings, project: Project): MapSettin
     sizeMetric: saved.sizeMetric as SizeMetric,
     // Absent in views saved before the range (D141): no upper bound.
     thresholdTo: saved.thresholdTo ?? DEFAULT_THRESHOLD_TO,
+    // Absent in views saved before the switch (D145): off.
+    negativeOutsideRange: saved.negativeOutsideRange === true,
     layerToggles: { ...saved.layerToggles },
     filters: saved.filters.map((f) => ({ key: f.key, values: [...f.values] })),
     ego: saved.ego && ids.has(saved.ego.member) ? { ...saved.ego } : null,

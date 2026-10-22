@@ -20,6 +20,7 @@ export function engineSettings(project: Project, options: AnalysisOptions): Engi
     weights: { ...options.weights },
     signedTreatment: { ...options.signedTreatment },
     seed: project.settings.random_seed,
+    ...(project.settings.insight_group ? { insightGroup: project.settings.insight_group } : {}),
   };
 }
 
@@ -40,6 +41,7 @@ export function buildAnalysisInput(
     max: l.max,
     signed: l.signed,
     ...(l.role === undefined ? {} : { role: l.role }),
+    ...(l.group === undefined ? {} : { group: l.group }),
     defaultWeight: l.default_weight,
   }));
   const layerIndex = new Map(defs.map((l, k) => [l.key, k]));

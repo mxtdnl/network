@@ -60,7 +60,7 @@ If your ratings were collected outside Graticule, prepare two files. Templates i
 |---|---|---|
 | `id` | Yes | A unique identifier, for example `M01`. Avoid names or email addresses, which would appear wherever ids do |
 | `display_name` | Yes | The name shown in Graticule |
-| `team` | No | Team or function; used for colours, grouping, silo checks and the codes shown when names are hidden |
+| `team` | No | Team or function; used for colours, grouping, the insight rules' groups (unless you choose another attribute in the Insights tab) and the codes shown when names are hidden |
 | `level` | No | Grade or level; used in the codes shown when names are hidden |
 | `location` | No | Location |
 | `tenure_band` | No | For example "1 to 3 years" |
@@ -230,6 +230,7 @@ The legend shows:
 - **Edges**: Edge colour, Edge width and Edge style, as in the legend above. Each line encoding shows one thing at a time.
 - **Direction.** Directed shows each person's ratings separately. Mutual combines the two directions of each pair, by their average, the weaker or the stronger of the two. The choice changes the metrics, so it is stated in every export.
 - **Tie strength from** and **to** draw only the ties whose strength lies within the range, both ends included; the metrics still use every tie. Set from 0.30 to 0.50, for example, to see only the middling ties. The map opens at 0.30 to 1.00, so the weakest ties are hidden, and the legend says which ties are hidden; set the range to 0 to 1 to draw every tie. From can never be above to: moving one slider past the other moves both. Showing an insight on the map draws every tie, and a saved view keeps its own range.
+- **Draw negative ratings outside the range** (when valence or energy is enabled) also draws every tie that carries a negative rating, however weak. With valence as a multiplier on the composite, a negatively rated tie is weakened and often falls below 0.30, so it would otherwise be hidden.
 - **Node size**, with **Node size scale** by value (area in proportion to the value) or by rank (area in proportion to the rank, so one member with a very high value does not leave everyone else small), **Node fill**, **Outline communities** (a grey outline round each community found on Ties from, while the fill shows an attribute, so communities that cross teams are visible), **Filter** (by any attribute) and **Search**.
 - **Colours**: the scale for signed layers (orange-brown to blue, the default; purple to green; or red to blue), and a colour for each value of the node-fill attribute. Pinning a value to one of the eight colours keeps it the same in every view and presentation; values left on Automatic take the free colours in order. Only palettes that stay distinguishable under the common colour-vision deficiencies are offered, which is why there is no free colour choice. The choices are saved with the project and followed by every export.
 - **Layout**: force-directed (ties pull people together in proportion to their strength), grouped by an attribute, circular by group, or formal hierarchy (managers above their reports, with informal ties drawn over it; it needs a `manager_id` column).
@@ -296,7 +297,18 @@ The Coverage tab shows the share of possible ratings that were given, per rater 
 
 ### Insights
 
-The Insights tab lists rule-based observations: potential brokers, peripheral members, possible overload, silos, negative clusters, and formal ties with no informal counterpart (and the reverse). Each is written as a question to explore with the people involved, never as a finding about anyone, and each shows the rule and thresholds that produced it. Show on the map sets the map up to show the observation; Save as view keeps it for a presentation. The rules are in the [method notes](method-notes.md#8-insight-rules).
+The Insights tab lists rule-based observations: potential brokers, peripheral members, possible overload, silos, negative clusters, negative ratings not returned, and formal ties with no informal counterpart (and the reverse). Each is written as a question to explore with the people involved, never as a finding about anyone, and each shows the rule and thresholds that produced it. Show on the map sets the map up to show the observation; Save as view keeps it for a presentation. The rules are in the [method notes](method-notes.md#8-insight-rules).
+
+**Group members by** chooses the attribute the silo, formal–informal and negative-ratings rules compare: team by default, or any other category, such as a programme in a matrix organisation or the former organisation after a merger. The choice is saved with the project, and each rule names it.
+
+A few things the rules do so that realistic data does not mislead:
+
+- Silos are checked only when there are at least two groups of three or more members; with one group, every tie is inside it by definition. The conflict layers are not read, because conflict between colleagues stays inside a team by nature.
+- Potential brokers need a bridging score of at least 0.05, and peripheral members must be at least 10 % below the median, so small differences in a close-knit team are not reported.
+- At most five peripheral members are listed, and the question says how many were found. Peripheral members who make up at least half of a silo group are named with that group instead of twice.
+- Negative ratings not returned counts negative ratings whose reverse is neutral, positive or missing, by group. Its view draws negative ratings whatever the tie strength. A one-way rating can reflect how someone rates in general, or a colleague who did not answer, as much as the relationship.
+
+The conflict layers have weight 0 in the composite by default, so frequent conflict does not make a stronger tie; give them a weight in Custom if you want them counted.
 
 ![The Insights tab: observations with their rule, the members involved and buttons to show them on the map](user-guide/insights.jpg)
 

@@ -77,6 +77,10 @@ function staticStrings(): string[] {
     insightsCopy.show,
     insightsCopy.saveView,
     insightsCopy.clearHighlight,
+    insightsCopy.groupBy,
+    insightsCopy.groupByHelp,
+    insightsCopy.peripheralInSilo(1),
+    insightsCopy.peripheralInSilo(6),
     insightsCopy.nth('Silos', 2, 3),
     ...Object.values(insightsCopy.unavailable),
   ];
@@ -84,6 +88,7 @@ function staticStrings(): string[] {
     const title = insightsCopy.titles[rule];
     out.push(title, insightsCopy.showLabel(title), insightsCopy.shown(title));
     out.push(insightsCopy.saveViewLabel(title), ruleText(rule, true), ruleText(rule, false));
+    out.push(ruleText(rule, true, 'Legacy organisation'));
   }
   return out;
 }
@@ -119,6 +124,32 @@ function constructed(): Observation[] {
       { group: { attribute: 'team', value: 'Finance' } },
     ),
     make('negativeCluster', 'valence-', { size: 5, pairs: 6 }),
+    make('peripheral', 'composite', {
+      count: 5,
+      found: 9,
+      inSilo: 2,
+      layers: 4,
+      fewestLowLayers: 3,
+    }),
+    make(
+      'silo',
+      'informal_collaboration',
+      { ei: -0.9, internal: 54, external: 3, size: 8, alsoPeripheral: 6 },
+      { group: { attribute: 'team', value: 'Finance' } },
+    ),
+    make(
+      'oneWayNegative',
+      'valence',
+      { count: 4, negative: 6, returned: 2, notRated: 2 },
+      {
+        groups: [
+          { attribute: 'team', value: 'Clinic', other: 'Clinic', count: 3 },
+          { attribute: 'team', value: 'Clinic', other: 'Admin', count: 1 },
+        ],
+        view: { ...view(m), show: ['valence'], drawNegative: true },
+      },
+    ),
+    make('oneWayNegative', 'energy', { count: 3, negative: 3, returned: 0, notRated: 0 }),
     make(
       'formalOnly',
       'formal_collaboration',

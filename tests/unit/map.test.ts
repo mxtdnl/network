@@ -165,6 +165,36 @@ describe('map model', () => {
     expect(point.edges.every((e) => Math.abs(e.weight - 0.5) <= 1e-9)).toBe(true);
   });
 
+  it('draws ties with a negative rating outside the range when asked (D145)', async () => {
+    // Valence as a multiplier lowers the composite of negatively rated ties below 0.30.
+    const n = demo.members.length;
+    const index = new Map(demo.members.map((m, i) => [m.id, i]));
+    const negative = new Set<number>();
+    for (const t of demo.ties)
+      if (t.variable === 'valence' && typeof t.value === 'number' && t.value < 0)
+        negative.add((index.get(t.rater_id) ?? 0) * n + (index.get(t.ratee_id) ?? 0));
+    const key = (e: { source: number; target: number }) => e.source * n + e.target;
+    const touches = (e: { source: number; target: number }) =>
+      negative.has(key(e)) || negative.has(e.target * n + e.source);
+    const off = await model();
+    const on = await model({ negativeOutsideRange: true });
+    expect(off.negativeOutsideRange).toBe(false);
+    expect(on.negativeOutsideRange).toBe(true);
+    const added = on.edges.filter((e) => !off.edges.some((x) => key(x) === key(e)));
+    expect(added.length).toBeGreaterThan(0);
+    expect(added.every(touches)).toBe(true);
+    expect(added.some((e) => e.weight < 0.3)).toBe(true);
+    const notes = legendSections(on, theme).find((x) => x.kind === 'width')?.notes ?? [];
+    expect(notes).toContain('Ties with a negative rating drawn whatever their strength');
+    // Without a signed layer the switch draws nothing extra.
+    const noValence = {
+      ...demo,
+      layers: demo.layers.map((l) => (l.key === 'valence' ? { ...l, enabled: false } : l)),
+    };
+    const plain = await model({ negativeOutsideRange: true }, noValence);
+    expect(plain.negativeOutsideRange).toBe(false);
+  });
+
   it('compares the bounds with a tolerance of 1e-9 (D141)', () => {
     const third = 1 / 3;
     expect(inTieRange(0.1 + 0.2, 0.3, 1)).toBe(true);

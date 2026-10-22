@@ -1,4 +1,4 @@
-// Prints what the engine finds in each committed scenario project
+// Prints what the engine finds in the demo and each committed scenario project
 // (src/demo/scenario-*.ona.json) under the app's default weights: coverage,
 // the composite's density, reciprocity and communities, and every insight
 // rule's outcome, in the directed view and symmetrised by mean and by min.
@@ -28,10 +28,16 @@ const list = (ids: readonly string[]) =>
   ids.length > 8 ? `${String(ids.length)} members` : ids.join(', ');
 
 const only = process.argv.slice(2);
-for (const { slug } of [...SCENARIOS, ...MERGED_SCENARIOS]) {
+for (const slug of ['demo', ...[...SCENARIOS, ...MERGED_SCENARIOS].map((s) => s.slug)]) {
   if (only.length > 0 && !only.includes(slug)) continue;
   const text = readFileSync(
-    join(import.meta.dirname, '..', 'src', 'demo', scenarioFile(slug)),
+    join(
+      import.meta.dirname,
+      '..',
+      'src',
+      'demo',
+      slug === 'demo' ? 'demo.ona.json' : scenarioFile(slug),
+    ),
     'utf8',
   );
   const project = parseProject(text);
@@ -69,10 +75,14 @@ for (const { slug } of [...SCENARIOS, ...MERGED_SCENARIOS]) {
                 const evidence = Object.entries(ob.evidence)
                   .map(([k, v]) => `${k} ${f(v)}`)
                   .join(', ');
-                return `[${ob.ref}${group}: ${list(ob.members)}; ${evidence}]`;
+                const groups = ob.groups
+                  ? ` by group ${ob.groups.map((g) => `${g.value}→${g.other} ${String(g.count)}`).join(', ')};`
+                  : '';
+                return `[${ob.ref}${group}: ${list(ob.members)};${groups} ${evidence}]`;
               })
               .join(' ');
-      console.log(`- ${o.rule}: ${o.status} ${detail ?? ''}`);
+      const inSilo = o.inSilo ? ` (${String(o.inSilo)} named under silos)` : '';
+      console.log(`- ${o.rule}: ${o.status}${inSilo} ${detail ?? ''}`);
     }
   }
 }

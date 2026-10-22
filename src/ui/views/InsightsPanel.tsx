@@ -12,6 +12,7 @@ import {
 import { mapCopy } from '../copy/map';
 import { focusMapMember } from '../map/focus';
 import { refLabel } from '../map/model';
+import { groupingAttributes, insightGroup } from '../state/insightGroup';
 import { saveInsightAsView, showInsight } from '../state/insights';
 import { useReadOnly } from '../state/layoutMode';
 import { useMemberNames } from '../state/names';
@@ -27,6 +28,10 @@ export function InsightsPanel() {
   const result = useAppStore((s) => s.results.current);
   const highlight = useAppStore((s) => s.map.highlight);
   const setMap = useAppStore((s) => s.setMap);
+  const setInsightGroup = useAppStore((s) => s.setInsightGroup);
+  const readOnly = useReadOnly();
+  const groupId = useId();
+  const groupHelpId = useId();
 
   const ctx = useMemo<InsightContext | null>(
     () =>
@@ -46,6 +51,9 @@ export function InsightsPanel() {
   }
   const directed = result.view === 'directed';
   const coverage = result.coverage;
+  const group = insightGroup(project);
+  const options = groupingAttributes(project);
+  const groupLabel = group?.label ?? 'team';
 
   return (
     <div className="insights">
@@ -55,6 +63,39 @@ export function InsightsPanel() {
           <Icon name="warning" />
           {I.coverage(coveragePercent(coverage.rate, coverage.threshold))}
         </p>
+      )}
+      {group && (
+        <div className="field insights__group">
+          {readOnly ? (
+            <p className="field__help">
+              {I.groupBy}: {group.label}
+            </p>
+          ) : (
+            <>
+              <label htmlFor={groupId} className="field__label">
+                {I.groupBy}
+              </label>
+              <select
+                id={groupId}
+                className="select"
+                aria-describedby={groupHelpId}
+                value={group.key}
+                onChange={(e) => {
+                  setInsightGroup(e.target.value);
+                }}
+              >
+                {options.map((a) => (
+                  <option key={a.key} value={a.key}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+          <p id={groupHelpId} className="field__help">
+            {I.groupByHelp}
+          </p>
+        </div>
       )}
       {highlight.length > 0 && (
         <button
@@ -68,7 +109,7 @@ export function InsightsPanel() {
         </button>
       )}
       {result.insights.map((o) => (
-        <Rule key={o.rule} outcome={o} directed={directed} ctx={ctx} />
+        <Rule key={o.rule} outcome={o} directed={directed} ctx={ctx} group={groupLabel} />
       ))}
     </div>
   );
@@ -78,10 +119,13 @@ function Rule({
   outcome,
   directed,
   ctx,
+  group,
 }: {
   outcome: InsightOutcome;
   directed: boolean;
   ctx: InsightContext;
+  /** Label of the attribute the group rules use. */
+  group: string;
 }) {
   const headingId = useId();
   const title = I.titles[outcome.rule];
@@ -92,12 +136,16 @@ function Rule({
       </h3>
       <p className="insight__rule">
         <span className="insight__rule-label">{I.ruleLabel}</span>{' '}
-        {ruleText(outcome.rule, directed)}
+        {ruleText(outcome.rule, directed, group)}
       </p>
       {outcome.status === 'unavailable' && outcome.reason && (
         <p className="insight__status">{I.unavailable[outcome.reason]}</p>
       )}
-      {outcome.status === 'none' && <p className="insight__status">{I.none}</p>}
+      {outcome.status === 'none' && (
+        <p className="insight__status">
+          {outcome.inSilo ? I.peripheralInSilo(outcome.inSilo) : I.none}
+        </p>
+      )}
       {outcome.observations.map((o, k, all) => (
         <ObservationItem
           key={k}

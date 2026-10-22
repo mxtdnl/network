@@ -18,6 +18,7 @@ import {
 import { formatValue } from '../copy/map';
 import { coverageCopy } from '../copy/data';
 import type { ExportContext } from './context';
+import { insightGroup } from '../state/insightGroup';
 import { insightCaveats, reportNotes } from './methodNotes';
 import { exportRefs, refName } from './tables';
 
@@ -213,20 +214,29 @@ function insightsSection(ctx: ExportContext, notes: string): Block[] {
     });
   }
   const directed = result.view === 'directed';
+  const group = insightGroup(project)?.label ?? 'team';
   for (const outcome of result.insights) {
-    // Negative clusters read only signed layers; with them left out the rule is not listed at all.
-    if (outcome.rule === 'negativeCluster' && ctx.excludeSigned) continue;
+    // These rules read only signed layers; with them left out the rule is not listed at all.
+    if (
+      (outcome.rule === 'negativeCluster' || outcome.rule === 'oneWayNegative') &&
+      ctx.excludeSigned
+    )
+      continue;
     blocks.push({ kind: 'heading', text: insightsCopy.titles[outcome.rule] });
     blocks.push({
       kind: 'paragraph',
       lead: insightsCopy.ruleLabel,
-      text: ruleText(outcome.rule, directed),
+      text: ruleText(outcome.rule, directed, group),
       tone: 'graphite',
       small: true,
     });
     if (outcome.status === 'unavailable' && outcome.reason)
       blocks.push({ kind: 'paragraph', text: insightsCopy.unavailable[outcome.reason] });
-    if (outcome.status === 'none') blocks.push({ kind: 'paragraph', text: insightsCopy.none });
+    if (outcome.status === 'none')
+      blocks.push({
+        kind: 'paragraph',
+        text: outcome.inSilo ? insightsCopy.peripheralInSilo(outcome.inSilo) : insightsCopy.none,
+      });
     for (const o of outcome.observations) {
       blocks.push({ kind: 'paragraph', text: questionText(o, insightCtx) });
       blocks.push({

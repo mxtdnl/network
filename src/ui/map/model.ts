@@ -147,6 +147,8 @@ export interface MapModel {
   /** The tie-strength range drawn, inclusive (D141). */
   threshold: number;
   thresholdTo: number;
+  /** Ties with a negative rating are drawn outside the range (D145): on, and a signed layer is enabled. */
+  negativeOutsideRange: boolean;
   /** Layers switched off whose ties are hidden (keys). */
   hiddenLayers: string[];
   hiddenLabels: string[];
@@ -175,6 +177,26 @@ export function valenceLayer(project: Project): LayerDefinition | undefined {
 /** Signed layers edge colour can show, on the diverging scale. */
 export function signedColourLayers(project: Project): LayerDefinition[] {
   return project.layers.filter((l) => l.enabled && l.signed && !isCategorical(l));
+}
+
+/**
+ * Directed pairs (rater × n + rated) with a negative rating on any enabled
+ * signed layer, wave 1; null when no signed layer is enabled.
+ */
+export function negativeRatings(project: Project): Uint8Array | null {
+  const keys = new Set(signedColourLayers(project).map((l) => l.key));
+  if (keys.size === 0) return null;
+  const n = project.members.length;
+  const index = new Map(project.members.map((m, i) => [m.id, i]));
+  const out = new Uint8Array(n * n);
+  for (const t of project.ties) {
+    if (!keys.has(t.variable) || t.wave !== 1 || typeof t.value !== 'number' || t.value >= 0)
+      continue;
+    const i = index.get(t.rater_id);
+    const j = index.get(t.ratee_id);
+    if (i !== undefined && j !== undefined && i !== j) out[i * n + j] = 1;
+  }
+  return out;
 }
 
 export function roleLayer(project: Project, role: 'formal' | 'informal') {
@@ -574,10 +596,18 @@ export function buildMapModel(
   let anyWidthMissing = false;
   const hidden = hiddenLayerWeights(project, result, settings);
   const hiddenWeights = hidden.flatMap((h) => h.weights);
+  // Negative ratings whatever the range (D145): a pair rated on "Ties from"
+  // (0 included) with a negative rating, in that direction when directed and
+  // in either direction when mutual.
+  const negative = settings.negativeOutsideRange ? negativeRatings(project) : null;
+  const isNegative = (k: number) =>
+    negative !== null &&
+    (negative[k] === 1 || (!directed && negative[(k % n) * n + Math.floor(k / n)] === 1));
   const shown = (k: number) => {
     if (hiddenWeights.some((hw) => (hw[k] as number) > 0)) return false;
     const w = weights ? (weights[k] as number) : NaN;
-    return w > 0 && inTieRange(w, settings.threshold, settings.thresholdTo);
+    if (w > 0 && inTieRange(w, settings.threshold, settings.thresholdTo)) return true;
+    return w >= 0 && isNegative(k);
   };
   const buildEdges = () => {
     const edges: MapEdge[] = [];
@@ -739,6 +769,7 @@ export function buildMapModel(
     symmetrise: settings.symmetrise,
     threshold: settings.threshold,
     thresholdTo: settings.thresholdTo,
+    negativeOutsideRange: negative !== null,
     hiddenLayers: hidden.map((h) => h.key),
     hiddenLabels: hidden.map((h) => project.layers.find((l) => l.key === h.key)?.label ?? h.key),
     searchMatches,

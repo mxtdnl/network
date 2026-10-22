@@ -889,7 +889,7 @@
       "builtin": true
     },
     {
-      "default_weight": 1,
+      "default_weight": 0,
       "key": "conflict_task",
       "label": "Conflict: task disagreement",
       "question_wording": "How often do you experience task disagreement with this person?",
@@ -911,7 +911,7 @@
       "builtin": true
     },
     {
-      "default_weight": 1,
+      "default_weight": 0,
       "key": "conflict_personal",
       "label": "Conflict: personal friction",
       "question_wording": "How often do you experience personal friction with this person?",

@@ -188,6 +188,7 @@ For path-based metrics, weight is converted to distance as 1/w. The method notes
   - use the layer as a multiplier on the composite.
 
   Unless the user or a preset chooses otherwise, a signed layer is a multiplier: it adjusts the strength of ties found on other layers and does not create ties of its own.
+- The conflict sub-layers have default weight 0: they are frequencies of friction, which the composite could only add, so more conflict would make a stronger tie. The user may give them a weight.
 - The live formula is shown in plain notation beneath the sliders.
 - Presets: Formal structure, Informal network, Relationship health, Custom.
 - The composite drives:
@@ -224,7 +225,7 @@ The network map is an interactive node-link diagram of members and their weighte
 **Default density.** The map opens showing fewer ties than the full network, so its structure can be read; the legend states which ties are hidden and that metrics are computed on all ties.
 
 **Interaction.**
-- Layer toggles, a tie-strength range (a lower and an upper bound; ties outside it are hidden from the drawing only), attribute filters and search.
+- Layer toggles, a tie-strength range (a lower and an upper bound; ties outside it are hidden from the drawing only), an option to draw ties carrying a negative rating whatever the range, attribute filters and search.
 - Hovering highlights a member's neighbourhood. Clicking opens a member panel with metrics, ranks, and ties by layer.
 - Ego view at 1- or 2-step depth.
 - Shortest path between any two members.
@@ -255,7 +256,10 @@ The panel lists rule-based observations. Each one shows the rule that produced i
 - **Possible overload:** highest in-degree on advice or workflow dependency.
 - **Silos:** groups with low cross-group density (E-I index).
 - **Negative clusters:** clusters of reciprocated negative valence.
+- **Negative ratings not returned:** negative ratings whose reverse rating is not negative, counted by group.
 - **Formal/informal gaps:** formal ties with no informal counterpart, and informal ties with no formal counterpart.
+
+Rules that compare groups use one attribute, chosen by the user and saved with the project (team by default). Rules hold on realistic data: a rule on groups is not applied when there is only one group of meaningful size; relative rules need a minimum difference before they name anyone, and list at most five members; conflict layers are not read as working ties; and a finding about a group is not repeated as a list of its members.
 
 Wording is neutral and framed as questions for inquiry, never as verdicts on individuals. For example: "Three members connect Finance to the rest of the organisation. What happens if one leaves?"
 
