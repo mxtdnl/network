@@ -32,6 +32,8 @@ export interface EngineLayer {
   max: number;
   signed: boolean;
   role?: 'formal' | 'informal';
+  /** The layer's group (plan §2); the insight rules leave out INSIGHT_RULES.excludedLayerGroups. */
+  group?: string;
   defaultWeight: number;
 }
 
@@ -44,6 +46,8 @@ export interface EngineSettings {
   signedTreatment: Record<LayerKey, SignedTreatment>;
   /** Louvain seed (project settings.random_seed). */
   seed: number;
+  /** Attribute the silo, formal–informal and one-way rules group members by (settings.insight_group). */
+  insightGroup?: AttributeKey;
 }
 
 export interface AttributeColumn {
@@ -286,7 +290,8 @@ export type InsightRuleId =
   | 'silo'
   | 'negativeCluster'
   | 'formalOnly'
-  | 'informalOnly';
+  | 'informalOnly'
+  | 'oneWayNegative';
 
 /** Why a rule could not be applied to this analysis. */
 export type InsightUnavailable =
@@ -294,6 +299,7 @@ export type InsightUnavailable =
   | 'noLayers'
   | 'layersNotEnabled'
   | 'noGroupAttribute'
+  | 'tooFewGroups'
   | 'noSignedLayer'
   | 'noFormalInformal';
 
@@ -311,6 +317,8 @@ export interface InsightView {
   highlight: MemberId[];
   /** Layer keys whose encodings (edge colour, edge style) should be switched on. */
   show: LayerKey[];
+  /** Draw ties carrying a negative rating whatever the tie-strength range. */
+  drawNegative?: boolean;
 }
 
 /**
@@ -325,6 +333,8 @@ export interface Observation {
   members: MemberId[];
   /** The group a silo observation concerns; for a formal–informal gap, the pair of groups. */
   group?: { attribute: AttributeKey; value: string; other?: string };
+  /** Counts by pair of groups (rater's group first), for one-way negative ratings. */
+  groups?: { attribute: AttributeKey; value: string; other: string; count: number }[];
   /** Figures quoted in the wording; which keys are present depends on the rule. */
   evidence: Record<string, number>;
   view: InsightView;
@@ -335,6 +345,8 @@ export interface InsightOutcome {
   status: 'observed' | 'none' | 'unavailable';
   reason?: InsightUnavailable;
   observations: Observation[];
+  /** Peripheral members found who are listed with a silo group instead (INSIGHT_RULES.overlap). */
+  inSilo?: number;
 }
 
 // ----------------------------------------------------------------- analysis

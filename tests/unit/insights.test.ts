@@ -10,8 +10,11 @@ import { analyse } from '../../src/engine/analyse';
 import { buildAnalysisInput } from '../../src/engine/input';
 import {
   formalInformalGaps,
+  groupAttribute,
   INSIGHT_RULES,
   negativeClusters,
+  observe,
+  oneWayNegative,
   peripheralMembers,
   possibleOverload,
   potentialBrokers,
@@ -22,6 +25,7 @@ import {
   type GroupMixing,
   type NetworkMetrics,
   type NodeMetricTable,
+  type RefResult,
 } from '../../src/engine/types';
 import { effectiveWeights, initialWeightState } from '../../src/ui/state/presets';
 
@@ -265,4 +269,176 @@ describe('the demo', () => {
       expect(by.overload).toMatchObject({ status: 'unavailable', reason: 'layersNotEnabled' });
     },
   );
+});
+
+describe('rules on realistic data (build plan session 3)', () => {
+  it('names no broker below the betweenness floor', () => {
+    const at = (b0: number) =>
+      potentialBrokers(
+        ids(10),
+        'composite',
+        table({
+          betweenness: f64([b0, ...Array<number>(9).fill(0.01)]),
+          constraint: f64([0.1, ...Array<number>(9).fill(0.5)]),
+        }),
+        true,
+      );
+    expect(INSIGHT_RULES.brokers.minBetweenness).toBe(0.05);
+    expect(at(0.05).observations[0]?.members).toEqual(['m0']);
+    expect(at(0.0499).status).toBe('none');
+  });
+
+  it('counts a member low only when at least 10 % below the median', () => {
+    // Median 10, 20th percentile 9.9: m0 at 9 is exactly 10 % below the median; at 9.1 it is not.
+    const layer = (v0: number) => ({
+      ref: 'a',
+      node: table({ inStrength: f64([v0, 9.5, 10, 10, 10, 10, 10, 11, 12, 13]) }),
+    });
+    expect(peripheralMembers(ids(10), [layer(9)], true).observations[0]?.members).toEqual(['m0']);
+    expect(peripheralMembers(ids(10), [layer(9.1)], true).status).toBe('none');
+  });
+
+  it('lists at most five peripheral members, furthest below the median first, and counts the rest', () => {
+    const values = [5, 1, 2, 3, 4, 0.5, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20];
+    // 30 members so the 20th percentile reaches the six low values.
+    const all = [...values, ...Array<number>(10).fill(20)];
+    const o = peripheralMembers(
+      ids(30),
+      [{ ref: 'a', node: table({ inStrength: f64(all) }) }],
+      true,
+    );
+    expect(o.observations[0]?.members).toEqual(['m5', 'm1', 'm2', 'm3', 'm4']);
+    expect(o.observations[0]?.evidence).toMatchObject({ count: 5, found: 6 });
+  });
+
+  const twoGroups = {
+    team: { categories: ['A', 'B'], values: ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'] },
+  };
+  const mix = (internal: number, external: number, ei: number): NetworkMetrics =>
+    ({
+      mixing: {
+        team: {
+          groups: ['A', 'B'],
+          excluded: 0,
+          internal,
+          external,
+          ei,
+          perGroup: [
+            { group: 'A', size: 4, internal, external, ei },
+            { group: 'B', size: 4, internal: 4, external: 6, ei: 0.2 },
+          ],
+          density: new Float64Array(4),
+        },
+      },
+    }) as unknown as NetworkMetrics;
+
+  it('does not apply the silo rule with fewer than two groups of three', () => {
+    const one = { team: { categories: ['Ops'], values: Array<string>(8).fill('Ops') } };
+    const o = silos(ids(8), [{ ref: 'c', network: mix(20, 0, -1) }], one);
+    expect(o).toMatchObject({ status: 'unavailable', reason: 'tooFewGroups' });
+    const small = {
+      team: { categories: ['A', 'B'], values: ['A', 'A', 'A', 'A', 'A', 'A', 'B', 'B'] },
+    };
+    expect(silos(ids(8), [{ ref: 'c', network: mix(20, 0, -1) }], small).reason).toBe(
+      'tooFewGroups',
+    );
+  });
+
+  it('needs at least five ties involving a group on a layer', () => {
+    expect(INSIGHT_RULES.silo.minTies).toBe(5);
+    expect(silos(ids(8), [{ ref: 'c', network: mix(5, 0, -1) }], twoGroups).status).toBe(
+      'observed',
+    );
+    expect(silos(ids(8), [{ ref: 'c', network: mix(4, 0, -1) }], twoGroups).status).toBe('none');
+  });
+
+  it('uses the chosen grouping attribute, falling back to team', () => {
+    const attributes = { team: twoGroups.team, programme: twoGroups.team };
+    expect(groupAttribute(attributes, 'programme')).toBe('programme');
+    expect(groupAttribute(attributes, 'gone')).toBe('team');
+    expect(groupAttribute({}, 'gone')).toBeNull();
+  });
+
+  it('counts negative ratings not returned negatively, from three on a layer', () => {
+    const n = 4;
+    const s = new Float64Array(n * n).fill(NaN);
+    const rate = (i: number, j: number, v: number) => (s[i * n + j] = v);
+    rate(0, 1, -0.5); // reverse positive
+    rate(1, 0, 0.5);
+    rate(0, 2, -1); // reverse not rated
+    rate(2, 3, -0.3); // returned negatively: not counted
+    rate(3, 2, -0.3);
+    const attributes = { team: { categories: ['A', 'B'], values: ['A', 'A', 'B', 'B'] } };
+    const two = oneWayNegative(ids(n), new Map([['valence', s]]), 'composite', attributes);
+    expect(two.status).toBe('none');
+    rate(3, 1, -0.2); // reverse 0 (neutral): counted
+    rate(1, 3, 0);
+    const o = oneWayNegative(ids(n), new Map([['valence', s]]), 'composite', attributes);
+    expect(o.observations[0]).toMatchObject({
+      rule: 'oneWayNegative',
+      ref: 'valence',
+      evidence: { count: 3, negative: 5, returned: 2, notRated: 1 },
+      view: { show: ['valence'], drawNegative: true },
+    });
+    expect(o.observations[0]?.groups).toEqual([
+      { attribute: 'team', value: 'A', other: 'A', count: 1 },
+      { attribute: 'team', value: 'A', other: 'B', count: 1 },
+      { attribute: 'team', value: 'B', other: 'A', count: 1 },
+    ]);
+    expect(oneWayNegative(ids(n), new Map(), 'composite', attributes).reason).toBe('noSignedLayer');
+  });
+
+  it('names peripheral members with their silo group when they are half of it or more', () => {
+    // Eight members in two teams; A's four members are the four lowest receivers.
+    const strength = f64([1, 1, 1, 1, 10, 10, 10, 10]);
+    const ref = (key: string, kind: RefResult['kind'], network: NetworkMetrics) =>
+      ({
+        ref: key,
+        kind,
+        node: table({ inStrength: strength }),
+        network,
+      }) as unknown as RefResult;
+    const network = mix(20, 1, -0.9);
+    const results = observe({
+      ids: ids(8),
+      directed: true,
+      refs: {
+        connection_strength: ref('connection_strength', 'unsigned', network),
+      },
+      refOrder: ['connection_strength'],
+      attributes: twoGroups,
+      signed: new Map(),
+      multiplex: null,
+    });
+    const by = Object.fromEntries(results.map((o) => [o.rule, o]));
+    // The 20th percentile of eight values (1,1,1,1,10,…) is 1, so all four of A are low.
+    expect(by.silo?.observations[0]?.evidence.alsoPeripheral).toBe(4);
+    expect(by.peripheral).toMatchObject({ status: 'none', inSilo: 4, observations: [] });
+  });
+
+  it('leaves conflict layers out of the silo and peripheral rules', () => {
+    const ref = (key: string, network: NetworkMetrics, values: number[]) =>
+      ({
+        ref: key,
+        kind: 'unsigned',
+        node: table({ inStrength: f64(values) }),
+        network,
+      }) as unknown as RefResult;
+    const results = observe({
+      ids: ids(8),
+      directed: true,
+      refs: {
+        connection_strength: ref('connection_strength', mix(6, 6, 0), [5, 5, 5, 5, 5, 5, 5, 5]),
+        conflict_task: ref('conflict_task', mix(20, 0, -1), [0, 0, 0, 3, 3, 3, 3, 3]),
+      },
+      refOrder: ['connection_strength', 'conflict_task'],
+      attributes: twoGroups,
+      signed: new Map(),
+      multiplex: null,
+      excludedLayers: ['conflict_task'],
+    });
+    const by = Object.fromEntries(results.map((o) => [o.rule, o]));
+    expect(by.silo?.status).toBe('none');
+    expect(by.peripheral?.status).toBe('none');
+  });
 });

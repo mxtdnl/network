@@ -132,6 +132,17 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   await page.getByRole('switch', { name: 'Show the full scale' }).click();
   await expect(legend.getByText('Valence, −3 to +3')).toBeVisible();
   await page.getByRole('switch', { name: 'Show the full scale' }).click();
+  // Negative ratings whatever the tie-strength range (D145).
+  const negatives = page.getByRole('switch', { name: 'Draw negative ratings outside the range' });
+  await expect(negatives).toHaveAttribute('aria-checked', 'false');
+  await negatives.click();
+  await expect(
+    legend.getByText('Ties with a negative rating drawn whatever their strength'),
+  ).toBeVisible();
+  await negatives.click();
+  await expect(
+    legend.getByText('Ties with a negative rating drawn whatever their strength'),
+  ).toHaveCount(0);
   await colour.selectOption({ label: 'Within or between groups' });
   await expect(legend.getByText('Within or between groups of Team or function')).toBeVisible();
   await colour.selectOption({ label: 'Formal collaboration' });

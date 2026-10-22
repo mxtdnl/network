@@ -6,7 +6,7 @@
 import { reciprocity, rescaleUnsigned, scaleSigned, signedPart, symmetrise } from './aggregate';
 import { compositeFormula, compositeMatrix } from './composite';
 import { denseGraph, pathGraph, tieCount, type DenseGraph } from './graphs';
-import { observe } from './insights';
+import { INSIGHT_RULES, observe } from './insights';
 import { bootstrap } from './metrics/bootstrap';
 import { multiplex, type MultiplexLayer } from './metrics/multiplex';
 import {
@@ -240,6 +240,10 @@ export async function analysePrepared(
     attributes: input.attributes,
     signed: p.signedScaled,
     multiplex: mx,
+    ...(input.settings.insightGroup ? { groupAttribute: input.settings.insightGroup } : {}),
+    excludedLayers: input.layers
+      .filter((l) => l.group !== undefined && INSIGHT_RULES.excludedLayerGroups.includes(l.group))
+      .map((l) => l.key),
   });
 
   return {

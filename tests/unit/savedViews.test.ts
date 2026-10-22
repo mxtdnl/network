@@ -42,6 +42,7 @@ describe('saving a view', () => {
       fill: { kind: 'community' },
       threshold: 0.4,
       thresholdTo: 0.75,
+      negativeOutsideRange: true,
       layerToggles: { valence: false, formal_collaboration: true },
       hideOffLayers: true,
       filters: [{ key: 'team', values: ['Finance', 'Sales'] }],
@@ -79,6 +80,7 @@ describe('saving a view', () => {
         fill: { kind: 'community' },
         threshold: 0.4,
         thresholdTo: 0.75,
+        negativeOutsideRange: true,
         layerToggles: { valence: false, formal_collaboration: true },
         hideOffLayers: true,
         filters: [{ key: 'team', values: ['Finance', 'Sales'] }],
@@ -214,6 +216,24 @@ describe('restoring a view', () => {
     expect(state().map).toMatchObject({ threshold: 0.3, thresholdTo: 1 });
   });
 
+  it('restores negative ratings outside the range, off for views saved before it (D145)', () => {
+    const s = state();
+    s.setMap({ negativeOutsideRange: true });
+    const view = saveCurrentView('Negatives');
+    if (!view) throw new Error('no view');
+    const older = { ...view.map };
+    delete older.negativeOutsideRange;
+    s.updateProjectViews((p) => ({
+      ...p,
+      saved_views: [...p.saved_views, { ...view, id: 'older', map: older }],
+    }));
+    s.setMap({ negativeOutsideRange: false });
+    restoreViewById(view.id);
+    expect(state().map.negativeOutsideRange).toBe(true);
+    restoreViewById('older');
+    expect(state().map.negativeOutsideRange).toBe(false);
+  });
+
   it('drops members that are no longer in the project', () => {
     const view = captureView('x');
     if (!view) throw new Error('no view');
@@ -312,5 +332,9 @@ describe('an insight shown on the map', () => {
     const patch = insightMapPatch({ ...view, show: [] }, s.map, s.data.project);
     expect(patch.threshold).toBe(0);
     expect(patch.thresholdTo).toBe(1);
+    expect(patch.negativeOutsideRange).toBe(false);
+    expect(
+      insightMapPatch({ ...view, show: [], drawNegative: true }, s.map).negativeOutsideRange,
+    ).toBe(true);
   });
 });

@@ -38,9 +38,13 @@ export const MIGRATIONS: readonly Migration[] = [
     from: 3,
     to: 4,
     description:
-      'Saved views choose their encodings: edge colour, width and style, the signed colour scale, node size by value or rank, and community outlines (CLAUDE.md D126, D128). Signed layers whose treatment a view left unset keep "positive ratings", the version 3 default (D130).',
+      'Saved views choose their encodings: edge colour, width and style, the signed colour scale, node size by value or rank, and community outlines (CLAUDE.md D126, D128). Signed layers whose treatment a view left unset keep "positive ratings", the version 3 default (D130). The built-in conflict layers default to weight 0 (D143); views that weighted them by default keep weight 1.',
     up: (file) => {
       const layers = Array.isArray(file.layers) ? file.layers.map(obj) : [];
+      // Only an enabled layer contributed to a view's composite.
+      const conflict = layers
+        .filter((l) => isOldConflictDefault(l) && l.enabled === true)
+        .map((l) => l.key as string);
       const roles = {
         formal: layers.find((l) => l.role === 'formal' && l.signed !== true)?.key,
         informal: layers.find((l) => l.role === 'informal' && l.signed !== true)?.key,
@@ -50,13 +54,30 @@ export const MIGRATIONS: readonly Migration[] = [
         .map((l) => l.key as string);
       return {
         ...file,
+        ...(Array.isArray(file.layers)
+          ? {
+              layers: file.layers.map((l: unknown) =>
+                isOldConflictDefault(obj(l)) ? { ...obj(l), default_weight: 0 } : l,
+              ),
+            }
+          : {}),
         saved_views: Array.isArray(file.saved_views)
-          ? file.saved_views.map((v) => savedViewV3toV4(v, roles, signed))
+          ? file.saved_views.map((v) => savedViewV3toV4(v, roles, signed, conflict))
           : file.saved_views,
       };
     },
   },
 ];
+
+/** A built-in conflict layer at version 3's default weight of 1 (D26), which D143 makes 0. */
+function isOldConflictDefault(l: Record<string, unknown>): boolean {
+  return (
+    l.builtin === true &&
+    l.group === 'conflict' &&
+    l.default_weight === 1 &&
+    typeof l.key === 'string'
+  );
+}
 
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj =>
@@ -136,6 +157,7 @@ export function savedViewV3toV4(
   view: unknown,
   roles: { formal?: unknown; informal?: unknown } = {},
   signedLayers: readonly string[] = [],
+  conflictLayers: readonly string[] = [],
 ): unknown {
   if (typeof view !== 'object' || view === null || Array.isArray(view)) return view;
   const v = view as Obj;
@@ -153,6 +175,17 @@ export function savedViewV3toV4(
           },
         }
       : v.weights;
+  // A custom weighting that left a conflict layer at its default weighted it 1 (D143).
+  const w = obj(migratedWeights);
+  const custom = obj(w.custom);
+  const unweighted = conflictLayers.filter((key) => !(key in custom));
+  const finalWeights =
+    w.preset === 'custom' && unweighted.length > 0 && w.custom === custom
+      ? {
+          ...w,
+          custom: { ...custom, ...Object.fromEntries(unweighted.map((key) => [key, 1])) },
+        }
+      : migratedWeights;
   const map = v.map as Obj;
   const toggles = obj(map.layerToggles);
   const hideOff = map.hideOffLayers === true;
@@ -164,7 +197,7 @@ export function savedViewV3toV4(
   const style = on(roles.formal, true) && on(roles.informal, true);
   return {
     ...v,
-    ...(migratedWeights === undefined ? {} : { weights: migratedWeights }),
+    ...(finalWeights === undefined ? {} : { weights: finalWeights }),
     map: {
       ...map,
       edgeColour:

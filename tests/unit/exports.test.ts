@@ -27,6 +27,7 @@ import {
 import { buildReport, type Block } from '../../src/ui/export/report';
 import { readExportTheme } from '../../src/ui/export/theme';
 import { exportCopy, reportCopy } from '../../src/ui/copy/export';
+import { insightsCopy } from '../../src/ui/copy/insights';
 import { withPalette, withPin } from '../../src/ui/map/palettes';
 import { DIRECTED_METRICS } from '../../src/ui/copy/metrics';
 import { effectiveWeights, type WeightState } from '../../src/ui/state/presets';
@@ -615,6 +616,24 @@ describe('report details', () => {
     );
   }, 30_000);
 
+  it('lists the negative ratings rule only while signed layers are kept, under its grouping (session 3)', async () => {
+    const title = insightsCopy.titles.oneWayNegative;
+    const headings = (blocks: Block[]) =>
+      blocks.filter((x) => x.kind === 'heading').map((x) => (x as { text: string }).text);
+    for (const anonymise of [false, true]) {
+      const kept = await contextFor(project, { anonymise, excludeSigned: false });
+      expect(headings(sectionBlocks(kept, reportCopy.sections.insights))).toContain(title);
+      const left = await contextFor(project, { anonymise, excludeSigned: true });
+      expect(headings(sectionBlocks(left, reportCopy.sections.insights))).not.toContain(title);
+    }
+    const grouped = await contextFor(
+      { ...project, settings: { ...project.settings, insight_group: 'location' } },
+      { anonymise: true, excludeSigned: false },
+    );
+    const text = JSON.stringify(sectionBlocks(grouped, reportCopy.sections.insights));
+    expect(text).toContain('Members are grouped by location');
+  }, 30_000);
+
   it('explains ratings whose source is not recorded (A8)', async () => {
     const ctx = await contextFor(project, { anonymise: true, excludeSigned: false });
     const blocks = sectionBlocks(ctx, reportCopy.sections.coverage);
@@ -686,6 +705,31 @@ describe('export files', () => {
     expect(band.length).toBeGreaterThan(0);
     expect(band.length).toBeLessThan(all.length);
     expect(band.every((e) => e.weight >= 0.3 - 1e-9 && e.weight <= 0.5 + 1e-9)).toBe(true);
+  });
+
+  it('draws negative ratings outside the range only while signed layers are kept (D145)', async () => {
+    const note = 'Ties with a negative rating drawn whatever their strength';
+    const svgText = async (excludeSigned: boolean, anonymise: boolean) => {
+      const ctx = await contextFor(project, {
+        anonymise,
+        excludeSigned,
+        map: { threshold: 0.3, thresholdTo: 1, negativeOutsideRange: true },
+      });
+      return {
+        model: mapExport(ctx, mapState, deps, '').map.model,
+        text: (await svgExport(ctx, mapState, deps, '')).text
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' '),
+      };
+    };
+    for (const anonymise of [false, true]) {
+      const kept = await svgText(false, anonymise);
+      expect(kept.model.negativeOutsideRange).toBe(true);
+      expect(kept.text).toContain(note);
+      const left = await svgText(true, anonymise);
+      expect(left.model.negativeOutsideRange).toBe(false);
+      expect(left.text).not.toContain(note);
+    }
   });
 
   it('sizes the print PNG to the printable width of A4 landscape at 300 dpi', async () => {

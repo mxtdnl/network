@@ -47,6 +47,7 @@ export function insightMapPatch(
     // The rule counted every tie, so every tie is drawn (CLAUDE.md D129, D141).
     threshold: 0,
     thresholdTo: 1,
+    negativeOutsideRange: view.drawNegative === true,
     layerToggles: toggles,
     ego: null,
     search: '',

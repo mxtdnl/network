@@ -35,13 +35,19 @@ export const INSIGHT_RULES = {
     topShare: 0.1,
     /** …and constraint at or below this quantile of members' constraint. */
     constraintQuantile: 0.5,
+    /** …and betweenness at least this (normalised, 0–1), so that tiny differences are not read as routes. */
+    minBetweenness: 0.05,
     maxMembers: 5,
   },
   peripheral: {
     /** In-strength (strength in the symmetrised view) at or below this quantile of a layer… */
     quantile: 0.2,
+    /** …and at least this share below the layer's median, so near-equal values are not counted low… */
+    minBelowMedian: 0.1,
     /** …on more than this share of the layers considered. */
     layerShare: 0.5,
+    /** Members listed, furthest below the median first; the wording gives how many were found. */
+    maxMembers: 5,
   },
   overload: {
     /** Layers the rule reads, by key. */
@@ -53,16 +59,42 @@ export const INSIGHT_RULES = {
     maxMembers: 5,
   },
   silo: {
-    /** Attributes whose groups are checked, first one present wins. */
+    /**
+     * Attributes groups are taken from when the project names none
+     * (settings.insight_group), first one present wins. The formal–informal
+     * and one-way rules use the same attribute.
+     */
     attributes: ['team'] as readonly string[],
     /** E-I index at or below this value on a layer: at least three internal ties for every external one. */
     maxEi: -0.5,
     minGroupSize: 3,
+    /** The rule applies only when at least this many groups have minGroupSize members. */
+    minGroups: 2,
+    /** A group is tested on a layer only when it has at least this many ties on it, inside and outside. */
+    minTies: 5,
   },
   negativeCluster: {
     /** Members joined by pairs who rate each other negatively in both directions, at least this many. */
     minSize: 3,
   },
+  oneWayNegative: {
+    /** Negative ratings whose reverse is not negative, at least this many on a layer. */
+    minCount: 3,
+  },
+  overlap: {
+    /**
+     * When at least this share of a silo group's members are peripheral
+     * members too, they are named in the silo observation and left out of the
+     * peripheral list, so one finding is not reported twice.
+     */
+    minGroupShare: 0.5,
+  },
+  /**
+   * Layer groups the silo and peripheral rules leave out: conflict is not a
+   * working tie, and conflict between people who work together stays inside
+   * their group by nature (build plan session 3).
+   */
+  excludedLayerGroups: ['conflict'] as readonly string[],
   formalInformal: {
     /**
      * Groups (the first attribute of silo.attributes present) are compared in
@@ -84,6 +116,7 @@ export const INSIGHT_RULE_ORDER: readonly InsightRuleId[] = [
   'overload',
   'silo',
   'negativeCluster',
+  'oneWayNegative',
   'formalOnly',
   'informalOnly',
 ];
@@ -115,8 +148,9 @@ const byValueDesc = (indices: number[], column: ArrayLike<number>) =>
 /**
  * Potential brokers: members whose betweenness is among the top
  * INSIGHT_RULES.brokers.topShare of members (at least one member; members
- * tied with the last one included) and above 0, and whose constraint is at or
- * below the median. High betweenness with low constraint means a member lies
+ * tied with the last one included) and at least
+ * INSIGHT_RULES.brokers.minBetweenness, and whose constraint is at or below
+ * the median. High betweenness with low constraint means a member lies
  * on many shortest routes between others whose contacts are not tied to each
  * other (docs/method-notes.md §3).
  */
@@ -133,7 +167,7 @@ export function potentialBrokers(
   const n = ids.length;
   const k = Math.max(1, Math.ceil(T.topShare * n));
   const ranked = byValueDesc(
-    [...Array(n).keys()].filter((i) => (betweenness[i] as number) > 0),
+    [...Array(n).keys()].filter((i) => (betweenness[i] as number) >= T.minBetweenness),
     betweenness,
   );
   const cutoff = ranked[Math.min(k, ranked.length) - 1];
@@ -177,23 +211,36 @@ export interface LayerNodeTable {
   node: NodeMetricTable;
 }
 
+/** Peripheral members found, before the list is capped: ranked, with the figures the wording quotes. */
+export interface PeripheralRanking {
+  /** Member indices, most low layers first, then furthest below the median. */
+  ranked: number[];
+  /** Layers on which each member counts low, by member index. */
+  low: number[];
+  considered: number;
+}
+
 /**
  * Peripheral members: members whose in-strength (strength when symmetrised) is
- * at or below the INSIGHT_RULES.peripheral.quantile of members on more than
- * half of the layers considered: every unsigned layer and the positive part of
- * each signed layer, not the composite and not negative ratings. A layer on
- * which nobody receives any tie is not considered, and a member at the layer's
- * highest value is never counted low.
+ * at or below the INSIGHT_RULES.peripheral.quantile of members, and at least
+ * minBelowMedian below the layer's median, on more than half of the layers
+ * considered: every unsigned layer and the positive part of each signed
+ * layer, not the composite, not negative ratings and not the layer groups in
+ * INSIGHT_RULES.excludedLayerGroups. A layer on which nobody receives any tie
+ * is not considered, and a member at the layer's highest value is never
+ * counted low. Members are ranked by the number of layers on which they are
+ * low, then by their mean value as a share of the median, lowest first. Null
+ * when no layer is considered.
  */
-export function peripheralMembers(
-  ids: readonly MemberId[],
+export function rankPeripheral(
+  n: number,
   layers: readonly LayerNodeTable[],
   directed: boolean,
-): InsightOutcome {
+): PeripheralRanking | null {
   const T = INSIGHT_RULES.peripheral;
   const metric: NodeMetricKey = directed ? 'inStrength' : 'strength';
-  const n = ids.length;
   const low = new Array<number>(n).fill(0);
+  const share = new Array<number>(n).fill(0);
   let considered = 0;
   for (const { node } of layers) {
     const column = node.columns[metric];
@@ -203,40 +250,82 @@ export function peripheralMembers(
     if (max <= 0) continue;
     considered += 1;
     const q = percentile(values, T.quantile);
+    const median = percentile(values, 0.5);
+    const below = (1 - T.minBelowMedian) * median;
     for (let i = 0; i < n; i++) {
       const v = column[i] as number;
-      if (Number.isFinite(v) && v <= q && v < max) low[i] = (low[i] ?? 0) + 1;
+      if (!Number.isFinite(v) || v > q || v >= max || v > below) continue;
+      low[i] = (low[i] ?? 0) + 1;
+      share[i] = (share[i] ?? 0) + (median > 0 ? v / median : 0);
     }
   }
-  if (considered === 0) return unavailable('peripheral', 'noLayers');
-  const chosen = [...Array(n).keys()]
+  if (considered === 0) return null;
+  const mean = (i: number) => (share[i] ?? 0) / (low[i] ?? 1);
+  const ranked = [...Array(n).keys()]
     .filter((i) => (low[i] ?? 0) > T.layerShare * considered)
-    .sort((a, b) => (low[b] ?? 0) - (low[a] ?? 0) || a - b);
-  if (chosen.length === 0) return outcome('peripheral', []);
+    .sort((a, b) => (low[b] ?? 0) - (low[a] ?? 0) || mean(a) - mean(b) || a - b);
+  return { ranked, low, considered };
+}
+
+/**
+ * The peripheral outcome from a ranking: at most
+ * INSIGHT_RULES.peripheral.maxMembers members listed. Members in `inSilo` are
+ * left out and counted, because a silo observation names them
+ * (INSIGHT_RULES.overlap).
+ */
+export function peripheralOutcome(
+  ids: readonly MemberId[],
+  ranking: PeripheralRanking | null,
+  directed: boolean,
+  inSilo: ReadonlySet<number> = new Set(),
+): InsightOutcome {
+  const T = INSIGHT_RULES.peripheral;
+  if (!ranking) return unavailable('peripheral', 'noLayers');
+  const { low, considered } = ranking;
+  const found = ranking.ranked.filter((i) => !inSilo.has(i));
+  const moved = ranking.ranked.length - found.length;
+  const extra = moved > 0 ? { inSilo: moved } : {};
+  if (found.length === 0) return { ...outcome('peripheral', []), ...extra };
+  const chosen = found.slice(0, T.maxMembers);
   const members = chosen.map((i) => ids[i] as MemberId);
-  return outcome('peripheral', [
-    {
-      rule: 'peripheral',
-      ref: COMPOSITE,
-      members,
-      evidence: {
-        count: chosen.length,
-        layers: considered,
-        fewestLowLayers: Math.min(...chosen.map((i) => low[i] ?? 0)),
-        quantile: T.quantile,
-        directed: directed ? 1 : 0,
+  const metric: NodeMetricKey = directed ? 'inStrength' : 'strength';
+  return {
+    ...outcome('peripheral', [
+      {
+        rule: 'peripheral',
+        ref: COMPOSITE,
+        members,
+        evidence: {
+          count: chosen.length,
+          found: found.length,
+          inSilo: moved,
+          layers: considered,
+          fewestLowLayers: Math.min(...found.map((i) => low[i] ?? 0)),
+          quantile: T.quantile,
+          directed: directed ? 1 : 0,
+        },
+        view: {
+          layer: COMPOSITE,
+          sizeMetric: metric,
+          layout: 'force',
+          groupBy: null,
+          filters: [],
+          highlight: members,
+          show: [],
+        },
       },
-      view: {
-        layer: COMPOSITE,
-        sizeMetric: metric,
-        layout: 'force',
-        groupBy: null,
-        filters: [],
-        highlight: members,
-        show: [],
-      },
-    },
-  ]);
+    ]),
+    ...extra,
+  };
+}
+
+/** Peripheral members (rankPeripheral, then peripheralOutcome), without the silo overlap. */
+export function peripheralMembers(
+  ids: readonly MemberId[],
+  layers: readonly LayerNodeTable[],
+  directed: boolean,
+): InsightOutcome {
+  return peripheralOutcome(ids, rankPeripheral(ids.length, layers, directed), directed);
 }
 
 // ----------------------------------------------------------------- overload
@@ -301,22 +390,45 @@ export function possibleOverload(
 // -------------------------------------------------------------------- silos
 
 /**
- * Silos: groups of the first attribute in INSIGHT_RULES.silo.attributes that
- * the project has (team by default), of at least minGroupSize members, whose
- * E-I index is at or below maxEi on at least one of the layers given (each
- * unsigned layer and the composite): most ties involving the group stay
- * inside it. One observation per group, quoting the layer with the lowest
- * index. The E-I index counts ties, not strength (docs/method-notes.md §4).
+ * The attribute the group rules use: the project's choice
+ * (settings.insight_group) when members have it, otherwise the first of
+ * INSIGHT_RULES.silo.attributes present. Null when there is none.
+ */
+export function groupAttribute(
+  attributes: Readonly<Record<AttributeKey, AttributeColumn>>,
+  chosen?: AttributeKey,
+): AttributeKey | null {
+  if (chosen && attributes[chosen]) return chosen;
+  return INSIGHT_RULES.silo.attributes.find((a) => attributes[a]) ?? null;
+}
+
+/**
+ * Silos: groups of the grouping attribute (groupAttribute) of at least
+ * minGroupSize members, whose E-I index is at or below maxEi on at least one
+ * of the layers given (each unsigned layer outside
+ * INSIGHT_RULES.excludedLayerGroups, and the composite) with at least minTies
+ * ties involving the group: most ties involving the group stay inside it. The
+ * rule is not applied when fewer than minGroups groups have minGroupSize
+ * members, because with one group E-I is −1 by construction; a group with no
+ * member outside it is never tested. One observation per group, quoting the
+ * layer with the lowest index. The E-I index counts ties, not strength
+ * (docs/method-notes.md §4).
  */
 export function silos(
   ids: readonly MemberId[],
   layers: readonly { ref: LayerRef; network: NetworkMetrics }[],
   attributes: Readonly<Record<AttributeKey, AttributeColumn>>,
+  chosen?: AttributeKey,
 ): InsightOutcome {
   const T = INSIGHT_RULES.silo;
-  const attribute = T.attributes.find((a) => attributes[a]);
+  const attribute = groupAttribute(attributes, chosen);
   const column = attribute ? attributes[attribute] : undefined;
   if (!attribute || !column) return unavailable('silo', 'noGroupAttribute');
+  const sizes = new Map<string, number>();
+  for (const v of column.values) if (v !== null) sizes.set(v, (sizes.get(v) ?? 0) + 1);
+  const valued = [...sizes.values()].reduce((a, b) => a + b, 0);
+  if ([...sizes.values()].filter((x) => x >= T.minGroupSize).length < T.minGroups)
+    return unavailable('silo', 'tooFewGroups');
   if (layers.length === 0) return unavailable('silo', 'noLayers');
   const found = new Map<
     string,
@@ -324,7 +436,8 @@ export function silos(
   >();
   for (const { ref, network } of layers) {
     for (const g of network.mixing[attribute]?.perGroup ?? []) {
-      if (g.size < T.minGroupSize || g.internal + g.external === 0 || !(g.ei <= T.maxEi)) continue;
+      if (g.size < T.minGroupSize || valued - g.size === 0) continue;
+      if (g.internal + g.external < T.minTies || !(g.ei <= T.maxEi)) continue;
       const best = found.get(g.group);
       if (!best || g.ei < best.ei) {
         found.set(g.group, {
@@ -441,13 +554,98 @@ export function negativeClusters(
   return outcome('negativeCluster', observations);
 }
 
+// ------------------------------------------------- one-way negative ratings
+
+/**
+ * Negative ratings not returned: on each signed layer, ratings below 0 whose
+ * reverse rating is not below 0 (neutral, positive, or not given), read from
+ * the directed ratings in either view. A layer with at least
+ * INSIGHT_RULES.oneWayNegative.minCount such ratings is an observation, with
+ * the counts by pair of groups (rater's group first) of the grouping
+ * attribute. The members are everyone who gave or received one, most involved
+ * first. Descriptive only: a rating that differs by direction may reflect
+ * rating habits, a missing response or a real difference in experience.
+ */
+export function oneWayNegative(
+  ids: readonly MemberId[],
+  signed: ReadonlyMap<LayerKey, Float64Array>,
+  drawLayer: LayerRef,
+  attributes: Readonly<Record<AttributeKey, AttributeColumn>>,
+  chosen?: AttributeKey,
+): InsightOutcome {
+  const T = INSIGHT_RULES.oneWayNegative;
+  if (signed.size === 0) return unavailable('oneWayNegative', 'noSignedLayer');
+  const n = ids.length;
+  const attribute = groupAttribute(attributes, chosen);
+  const values = attribute ? (attributes[attribute]?.values ?? []) : [];
+  const observations: Observation[] = [];
+  for (const [layer, s] of signed) {
+    let negative = 0;
+    let oneWay = 0;
+    let notRated = 0;
+    const involved = new Map<number, number>();
+    const byGroups = new Map<string, { value: string; other: string; count: number }>();
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (i === j || !((s[i * n + j] as number) < 0)) continue;
+        negative += 1;
+        const back = s[j * n + i] as number;
+        if (back < 0) continue;
+        oneWay += 1;
+        if (Number.isNaN(back)) notRated += 1;
+        involved.set(i, (involved.get(i) ?? 0) + 1).set(j, (involved.get(j) ?? 0) + 1);
+        const a = values[i] ?? null;
+        const b = values[j] ?? null;
+        if (attribute && a !== null && b !== null) {
+          const key = `${a}\u0000${b}`;
+          const g = byGroups.get(key) ?? { value: a, other: b, count: 0 };
+          g.count += 1;
+          byGroups.set(key, g);
+        }
+      }
+    }
+    if (oneWay < T.minCount) continue;
+    const members = [...involved.keys()]
+      .sort((a, b) => (involved.get(b) ?? 0) - (involved.get(a) ?? 0) || a - b)
+      .map((i) => ids[i] as MemberId);
+    const groups = [...byGroups.values()].sort(
+      (x, y) => y.count - x.count || (x.value < y.value ? -1 : x.value > y.value ? 1 : 0),
+    );
+    observations.push({
+      rule: 'oneWayNegative',
+      ref: layer,
+      members,
+      ...(attribute ? { groups: groups.map((g) => ({ attribute, ...g })) } : {}),
+      evidence: {
+        count: oneWay,
+        negative,
+        returned: negative - oneWay,
+        notRated,
+        minCount: T.minCount,
+      },
+      view: {
+        layer: drawLayer,
+        sizeMetric: 'betweenness',
+        layout: 'force',
+        groupBy: null,
+        filters: [],
+        highlight: members,
+        show: [layer],
+        drawNegative: true,
+      },
+    });
+  }
+  observations.sort((a, b) => (b.evidence.count ?? 0) - (a.evidence.count ?? 0));
+  return outcome('oneWayNegative', observations);
+}
+
 // ---------------------------------------------------- formal–informal gaps
 
 /**
  * Formal/informal gaps, from the formal–informal classification
- * (multiplexity). Members are grouped by the first attribute of
- * INSIGHT_RULES.silo.attributes the project has (team by default), or taken as
- * one group without it. For every pair of groups, and every group with
+ * (multiplexity). Members are grouped by the grouping attribute
+ * (groupAttribute: the project's choice, team by default), or taken as one
+ * group without it. For every pair of groups, and every group with
  * itself, the share of formal ties with no informal counterpart is formal only
  * / (formal only + both); the reverse share uses informal only. A pair of
  * groups is an observation when the share is at least
@@ -461,6 +659,7 @@ export function formalInformalGaps(
   fi: MultiplexResult['formalInformal'],
   directed: boolean,
   attributes: Readonly<Record<AttributeKey, AttributeColumn>>,
+  chosen?: AttributeKey,
 ): InsightOutcome[] {
   const T = INSIGHT_RULES.formalInformal;
   if (!fi) {
@@ -470,7 +669,7 @@ export function formalInformalGaps(
     ];
   }
   const n = ids.length;
-  const attribute = INSIGHT_RULES.silo.attributes.find((a) => attributes[a]) ?? null;
+  const attribute = groupAttribute(attributes, chosen);
   const values = attribute ? (attributes[attribute]?.values ?? []) : [];
   const groupOf = (i: number): string | null => (attribute ? (values[i] ?? null) : '');
   const key = (a: string, b: string) => (a <= b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
@@ -561,43 +760,90 @@ export interface InsightInput {
   /** Signed layers' directed ratings on −1..1. */
   signed: ReadonlyMap<LayerKey, Float64Array>;
   multiplex: MultiplexResult | null;
+  /** The project's grouping attribute for the group rules (settings.insight_group). */
+  groupAttribute?: AttributeKey;
+  /** Layer keys the silo and peripheral rules leave out (INSIGHT_RULES.excludedLayerGroups). */
+  excludedLayers?: readonly LayerKey[];
+}
+
+/**
+ * Silo and peripheral overlap (INSIGHT_RULES.overlap): for each silo group,
+ * the peripheral members in it when they make up at least minGroupShare of the
+ * group. The silo observation names how many, and the peripheral list leaves
+ * them out.
+ */
+function mergeOverlap(
+  ids: readonly MemberId[],
+  silo: InsightOutcome,
+  ranking: PeripheralRanking | null,
+): { silo: InsightOutcome; inSilo: Set<number> } {
+  const inSilo = new Set<number>();
+  if (!ranking || silo.observations.length === 0) return { silo, inSilo };
+  const index = new Map(ids.map((id, i) => [id, i]));
+  const peripheral = new Set(ranking.ranked);
+  const observations = silo.observations.map((o) => {
+    const both = o.members.map((id) => index.get(id) as number).filter((i) => peripheral.has(i));
+    if (both.length === 0 || both.length < INSIGHT_RULES.overlap.minGroupShare * o.members.length)
+      return o;
+    for (const i of both) inSilo.add(i);
+    return { ...o, evidence: { ...o.evidence, alsoPeripheral: both.length } };
+  });
+  return { silo: { ...silo, observations }, inSilo };
 }
 
 /** Applies every rule, in panel order. */
 export function observe(input: InsightInput): InsightOutcome[] {
   const { ids, directed, refs, refOrder } = input;
+  const chosen = input.groupAttribute;
   const composite = refs[COMPOSITE];
+  const excluded = new Set(input.excludedLayers ?? []);
   const layerTables = refOrder
     .map((ref) => refs[ref])
     .filter(
       (r): r is RefResult => r !== undefined && (r.kind === 'unsigned' || r.kind === 'positive'),
     )
     .map((r) => ({ ref: r.ref, node: r.node, layer: r.layer ?? r.ref }));
+  // Conflict layers are not working ties (INSIGHT_RULES.excludedLayerGroups).
+  const ruleTables = layerTables.filter((l) => !excluded.has(l.layer));
   // Negative clusters are drawn over the composite, or the first unsigned layer without one.
   const drawLayer =
     composite?.ref ?? refOrder.find((ref) => refs[ref]?.kind === 'unsigned') ?? COMPOSITE;
+  const ranking = rankPeripheral(ids.length, ruleTables, directed);
+  const merged = mergeOverlap(
+    ids,
+    silos(
+      ids,
+      [
+        ...(composite ? [{ ref: composite.ref, network: composite.network }] : []),
+        ...ruleTables
+          .filter((l) => refs[l.ref]?.kind === 'unsigned')
+          .map((l) => ({ ref: l.ref, network: (refs[l.ref] as RefResult).network })),
+      ],
+      input.attributes,
+      chosen,
+    ),
+    ranking,
+  );
   const out: InsightOutcome[] = [
     composite
       ? potentialBrokers(ids, composite.ref, composite.node, directed)
       : unavailable('brokers', 'noComposite'),
-    peripheralMembers(ids, layerTables, directed),
+    peripheralOutcome(ids, ranking, directed, merged.inSilo),
     possibleOverload(
       ids,
       layerTables.filter((l) => refs[l.ref]?.kind === 'unsigned'),
       directed,
     ),
-    silos(
-      ids,
-      [
-        ...(composite ? [{ ref: composite.ref, network: composite.network }] : []),
-        ...layerTables
-          .filter((l) => refs[l.ref]?.kind === 'unsigned')
-          .map((l) => ({ ref: l.ref, network: (refs[l.ref] as RefResult).network })),
-      ],
-      input.attributes,
-    ),
+    merged.silo,
     negativeClusters(ids, input.signed, drawLayer),
-    ...formalInformalGaps(ids, input.multiplex?.formalInformal ?? null, directed, input.attributes),
+    oneWayNegative(ids, input.signed, drawLayer, input.attributes, chosen),
+    ...formalInformalGaps(
+      ids,
+      input.multiplex?.formalInformal ?? null,
+      directed,
+      input.attributes,
+      chosen,
+    ),
   ];
   return INSIGHT_RULE_ORDER.map(
     (rule) => out.find((o) => o.rule === rule) ?? unavailable(rule, 'noLayers'),

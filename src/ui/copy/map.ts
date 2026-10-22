@@ -120,6 +120,9 @@ export const mapCopy = {
     tieRange: 'Tie strength',
     threshold: 'Tie strength from',
     thresholdTo: 'to',
+    negativeOutside: 'Draw negative ratings outside the range',
+    negativeOutsideHelp:
+      'A tie with a negative rating on a signed layer is drawn whatever its tie strength.',
     size: 'Node size',
     fill: 'Node fill',
     community: 'Community',
@@ -212,6 +215,7 @@ export const mapCopy = {
     threshold: (value: string) => `Ties below ${value} hidden`,
     thresholdTo: (value: string) => `Ties above ${value} hidden`,
     thresholdRange: (from: string, to: string) => `Ties outside ${from}–${to} hidden`,
+    negativeOutside: 'Ties with a negative rating drawn whatever their strength',
     hiddenLayers: (labels: string[]) => `Ties on ${labels.join(' and ')} hidden`,
     metricsUseAllTies: 'Every metric uses all ties, hidden or not',
     colour: 'Edge colour',

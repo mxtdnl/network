@@ -138,16 +138,27 @@ test('insights: every rule with its rule text, questions, and a link to the view
     'Possible overload',
     'Silos',
     'Negative clusters',
+    'Negative ratings not returned',
     'Formal ties with no informal counterpart',
     'Informal ties with no formal counterpart',
   ]) {
     await expect(panel.getByRole('heading', { name: title, exact: true })).toBeVisible();
   }
+  // Finance's peripheral members are named with the silo, not listed twice (D142).
+  await expect(panel.getByText(/Six of its 8 members also receive fewer ties/)).toBeVisible();
+  await expect(panel.getByText(/Six members this rule found are part of a group/)).toBeVisible();
+  // The rules group by the attribute chosen, and say so (D144).
+  const groupBy = panel.getByLabel('Group members by');
+  await expect(groupBy).toHaveValue('team');
+  await groupBy.selectOption('location');
+  await expect(panel.getByText(/Members are grouped by location\./).first()).toBeVisible();
+  await groupBy.selectOption('team');
+  await expect(panel.getByText(/Members are grouped by team or function\./).first()).toBeVisible();
   // Each rule states its thresholds; one that cannot run says why.
   await expect(panel.getByText(/among the highest 10% of members/)).toBeVisible();
   await expect(panel.getByText(/Not applied: this rule reads the advice/)).toBeVisible();
   // Questions, never verdicts.
-  await expect(panel.getByText(/ties involving Finance stay within Finance/)).toBeVisible();
+  await expect(panel.getByText(/most ties involving Finance stay within Finance/)).toBeVisible();
   await expect(panel.getByText(/How does work reach the rest of the organisation\?/)).toBeVisible();
 
   // The link applies the view: grouped by team, Finance highlighted.

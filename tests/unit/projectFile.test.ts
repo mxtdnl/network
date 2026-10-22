@@ -216,6 +216,19 @@ describe('schema versions and migrations', () => {
       (savedViewV3toV4(weighted, {}, ['valence', 'energy']) as typeof weighted).weights
         .customTreatment,
     ).toStrictEqual({ energy: 'filterNegative', valence: 'positive' });
+    // A custom weighting that left an enabled conflict layer unset weighted it 1 (D143).
+    const custom = {
+      id: 'x',
+      map: {},
+      weights: { preset: 'custom', custom: { advice: 0.5 }, customTreatment: {} },
+    };
+    expect(
+      (savedViewV3toV4(custom, {}, [], ['conflict_task']) as typeof custom).weights.custom,
+    ).toStrictEqual({ advice: 0.5, conflict_task: 1 });
+    const preset = { ...custom, weights: { ...custom.weights, preset: 'health' } };
+    expect(
+      (savedViewV3toV4(preset, {}, [], ['conflict_task']) as typeof preset).weights.custom,
+    ).toStrictEqual({ advice: 0.5 });
     expect(savedViewV3toV4('not a view')).toBe('not a view');
     expect(savedViewV3toV4({ id: 'x' })).toStrictEqual({ id: 'x' });
   });
@@ -427,6 +440,7 @@ describe('saved views: every encoding field is checked on load', () => {
     ['edgeStyle', { edgeStyle: 'formal' }, 'has an invalid edge style'],
     ['sizeScale', { sizeScale: 'log' }, 'has an invalid node-size scale'],
     ['communityOutlines', { communityOutlines: 'yes' }, 'whether communities are outlined'],
+    ['negativeOutsideRange', { negativeOutsideRange: 'on' }, 'negative ratings outside the range'],
     ['thresholdTo', { thresholdTo: 1.5 }, 'has an invalid upper tie strength'],
     ['thresholdTo type', { thresholdTo: '0.5' }, 'has an invalid upper tie strength'],
     [
@@ -488,6 +502,27 @@ describe('palettes and pinned colours (D127) are checked on load', () => {
     };
     expect(parseProject(serialiseProject(chosen))).toEqual(chosen);
     expect(parseProject(serialiseProject(p)).settings.palette).toBeUndefined();
+  });
+
+  it('round-trips the grouping attribute of the insight rules, absent by default', () => {
+    const p = richProject();
+    const chosen: Project = { ...p, settings: { ...p.settings, insight_group: 'location' } };
+    expect(parseProject(serialiseProject(chosen))).toEqual(chosen);
+    expect(parseProject(serialiseProject(p)).settings.insight_group).toBeUndefined();
+    expect(() => parseProject(withSettings({ insight_group: 3 }))).toThrow(
+      'settings.insight_group',
+    );
+  });
+
+  it('gives version 3 conflict layers weight 0, keeping a weight the analyst set (D143)', () => {
+    const file = JSON.parse(V3_PROJECT) as { layers: Record<string, unknown>[] };
+    for (const l of file.layers) if (l.group === 'conflict') l.enabled = true;
+    const custom = file.layers.find((l) => l.key === 'conflict_personal');
+    if (custom) custom.default_weight = 2;
+    const loaded = parseProject(JSON.stringify(file));
+    const weight = (key: string) => loaded.layers.find((l) => l.key === key)?.default_weight;
+    expect(weight('conflict_task')).toBe(0);
+    expect(weight('conflict_personal')).toBe(2);
   });
 
   it.each([

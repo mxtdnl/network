@@ -1,6 +1,8 @@
 # Initial assessment: Graticule on realistic survey data
 
-Date: 2026-10-22. Status: initial report, written as the brief for a deep dive into the issues below. Nothing in the analysis, the insight rules or the defaults has been changed. Each issue touches a rule or default the owner approved (CLAUDE.md D26, D72, Q26, plan Q3), so each fix needs the owner's decision.
+Date: 2026-10-22. Update, same day: issues 1–3, 5 and 7–9 were decided by the owner and built in build plan session 3 (CLAUDE.md D142–D145, `tests/unit/scenarioOutcomes.test.ts`); issues 4 and 6 remain for sessions 4 and 5. The figures below describe the tool before that session.
+
+Status: initial report, written as the brief for a deep dive into the issues below. Nothing in the analysis, the insight rules or the defaults has been changed. Each issue touches a rule or default the owner approved (CLAUDE.md D26, D72, Q26, plan Q3), so each fix needs the owner's decision.
 
 ## 1. Scope and method
 

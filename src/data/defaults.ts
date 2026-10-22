@@ -159,14 +159,16 @@ const OPTIONAL: readonly LayerSeed[] = [
     'Conflict: task disagreement',
     'How often do you experience task disagreement with this person?',
     'frequency',
-    { group: 'conflict' },
+    // Weight 0 by default (D143): friction is not a tie, so it does not raise the composite.
+    { group: 'conflict', default_weight: 0 },
   ),
   scaled(
     'conflict_personal',
     'Conflict: personal friction',
     'How often do you experience personal friction with this person?',
     'frequency',
-    { group: 'conflict' },
+    // Weight 0 by default (D143): friction is not a tie, so it does not raise the composite.
+    { group: 'conflict', default_weight: 0 },
   ),
   {
     key: 'primary_channel',

@@ -482,6 +482,20 @@ export function MapControls() {
         />
       </div>
 
+      {/* Negative ratings whatever the range (D145), offered when a signed layer is enabled. */}
+      {signedLayers.length > 0 && (
+        <div className="field">
+          <Switch
+            label={C.negativeOutside}
+            checked={settings.negativeOutsideRange}
+            onChange={(on) => {
+              setMap({ negativeOutsideRange: on });
+            }}
+          />
+          <p className="field__help">{C.negativeOutsideHelp}</p>
+        </div>
+      )}
+
       <div className="field">
         <label htmlFor={ids.size} className="field__label">
           {C.size}

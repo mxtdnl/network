@@ -103,6 +103,8 @@ export interface MapSettings {
   threshold: number;
   /** Display only: ties on `layer` stronger than this are hidden (upper bound, D141). */
   thresholdTo: number;
+  /** Display only: ties with a negative rating on a signed layer are drawn outside the range too (D145). */
+  negativeOutsideRange: boolean;
   /** Layers switched off on the map; with `hideOffLayers`, their ties are hidden (D59). */
   layerToggles: Record<LayerKey, boolean>;
   /** When true, a layer switched off also hides its ties (CLAUDE.md D59). */
@@ -190,6 +192,8 @@ interface Actions {
   restoreLayer: (key: LayerKey) => void;
   applyRatings: (variable: LayerKey, changes: readonly RatingChange[]) => void;
   setCoverageThreshold: (threshold: number) => void;
+  /** The attribute the group insight rules use (settings.insight_group). */
+  setInsightGroup: (key: string) => void;
   /** A change the analysis reads (for example ties imported from survey
    *  responses): the revision moves, so everything is recalculated. */
   updateProject: (fn: (p: Project) => Project, status?: StatusMessage) => void;
@@ -250,6 +254,7 @@ export function initialMapSettings(): MapSettings {
     // Display only: the map opens with ties below 0.3 hidden (CLAUDE.md D129).
     threshold: DEFAULT_THRESHOLD,
     thresholdTo: DEFAULT_THRESHOLD_TO,
+    negativeOutsideRange: false,
     layerToggles: {},
     hideOffLayers: false,
     filters: [],
@@ -467,6 +472,9 @@ export const useAppStore = create<AppState>()((set, get) => {
     },
     setCoverageThreshold: (coverage_threshold) => {
       change((p) => ({ ...p, settings: { ...p.settings, coverage_threshold } }));
+    },
+    setInsightGroup: (insight_group) => {
+      change((p) => ({ ...p, settings: { ...p.settings, insight_group } }));
     },
     updateProject: (fn, status) => {
       change(fn, status);

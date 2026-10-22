@@ -171,6 +171,7 @@ export function legendSections(
     notes: [
       ...(width.kind === 'tiesFrom' ? [] : [L.tiesFrom(tiesFrom)]),
       ...(rangeNote ? [rangeNote] : []),
+      ...(rangeNote && model.negativeOutsideRange ? [L.negativeOutside] : []),
       ...(model.hiddenLayers.length > 0 ? [L.hiddenLayers(model.hiddenLabels)] : []),
       ...(rangeNote || model.hiddenLayers.length > 0 ? [L.metricsUseAllTies] : []),
     ],
