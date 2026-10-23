@@ -68,6 +68,8 @@ export const insightsCopy = {
     brokers: 'Potential brokers',
     peripheral: 'Peripheral members',
     overload: 'Possible overload',
+    onlyRoutes: 'Only routes between groups',
+    concentratedDemand: 'Concentrated demand',
     silo: 'Silos',
     negativeCluster: 'Negative clusters',
     formalOnly: 'Formal ties with no informal counterpart',
@@ -103,7 +105,7 @@ export const insightsCopy = {
   clearHighlight: 'Clear highlight',
   groupBy: 'Group members by',
   groupByHelp:
-    'Used by the rules on silos, formal and informal ties, and negative ratings not returned.',
+    'Used by the rules on only routes between groups, concentrated demand, silos, formal and informal ties, and negative ratings not returned.',
   peripheralInSilo: (n: number) =>
     `${countOf(n, 'member this rule found is', 'members this rule found are')} part of a group listed under Silos, and named there.`,
 } as const;
@@ -126,6 +128,10 @@ export function ruleText(rule: InsightRuleId, directed: boolean, group = 'team')
       return `${received} at or below the ${ordinal(R.peripheral.quantile)} percentile of members and at least ${percent(R.peripheral.minBelowMedian)} below the median, on more than half of the layers considered: each unsigned layer except ${excludedText}, and the positive ratings of each signed layer, not the composite. A layer on which no one receives a tie is not considered. At most ${String(R.peripheral.maxMembers)} members are listed, furthest below the median first. Members who make up at least ${percent(R.overlap.minGroupShare)} of a silo group are named with that group instead.`;
     case 'overload':
       return `On the advice and workflow dependency layers: ${lower(connectionsIn)} at or above the ${ordinal(R.overload.quantile)} percentile of members and at least ${String(R.overload.medianMultiple)} times the median. At most ${String(R.overload.maxMembers)} members per layer.`;
+    case 'onlyRoutes':
+      return `Members are grouped by ${by}. On the composite and on each unsigned layer except ${excludedText}, with ties read without direction: a group of at least ${String(R.silo.minGroupSize)} members whose ties with every other group are held by at most ${String(R.onlyRoutes.maxGateways)} of its members, and by at most ${percent(R.onlyRoutes.maxGatewayShare)} of the group. The layer with the fewest such members is quoted. Also every member through whom alone at least ${String(R.onlyRoutes.minCutOff)} colleagues are linked to the rest of the network (a cut point).`;
+    case 'concentratedDemand':
+      return `On the advice and workflow dependency layers, ties received are counted from the directed ratings in either view. Across the network: the ${percent(R.concentratedDemand.topShare)} of members who receive the most ties (at least one member) hold at least ${percent(R.concentratedDemand.minShare)} of at least ${String(R.concentratedDemand.minTies)} ties. Within each group by ${by} of at least ${String(R.concentratedDemand.groupMinSize)} members receiving at least ${String(R.concentratedDemand.groupMinTies)} ties: the group's own top ${percent(R.concentratedDemand.topShare)} hold at least ${String(R.concentratedDemand.groupMultiple)} times the share they would hold if ties were spread evenly.`;
     case 'silo':
       return `Members are grouped by ${by}. A group of at least ${String(R.silo.minGroupSize)} members whose E-I index is ${signed2(R.silo.maxEi)} or lower on the composite or on any unsigned layer except ${excludedText}, which means at least three ties inside the group for every tie outside it, counting only layers with at least ${String(R.silo.minTies)} ties involving the group. The layer with the lowest index is quoted. Not applied when fewer than ${String(R.silo.minGroups)} groups have ${String(R.silo.minGroupSize)} members or more.`;
     case 'negativeCluster':
@@ -168,6 +174,28 @@ export function questionText(o: Observation, ctx: InsightContext): string {
     }
     case 'overload':
       return `On ${lower(ctx.layerLabel(o.ref))}, ${lower(countOf(o.members.length, 'member is', 'members are'))} named by the most colleagues: up to ${formatValue(n('highest'))} each, against a median of ${formatValue(n('median'))}. How is the demand on their time shared?`;
+    case 'onlyRoutes': {
+      const layer = lower(ctx.layerLabel(o.ref));
+      if (e.cutPoint === 1)
+        return `On ${layer}, ${formatValue(n('cutOff'))} members are linked to the rest of the network only through one colleague. What would happen to these links if that colleague were away?`;
+      const team = o.group?.value ?? '';
+      const k = n('gateways');
+      const others = (o.groups ?? [])
+        .slice(0, 3)
+        .map((g) => `${formatValue(g.count)} with ${g.other}`);
+      const more = (o.groups?.length ?? 0) > 3 ? ', and others' : '';
+      const where = others.length > 0 ? ` (${others.join(', ')}${more})` : '';
+      return `On ${layer}, ${lower(countOf(k, 'member', 'members'))} of the ${formatValue(n('size'))} in ${team} ${k === 1 ? 'holds' : 'hold'} all ${formatValue(n('ties'))} ties between ${team} and other groups${where}. What would happen to ${team}’s links with the rest of the organisation if ${k === 1 ? 'this member' : 'one of them'} were away?`;
+    }
+    case 'concentratedDemand': {
+      const layer = lower(ctx.layerLabel(o.ref));
+      const k = n('top');
+      const even = percent(n('even'));
+      if (!o.group)
+        return `On ${layer}, the ${formatValue(k)} members named by the most colleagues receive ${percent(n('share'))} of all ${formatValue(n('received'))} ties, against ${even} if ties were spread evenly. How is the demand on their time shared, and what supports it?`;
+      const team = o.group.value;
+      return `On ${layer}, ${lower(countOf(k, 'member', 'members'))} of the ${formatValue(n('of'))} in ${team} ${k === 1 ? 'receives' : 'receive'} ${percent(n('share'))} of the ${formatValue(n('received'))} ties ${team} receives, against ${even} if ties were spread evenly. How is the demand within ${team} shared?`;
+    }
     case 'silo': {
       const team = o.group?.value ?? '';
       const also =

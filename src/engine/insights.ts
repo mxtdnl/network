@@ -8,6 +8,7 @@
 // Quantiles use linear interpolation between order statistics (NumPy's
 // default), over the members whose value is defined.
 
+import { articulationPoints, neighboursOf, partsWithout } from './metrics/cutpoints';
 import { percentile } from './metrics/percentile';
 import {
   COMPOSITE,
@@ -18,6 +19,8 @@ import {
   type InsightRuleId,
   type InsightUnavailable,
   type LayerKey,
+  type LoadResult,
+  type LoadShare,
   type LayerRef,
   type MemberId,
   type MultiplexResult,
@@ -74,6 +77,33 @@ export const INSIGHT_RULES = {
     /** A group is tested on a layer only when it has at least this many ties on it, inside and outside. */
     minTies: 5,
   },
+  onlyRoutes: {
+    /**
+     * A group (of the grouping attribute, at least silo.minGroupSize members)
+     * whose ties with every other group are held by at most this many of its
+     * members…
+     */
+    maxGateways: 2,
+    /** …and by at most this share of the group, on the composite or a working layer. */
+    maxGatewayShare: 0.5,
+    /** A member whose removal cuts at least this many members off from the rest (a cut point). */
+    minCutOff: 3,
+  },
+  concentratedDemand: {
+    /** Layers the rule reads, by key, as the overload rule. */
+    layers: ['advice', 'workflow_dependency'] as readonly string[],
+    /** The members receiving most ties: this share of members, at least one. */
+    topShare: 0.1,
+    /** Across the network: the top members hold at least this share of incoming ties… */
+    minShare: 0.25,
+    /** …of at least this many. */
+    minTies: 20,
+    /** Within a group of at least groupMinSize members and groupMinTies incoming ties… */
+    groupMinSize: 5,
+    groupMinTies: 10,
+    /** …the group's top members hold at least this multiple of their even share (top / members). */
+    groupMultiple: 2.5,
+  },
   negativeCluster: {
     /** Members joined by pairs who rate each other negatively in both directions, at least this many. */
     minSize: 3,
@@ -124,8 +154,10 @@ export const INSIGHT_RULES = {
 /** Panel order. */
 export const INSIGHT_RULE_ORDER: readonly InsightRuleId[] = [
   'brokers',
+  'onlyRoutes',
   'peripheral',
   'overload',
+  'concentratedDemand',
   'silo',
   'negativeCluster',
   'oneWayNegative',
@@ -491,6 +523,304 @@ export function silos(
   });
   observations.sort((a, b) => (a.evidence.ei ?? 0) - (b.evidence.ei ?? 0));
   return outcome('silo', observations);
+}
+
+// ------------------------------------------------------- routes between groups
+
+export interface GroupRoutes {
+  groups: {
+    group: string;
+    size: number;
+    /** Pairs (one in the group, one outside it, members with a value) tied in either direction. */
+    externalTies: number;
+    /** Members of the group in those ties, most ties first, then in member order. */
+    gateways: number[];
+    /** Ties each gateway holds, aligned with `gateways`. */
+    gatewayTies: number[];
+  }[];
+  pairs: {
+    a: string;
+    b: string;
+    sizeA: number;
+    sizeB: number;
+    /** Pairs of members, one in each group, tied in either direction. */
+    ties: number;
+    /** Members in those ties, most ties first. */
+    members: number[];
+  }[];
+}
+
+/**
+ * The ties between groups of an attribute, read without direction (a tie in
+ * either direction counts once): per group, the members holding every tie
+ * with other groups; per pair of groups, the ties directly between them.
+ * Members without a value are left out. `weights` are a layer's view weights.
+ */
+export function groupRoutes(
+  weights: ArrayLike<number>,
+  n: number,
+  column: AttributeColumn,
+): GroupRoutes {
+  const order = [...column.categories];
+  for (const v of column.values) if (v !== null && !order.includes(v)) order.push(v);
+  const present = order.filter((g) => column.values.includes(g));
+  const index = new Map(present.map((g, k) => [g, k]));
+  const gi = column.values.map((v) => (v === null ? -1 : (index.get(v) ?? -1)));
+  const k = present.length;
+  const size = new Array<number>(k).fill(0);
+  for (const g of gi) if (g >= 0) size[g] = (size[g] ?? 0) + 1;
+  const external = new Array<number>(k).fill(0);
+  const held = new Array<number>(n).fill(0);
+  const pairTies = new Array<number>(k * k).fill(0);
+  const pairMembers = Array.from({ length: k * k }, () => new Map<number, number>());
+  for (let i = 0; i < n; i++) {
+    const a = gi[i] as number;
+    if (a < 0) continue;
+    for (let j = i + 1; j < n; j++) {
+      const b = gi[j] as number;
+      if (b < 0 || a === b) continue;
+      if (!((weights[i * n + j] as number) > 0 || (weights[j * n + i] as number) > 0)) continue;
+      external[a] = (external[a] ?? 0) + 1;
+      external[b] = (external[b] ?? 0) + 1;
+      held[i] = (held[i] ?? 0) + 1;
+      held[j] = (held[j] ?? 0) + 1;
+      const key = Math.min(a, b) * k + Math.max(a, b);
+      pairTies[key] = (pairTies[key] ?? 0) + 1;
+      const m = pairMembers[key] as Map<number, number>;
+      m.set(i, (m.get(i) ?? 0) + 1).set(j, (m.get(j) ?? 0) + 1);
+    }
+  }
+  const byHeld = (xs: number[], count: (i: number) => number) =>
+    xs.sort((x, y) => count(y) - count(x) || x - y);
+  const groups = present.map((group, g) => {
+    const gateways = byHeld(
+      [...Array(n).keys()].filter((i) => gi[i] === g && (held[i] ?? 0) > 0),
+      (i) => held[i] ?? 0,
+    );
+    return {
+      group,
+      size: size[g] ?? 0,
+      externalTies: external[g] ?? 0,
+      gateways,
+      gatewayTies: gateways.map((i) => held[i] ?? 0),
+    };
+  });
+  const pairs: GroupRoutes['pairs'] = [];
+  for (let a = 0; a < k; a++) {
+    for (let b = a + 1; b < k; b++) {
+      const m = pairMembers[a * k + b] as Map<number, number>;
+      pairs.push({
+        a: present[a] as string,
+        b: present[b] as string,
+        sizeA: size[a] ?? 0,
+        sizeB: size[b] ?? 0,
+        ties: pairTies[a * k + b] ?? 0,
+        members: byHeld([...m.keys()], (i) => m.get(i) ?? 0),
+      });
+    }
+  }
+  return { groups, pairs };
+}
+
+/**
+ * Only routes between groups (build plan session 7), on the composite and each
+ * working layer (unsigned, outside INSIGHT_RULES.excludedLayerGroups), ties
+ * read without direction:
+ * - a group of at least silo.minGroupSize members, with members outside it,
+ *   whose ties with every other group are held by at most
+ *   onlyRoutes.maxGateways of its members and at most maxGatewayShare of the
+ *   group; one observation per group, quoting the layer with fewest such
+ *   members (the first in layer order on a tie), with its ties per other group;
+ * - a cut point whose removal cuts at least minCutOff members off from the
+ *   largest part that remains; one observation per member, quoting the layer
+ *   on which it cuts off most.
+ * The group part is skipped, without making the rule unavailable, when no
+ * grouping attribute applies (fewer than silo.minGroups groups of
+ * silo.minGroupSize members).
+ */
+export function onlyRoutes(
+  ids: readonly MemberId[],
+  layers: readonly { ref: LayerRef; weights: Float64Array }[],
+  attributes: Readonly<Record<AttributeKey, AttributeColumn>>,
+  chosen?: AttributeKey,
+): InsightOutcome {
+  const T = INSIGHT_RULES.onlyRoutes;
+  const S = INSIGHT_RULES.silo;
+  if (layers.length === 0) return unavailable('onlyRoutes', 'noLayers');
+  const n = ids.length;
+  const observations: Observation[] = [];
+  const attribute = groupAttribute(attributes, chosen);
+  const column = attribute ? attributes[attribute] : undefined;
+  const sizes = new Map<string, number>();
+  for (const v of column?.values ?? []) if (v !== null) sizes.set(v, (sizes.get(v) ?? 0) + 1);
+  const valued = [...sizes.values()].reduce((a, b) => a + b, 0);
+  if (
+    attribute &&
+    column &&
+    [...sizes.values()].filter((x) => x >= S.minGroupSize).length >= S.minGroups
+  ) {
+    const found = new Map<
+      string,
+      {
+        ref: LayerRef;
+        group: GroupRoutes['groups'][number];
+        pairs: GroupRoutes['pairs'];
+        layers: number;
+      }
+    >();
+    for (const { ref, weights } of layers) {
+      const routes = groupRoutes(weights, n, column);
+      for (const g of routes.groups) {
+        const k = g.gateways.length;
+        if (g.size < S.minGroupSize || valued - g.size === 0 || g.externalTies === 0) continue;
+        if (k > T.maxGateways || k > T.maxGatewayShare * g.size) continue;
+        const best = found.get(g.group);
+        const pairs = routes.pairs.filter(
+          (p) => p.ties > 0 && (p.a === g.group || p.b === g.group),
+        );
+        if (!best || k < best.group.gateways.length)
+          found.set(g.group, { ref, group: g, pairs, layers: (best?.layers ?? 0) + 1 });
+        else best.layers += 1;
+      }
+    }
+    for (const [value, f] of found) {
+      const members = f.group.gateways.map((i) => ids[i] as MemberId);
+      observations.push({
+        rule: 'onlyRoutes',
+        ref: f.ref,
+        members,
+        group: { attribute, value },
+        groups: f.pairs
+          .map((p) => ({ attribute, value, other: p.a === value ? p.b : p.a, count: p.ties }))
+          .sort((a, b) => b.count - a.count || (a.other < b.other ? -1 : 1)),
+        evidence: {
+          cutPoint: 0,
+          gateways: members.length,
+          size: f.group.size,
+          ties: f.group.externalTies,
+          layers: f.layers,
+          maxGateways: T.maxGateways,
+        },
+        view: {
+          layer: f.ref,
+          sizeMetric: 'betweenness',
+          layout: 'grouped',
+          groupBy: attribute,
+          filters: [],
+          highlight: members,
+          show: [],
+          markBridges: true,
+        },
+      });
+    }
+  }
+  const cuts = new Map<number, { ref: LayerRef; cutOff: number[]; layers: number }>();
+  for (const { ref, weights } of layers) {
+    const adj = neighboursOf(weights, n);
+    for (const v of articulationPoints(adj)) {
+      const cutOff = partsWithout(adj, v)
+        .slice(1)
+        .flat()
+        .sort((a, b) => a - b);
+      if (cutOff.length < T.minCutOff) continue;
+      const best = cuts.get(v);
+      if (!best || cutOff.length > best.cutOff.length)
+        cuts.set(v, { ref, cutOff, layers: (best?.layers ?? 0) + 1 });
+      else best.layers += 1;
+    }
+  }
+  const cutObservations = [...cuts]
+    .sort(([a, x], [b, y]) => y.cutOff.length - x.cutOff.length || a - b)
+    .map(([v, c]): Observation => {
+      const member = ids[v] as MemberId;
+      return {
+        rule: 'onlyRoutes',
+        ref: c.ref,
+        members: [member],
+        evidence: {
+          cutPoint: 1,
+          cutOff: c.cutOff.length,
+          layers: c.layers,
+          minCutOff: T.minCutOff,
+        },
+        view: {
+          layer: c.ref,
+          sizeMetric: 'betweenness',
+          layout: 'force',
+          groupBy: null,
+          filters: [],
+          highlight: [member, ...c.cutOff.map((i) => ids[i] as MemberId)],
+          show: [],
+          markBridges: true,
+        },
+      };
+    });
+  observations.sort((a, b) => (a.evidence.gateways ?? 0) - (b.evidence.gateways ?? 0));
+  return outcome('onlyRoutes', [...observations, ...cutObservations]);
+}
+
+// ------------------------------------------------------- concentrated demand
+
+/**
+ * Concentrated demand (build plan session 7), on the advice and workflow
+ * dependency layers: ties received per member are read from the directed
+ * ratings in either view (RefResult.load). An observation when the top
+ * concentratedDemand.topShare of members (at least one) hold at least minShare
+ * of at least minTies incoming ties; and for each group of the grouping
+ * attribute with at least groupMinSize members and groupMinTies incoming ties
+ * whose own top members hold at least groupMultiple times their even share.
+ */
+export function concentratedDemand(
+  ids: readonly MemberId[],
+  layers: readonly { ref: LayerRef; layer: LayerKey; load: LoadResult | null }[],
+  directed: boolean,
+  attributes: Readonly<Record<AttributeKey, AttributeColumn>>,
+  chosen?: AttributeKey,
+): InsightOutcome {
+  const T = INSIGHT_RULES.concentratedDemand;
+  const read = layers.filter((l) => T.layers.includes(l.layer));
+  if (read.length === 0) return unavailable('concentratedDemand', 'layersNotEnabled');
+  const attribute = groupAttribute(attributes, chosen);
+  const sizeMetric: NodeMetricKey = directed ? 'inDegree' : 'degree';
+  const observations: Observation[] = [];
+  for (const { ref, load } of read) {
+    if (!load) continue;
+    const make = (share: LoadShare, group: string | null): Observation => {
+      const members = Array.from(share.top, (i) => ids[i] as MemberId);
+      return {
+        rule: 'concentratedDemand',
+        ref,
+        members,
+        ...(group !== null && attribute ? { group: { attribute, value: group } } : {}),
+        evidence: {
+          share: share.share,
+          held: share.held,
+          received: share.received,
+          top: share.top.length,
+          of: share.members,
+          even: share.top.length / share.members,
+          highest: load.incoming[share.top[0] as number] as number,
+        },
+        view: {
+          layer: ref,
+          sizeMetric,
+          layout: group !== null && attribute ? 'grouped' : 'force',
+          groupBy: group !== null && attribute ? attribute : null,
+          filters: [],
+          highlight: members,
+          show: [],
+        },
+      };
+    };
+    const o = load.overall;
+    if (o.received >= T.minTies && o.share >= T.minShare) observations.push(make(o, null));
+    for (const g of attribute ? (load.byGroup[attribute] ?? []) : []) {
+      if (g.members < T.groupMinSize || g.received < T.groupMinTies) continue;
+      if (!(g.share >= T.groupMultiple * (g.top.length / g.members))) continue;
+      observations.push(make(g, g.group));
+    }
+  }
+  return outcome('concentratedDemand', observations);
 }
 
 // -------------------------------------------------------- negative clusters
@@ -883,10 +1213,31 @@ export function observe(input: InsightInput): InsightOutcome[] {
     ),
     ranking,
   );
+  const working = ruleTables
+    .map((l) => refs[l.ref] as RefResult)
+    .filter((r) => r.kind === 'unsigned');
   const out: InsightOutcome[] = [
     composite
       ? potentialBrokers(ids, composite.ref, composite.node, directed)
       : unavailable('brokers', 'noComposite'),
+    onlyRoutes(
+      ids,
+      [...(composite ? [composite] : []), ...working].map((r) => ({
+        ref: r.ref,
+        weights: r.weights,
+      })),
+      input.attributes,
+      chosen,
+    ),
+    concentratedDemand(
+      ids,
+      layerTables
+        .filter((l) => refs[l.ref]?.kind === 'unsigned')
+        .map((l) => ({ ref: l.ref, layer: l.layer, load: (refs[l.ref] as RefResult).load })),
+      directed,
+      input.attributes,
+      chosen,
+    ),
     peripheralOutcome(ids, ranking, directed, merged.inSilo),
     possibleOverload(
       ids,

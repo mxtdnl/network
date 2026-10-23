@@ -165,6 +165,14 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
     legend.getByText('Community outline, detected on Composite of all layers'),
   ).toBeVisible();
   await page.getByRole('switch', { name: 'Outline communities' }).click();
+  // Bridge ties (build plan session 7): switched by keyboard, explained in the legend.
+  const bridges = page.getByRole('switch', { name: 'Mark bridge ties' });
+  await bridges.focus();
+  await page.keyboard.press('Space');
+  await expect(bridges).toBeChecked();
+  await expect(legend.getByText(/^Bridge tie/)).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(legend.getByText(/^Bridge tie/)).toHaveCount(0);
   await expectNoAxeViolations(page);
 
   // Layer toggles can also hide a layer's ties.

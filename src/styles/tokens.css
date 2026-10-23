@@ -36,6 +36,11 @@
   --val-p2: #156d8e;
   --val-p3: #004d6e;
 
+  /* Bridge ties (build plan session 7): a diamond on the tie, 3.3:1 on paper and
+     at least ΔE00 8 from every edge colour, ink and the accent under normal
+     vision and the three simulations (tests/unit/contrast.test.ts). */
+  --map-bridge: #e06800;
+
   /* 2.2 Diverging palettes the analyst may choose instead (D127): purple to green */
   --div-pg-n3: #701b98;
   --div-pg-n2: #8f4cae;
@@ -153,6 +158,7 @@
   --map-dash: 4px; /* informal ties: 4px dash, 3px gap (design-system §2.3) */
   --map-gap: 3px;
   --map-dot: 1px; /* ties that are neither formal nor informal: dotted */
+  --map-bridge-mark: 5px; /* half the diagonal of the diamond marking a bridge tie */
   --map-fade: 0.3; /* opacity of members outside a highlight (design-system §2.3) */
   --map-ramp-low: 0.6; /* edge colour by an unsigned layer: the lightest of five steps from paper to val-p3, at 3.3:1 on paper (D126) */
   --map-legend-swatch: 24px; /* legend line and colour samples */

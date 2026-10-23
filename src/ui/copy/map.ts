@@ -86,6 +86,9 @@ export const mapCopy = {
     styleNone: 'None',
     styleFormalInformal: 'Formal and informal collaboration',
     styleUnavailable: 'Edge style needs the formal and informal collaboration layers.',
+    markBridges: 'Mark bridge ties',
+    markBridgesHelp: (layer: string) =>
+      `A diamond marks each tie on ${layer} whose two members have no contact in common, so it is their shortest link. Found from every tie, drawn or not.`,
     sizeScale: 'Node size scale',
     byValue: 'By value',
     byRank: 'By rank',
@@ -241,6 +244,9 @@ export const mapCopy = {
     colourExcluded: 'Not used: its layer is left out of this export',
     outlines: (layer: string) => `Community outline, detected on ${layer}`,
     noRatings: 'Gave no ratings (hollow)',
+    bridges: (n: number) =>
+      `Bridge tie: its two members have no contact in common (${formatValue(n)} drawn)`,
+    noBridges: 'Bridge ties: none among the ties drawn',
     style: 'Edge style',
     styleVariable: 'Formal and informal collaboration',
     formal: 'Formal only',

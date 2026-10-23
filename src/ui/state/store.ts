@@ -30,6 +30,8 @@ export type CentreView = 'map' | 'matrix' | 'table' | 'groups' | 'compare' | 'me
 export type RightPanel = 'member' | 'explore' | 'insights' | 'views' | 'coverage';
 export type MatrixMode = 'explore' | 'enter';
 export type CompareMode = 'layers' | 'formalInformal';
+/** The Table tab shows the metrics table or the ranked bars of incoming ties (build plan session 7). */
+export type TableMode = 'metrics' | 'incoming';
 
 export interface UiState {
   centreView: CentreView;
@@ -51,6 +53,9 @@ export interface UiState {
   legend: LegendMode | null;
   /** The Groups view's grouping; null follows the insight rules' attribute (D154). */
   grouping: Grouping | null;
+  tableMode: TableMode;
+  /** The layer of the incoming-ties bars; null follows advice, workflow dependency, then "Ties from". */
+  incomingLayer: string | null;
 }
 
 export type LegendMode = 'full' | 'condensed' | 'beside';
@@ -143,6 +148,8 @@ export interface MapSettings {
   sizeScale: 'value' | 'rank';
   /** A stone outline around each community on the "Ties from" layer (D136). */
   communityOutlines: boolean;
+  /** Mark the ties whose two members have no contact in common (local bridges, build plan session 7). */
+  markBridges: boolean;
 }
 
 export type { EdgeColourChoice, EdgeWidthChoice };
@@ -188,6 +195,8 @@ interface Actions {
   setRightOpen: (open: boolean) => void;
   setLegend: (legend: LegendMode | null) => void;
   setGrouping: (grouping: Grouping | null) => void;
+  setTableMode: (mode: TableMode) => void;
+  setIncomingLayer: (layer: string | null) => void;
   setAnonymise: (on: boolean) => void;
   openNotice: () => void;
   closeNotice: () => void;
@@ -289,6 +298,7 @@ export function initialMapSettings(): MapSettings {
     edgeStyle: 'none',
     sizeScale: 'value',
     communityOutlines: false,
+    markBridges: false,
   };
 }
 
@@ -328,6 +338,8 @@ export function initialUiState(noticeSeen: boolean): UiState {
     rightOpen: false,
     legend: null,
     grouping: null,
+    tableMode: 'metrics',
+    incomingLayer: null,
   };
 }
 
@@ -396,6 +408,12 @@ export const useAppStore = create<AppState>()((set, get) => {
     },
     setLegend: (legend) => {
       setUi({ legend });
+    },
+    setTableMode: (tableMode) => {
+      setUi({ tableMode });
+    },
+    setIncomingLayer: (incomingLayer) => {
+      setUi({ incomingLayer });
     },
     setGrouping: (grouping) => {
       setUi({ grouping });

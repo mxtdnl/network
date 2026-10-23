@@ -56,6 +56,8 @@ const theme: MapTheme = {
     },
   },
   other: '#b4b9bf',
+  bridge: '#e06800',
+  bridgeMark: 5,
   ramp: ['#6694a8', '#4c8098', '#336b85', '#195c79', '#004d6e'],
   nodeMin: 4,
   nodeMax: 16,
@@ -890,6 +892,49 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
     // A community fill already shows them.
     expect((await model({ communityOutlines: true, fill: { kind: 'community' } })).outlines).toBe(
       null,
+    );
+  });
+
+  it('marks bridge ties with a diamond and a legend entry (build plan session 7)', async () => {
+    const patch: Partial<MapSettings> = {
+      view: 'symmetrised',
+      symmetrise: 'min',
+      layer: 'connection_strength',
+      threshold: 0,
+    };
+    const off = await model(patch);
+    expect(off.markBridges).toBe(false);
+    expect(off.edges.some((e) => e.bridge)).toBe(false);
+    const m = await model({ ...patch, markBridges: true });
+    const r = await resultFor(demo, { ...initialMapSettings(), ...patch });
+    const lb = r.refs.connection_strength?.ties?.localBridges;
+    expect(lb && lb.from.length).toBeGreaterThan(0);
+    // Every local bridge is drawn at threshold 0, and only those are marked.
+    expect(m.bridges).toBe(lb?.from.length);
+    for (const e of m.edges.filter((x) => x.bridge)) {
+      const k = Array.from(lb?.from ?? []).findIndex(
+        (a, i) => a === Math.min(e.source, e.target) && lb?.to[i] === Math.max(e.source, e.target),
+      );
+      expect(k).toBeGreaterThanOrEqual(0);
+    }
+    const marks = legendSections(m, theme).find((x) => x.kind === 'marks');
+    expect(marks?.kind === 'marks' && marks.items.map((i) => i.mark)).toContain('bridge');
+    expect(marks?.kind === 'marks' && marks.items.find((i) => i.mark === 'bridge')?.label).toBe(
+      `Bridge tie: its two members have no contact in common (${String(m.bridges)} drawn)`,
+    );
+    const scene = buildScene(m, spiral(m.n), t, size, theme, none);
+    const diamonds = scene.arrows
+      .filter((a) => a.fill === theme.bridge)
+      .reduce((k, a) => k + a.coords.length / 12, 0);
+    expect(diamonds).toBe(m.bridges);
+    // Each diamond sits on a paper halo drawn before it.
+    const order = scene.arrows.map((a) => a.fill);
+    expect(order.indexOf(theme.paper)).toBeLessThan(order.indexOf(theme.bridge));
+    // With no bridge among the ties drawn the legend says so.
+    const none0 = await model({ ...patch, markBridges: true, threshold: 1 });
+    const marks0 = legendSections(none0, theme).find((x) => x.kind === 'marks');
+    expect(marks0?.kind === 'marks' && marks0.items.find((i) => i.mark === 'bridge')?.label).toBe(
+      'Bridge ties: none among the ties drawn',
     );
   });
 

@@ -208,6 +208,34 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await page.getByRole('radio', { name: 'Force-directed' }).check();
   await settled(page);
 
+  // Bridge ties (build plan session 7): connection strength, mutual by the weaker direction.
+  await page
+    .getByRole('region', { name: 'Map' })
+    .getByLabel('Ties from')
+    .selectOption({ label: 'Connection strength' });
+  await page.getByRole('radio', { name: 'Mutual' }).check();
+  await page
+    .getByLabel('Combine the two directions by')
+    .selectOption({ label: 'Weaker of the two' });
+  // Bridges are often weak ties, so every tie is drawn; no member is selected, so nothing is faded.
+  const closePanel = page.getByRole('button', { name: 'Close member panel' });
+  if ((await closePanel.count()) > 0) await closePanel.first().click();
+  await page.getByLabel('Tie strength from').fill('0');
+  await page.getByRole('switch', { name: 'Mark bridge ties' }).click();
+  await settled(page);
+  await expect(
+    page.getByRole('region', { name: 'Legend' }).getByText(/^Bridge tie: /),
+  ).toBeVisible();
+  await shot(page, 'bridge-ties');
+  await page.getByRole('switch', { name: 'Mark bridge ties' }).click();
+  await page.getByLabel('Tie strength from').fill('0.3');
+  await page.getByRole('radio', { name: 'Directed', exact: true }).check();
+  await page
+    .getByRole('region', { name: 'Map' })
+    .getByLabel('Ties from')
+    .selectOption({ index: 0 });
+  await settled(page);
+
   await rightTab(page, 'Explore').click();
   await right(page).getByLabel('From', { exact: true }).selectOption({ index: 3 });
   await right(page).getByLabel('To', { exact: true }).selectOption({ index: 30 });
@@ -278,6 +306,16 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await page.getByRole('radio', { name: 'Tie strength' }).check();
   await centreTab(page, 'Table').click();
   await shot(page, 'metrics-table');
+  // Ranked bars of incoming ties (build plan session 7), on the composite (the demo has no advice layer).
+  await page.getByRole('radio', { name: 'Incoming ties' }).check();
+  const openDrawer = page.getByRole('button', {
+    name: 'Member, insights and coverage',
+    expanded: true,
+  });
+  if ((await openDrawer.count()) > 0) await openDrawer.click();
+  await expect(page.getByRole('table', { name: /^Ties received on / })).toBeVisible();
+  await shot(page, 'incoming-ties');
+  await page.getByRole('radio', { name: 'Metrics' }).check();
   // The Groups view (D154), with Finance chosen as the subgroup, then cleared.
   await centreTab(page, 'Groups').click();
   // The compact layout's drawer, left open by an earlier step, would cover the group map.
@@ -307,7 +345,7 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await expectNoNames(page);
 
   const help = await openHelp(page, 'Method notes');
-  await expect(help.getByRole('heading', { name: 'Betweenness' })).toBeVisible();
+  await expect(help.getByRole('heading', { name: 'Betweenness', exact: true })).toBeVisible();
   await shot(page, 'help');
   expect(problems).toEqual([]);
 });
@@ -516,7 +554,7 @@ test(
       'true',
     );
     await expect(dialog.getByRole('heading', { name: 'Method notes' })).toHaveCount(0);
-    await expect(dialog.getByRole('heading', { name: 'Betweenness' })).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'Betweenness', exact: true })).toBeVisible();
     await expectNoAxeViolations(page, 'method notes');
 
     // And the method notes link back to the user guide.

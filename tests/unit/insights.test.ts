@@ -399,6 +399,8 @@ describe('rules on realistic data (build plan session 3)', () => {
         kind,
         node: table({ inStrength: strength }),
         network,
+        weights: new Float64Array(64),
+        load: null,
       }) as unknown as RefResult;
     const network = mix(20, 1, -0.9);
     const results = observe({
@@ -425,6 +427,8 @@ describe('rules on realistic data (build plan session 3)', () => {
         kind: 'unsigned',
         node: table({ inStrength: f64(values) }),
         network,
+        weights: new Float64Array(64),
+        load: null,
       }) as unknown as RefResult;
     const results = observe({
       ids: ids(8),

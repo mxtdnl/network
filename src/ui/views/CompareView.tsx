@@ -365,6 +365,7 @@ function classModel(data: MapData, classes: Uint8Array, cls: number, style: Edge
         widthNotRated: false,
         style,
         reciprocated: both,
+        bridge: false,
       });
       if (!(neighbours[i] as number[]).includes(j)) (neighbours[i] as number[]).push(j);
       if (!(neighbours[j] as number[]).includes(i)) (neighbours[j] as number[]).push(i);
@@ -377,6 +378,8 @@ function classModel(data: MapData, classes: Uint8Array, cls: number, style: Edge
     colour: { ...model.colour, kind: 'none', reason: 'chosen', anyMissing: false },
     width: { kind: 'uniform', layerLabel: '', anyMissing: false },
     outlines: null,
+    markBridges: false,
+    bridges: 0,
     styleShown: true,
     stylesPresent: [style],
     directions: {

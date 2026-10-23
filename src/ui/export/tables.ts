@@ -195,6 +195,19 @@ export function networkMetricsCsv(ctx: ExportContext): ExportFile {
       add(name, M.communities, cell(r.communities.count));
       add(name, M.modularity, cell(r.communities.modularity));
     }
+    // Ties, cut points and load (build plan session 7); not on negative sub-layers.
+    if (r.ties) {
+      const spans = Array.from(r.ties.localBridges.span);
+      add(name, M.localBridges, cell(spans.length));
+      add(name, M.bridgesNoOtherRoute, cell(spans.filter((x) => x === Infinity).length));
+      add(name, M.cutPoints, cell(r.ties.cutPoints.members.length));
+    }
+    if (r.load) {
+      add(name, M.tiesReceived, cell(r.load.overall.received));
+      add(name, M.topShare, cell(r.load.overall.share));
+      for (const [key, groups] of Object.entries(r.load.byGroup))
+        for (const g of groups) add(name, M.topShare, cell(g.share), attrLabel(key), g.group);
+    }
     for (const [key, mix] of Object.entries(n.mixing)) {
       const a = attrLabel(key);
       add(name, M.ei, cell(mix.ei), a);

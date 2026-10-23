@@ -218,7 +218,7 @@ The legend shows:
 - **Edge width**: tie strength on the layer chosen under Ties from, or on another layer you choose; or the same for every tie. A tie with no rating on the width layer is drawn thinnest, in grey, with its own legend entry, so it is never read as 0.
 - **Edge colour**: by default, negative valence ratings in orange-brown, with neutral and positive ties in grey; "Show the full scale" adds blue for positive ratings. Ties with no valence rating are dark grey, so they are never read as neutral. Edge colour can instead show another signed layer, the strength of any layer on a blue ramp, whether a tie runs within or between groups, or nothing.
 - **Edge style**: formal only (solid), informal only (dashed), both (solid with a dashed line), or neither (dotted). It is off until you choose it under Edge style.
-- **Marks**: community outlines, when switched on, and the subgroup, a shortest path or highlighted members.
+- **Marks**: community outlines and bridge ties, when switched on, and the subgroup, a shortest path or highlighted members.
 - **Direction**: in the directed view, a tie rated one way has an arrowhead from the rater to the person rated; a pair rated both ways is one line without arrowheads, whose width and colour combine the two directions by the rule chosen under Direction.
 
 ![The full legend: node size, node fill, edge width, edge colour, edge style and arrowheads](user-guide/legend.jpg)
@@ -227,7 +227,9 @@ The legend shows:
 
 - **Ties from** chooses the layer, or the composite, that sets which ties are drawn, their width, the layout, node size, communities and ranks.
 - **Show on the map**: with "Hide its ties", a switch for each layer hides the pairs tied on it; every layer starts on. With "Keep its ties" (the default) every layer's ties are drawn.
-- **Edges**: Edge colour, Edge width and Edge style, as in the legend above. Each line encoding shows one thing at a time.
+- **Edges**: Edge colour, Edge width and Edge style, as in the legend above. Each line encoding shows one thing at a time. **Mark bridge ties** puts an orange diamond on each tie whose two members have no contact in common (a local bridge): without that tie, any route between them is longer, or there is none. Bridges are found from every tie of the layer drawn, not only those within the range, and the legend counts the ones drawn.
+
+![Bridge ties marked on the map: an orange diamond on each tie whose two members share no contact](user-guide/bridge-ties.jpg)
 - **Direction.** Directed shows each person's ratings separately. Mutual combines the two directions of each pair, by their average, the weaker or the stronger of the two, or "Both report a tie", which keeps a tie only when each has rated the other above 0. Under the weaker of the two, a tie to someone who did not answer survives, because their missing rating is filled from the one given; under "Both report a tie" it does not. The choice changes the metrics, so it is stated in every export.
 - **Tie strength from** and **to** draw only the ties whose strength lies within the range, both ends included; the metrics still use every tie. Set from 0.30 to 0.50, for example, to see only the middling ties. The map opens at 0.30 to 1.00, so the weakest ties are hidden, and the legend says which ties are hidden; set the range to 0 to 1 to draw every tie. From can never be above to: moving one slider past the other moves both. Showing an insight on the map draws every tie, and a saved view keeps its own range.
 - **Draw negative ratings outside the range** (when valence or energy is enabled) also draws every tie that carries a negative rating, however weak. With valence as a multiplier on the composite, a negatively rated tie is weakened and often falls below 0.30, so it would otherwise be hidden.
@@ -246,13 +248,16 @@ The legend shows:
 Selecting a member, a subgroup, a filter or an ego view applies to every view.
 
 - **Matrix → Tie strength**: an adjacency matrix, shaded by tie strength, which can be ordered by name, attribute, community or a metric.
-- **Table**: every member's metrics, sortable by any column. Export table saves it as CSV. Rank stability recalculates a metric many times, each time leaving out some members, and shows the range each rank falls in.
+- **Table → Metrics**: every member's metrics, sortable by any column. Export table saves it as CSV. Rank stability recalculates a metric many times, each time leaving out some members, and shows the range each rank falls in.
+- **Table → Incoming ties**: a ranked bar chart of how many colleagues name each member on a chosen layer (advice first, then workflow dependency, then Ties from), most first, with each member's share of all ties received. A line marks where the top 10 % of members ends (where several members receive the same number at that point, member order decides which are above the line; the share is the same either way), and a sentence above says what share of all ties they receive against an even spread. It is a table, so a screen reader reads it row by row; filters and the ego view choose who is listed.
 - **Groups**: ties within and between groups. Choose "Group by" (any category attribute, such as team, location or level, or Community, the groups detected on the layer) and "Ties from". The matrix shows, for each group and each pair of groups, the share of the ties possible that exist, shaded from fewer to more; in the directed view rows give and columns receive. Arrow keys move between cells and a sentence names the cell ("Finance to Sales: 4 of 64 possible ties, 6%"). Enter makes the row's group the subgroup in every view, and Shift and Enter makes it both groups of the cell. The group map draws one circle per group, sized by its members, with thicker lines between groups that share more of their possible ties; click a circle to choose that group. The table lists each group's members, ties inside, ties leaving and E-I index; press a group's name to choose it, and again to clear the subgroup. Every member and tie counts, whatever the map's range and filters. The PDF report's table of ties within and between groups uses the grouping chosen here.
 - **Compare**: two layers side by side on the same positions, with their overlap; or formal against informal collaboration, classifying each pair as formal only, informal only, both or neither.
 
 ![The adjacency matrix, ordered by name, with the tie strength key](user-guide/adjacency-matrix.jpg)
 
 ![The metrics table: one row per member, one column per metric](user-guide/metrics-table.jpg)
+
+![Incoming ties on the demo's composite, ranked, with bars and the top 10 % marked](user-guide/incoming-ties.jpg)
 
 ![The Groups view by team: the share of possible ties within and between teams, the group map and the table per team](user-guide/groups-view.jpg)
 
@@ -319,15 +324,17 @@ The checks change no figure. The definitions and thresholds are in the [method n
 
 ### Insights
 
-The Insights tab lists rule-based observations: potential brokers, peripheral members, possible overload, silos, negative clusters, negative ratings not returned, and formal ties with no informal counterpart (and the reverse). Each is written as a question to explore with the people involved, never as a finding about anyone, and each shows the rule and thresholds that produced it. Under the members named, an observation says what most of them have in common when it is more common among them than in the project as a whole, for example "Three of the five share tenure band Under 1 year", and marks anyone named who gave no ratings. Show on the map sets the map up to show the observation; Save as view keeps it for a presentation. The rules are in the [method notes](method-notes.md#8-insight-rules).
+The Insights tab lists rule-based observations: potential brokers, only routes between groups, peripheral members, possible overload, concentrated demand, silos, negative clusters, negative ratings not returned, and formal ties with no informal counterpart (and the reverse). Each is written as a question to explore with the people involved, never as a finding about anyone, and each shows the rule and thresholds that produced it. Under the members named, an observation says what most of them have in common when it is more common among them than in the project as a whole, for example "Three of the five share tenure band Under 1 year", and marks anyone named who gave no ratings. Show on the map sets the map up to show the observation; Save as view keeps it for a presentation. The rules are in the [method notes](method-notes.md#8-insight-rules).
 
-**Group members by** chooses the attribute the silo, formal–informal and negative-ratings rules compare: team by default, or any other category, such as a programme in a matrix organisation or the former organisation after a merger. The choice is saved with the project, and each rule names it.
+**Group members by** chooses the attribute the only-routes, concentrated-demand, silo, formal–informal and negative-ratings rules compare: team by default, or any other category, such as a programme in a matrix organisation or the former organisation after a merger. The choice is saved with the project, and each rule names it.
 
 A few things the rules do so that realistic data does not mislead:
 
 - Silos are checked only when there are at least two groups of three or more members; with one group, every tie is inside it by definition. The conflict layers are not read, because conflict between colleagues stays inside a team by nature.
 - Potential brokers need a bridging score of at least 0.05, and peripheral members must be at least 10 % below the median, so small differences in a close-knit team are not reported.
 - At most five peripheral members are listed, and the question says how many were found. Peripheral members who make up at least half of a silo group are named with that group instead of twice.
+- Only routes between groups names a group of three or more whose ties with every other group are held by at most two of its members, and at most half the group, on the composite or any working layer; and any member through whom alone three or more colleagues are linked to the rest (a cut point). Its view marks bridge ties.
+- Concentrated demand reads advice and workflow dependency: it is observed when the 10 % of members named most receive at least 25 % of all ties, or when, within a group of five or more, the group's own top members receive at least 2.5 times an even share. Possible overload stays beside it: one describes how demand is spread, the other names who receives most.
 - Negative ratings not returned counts negative ratings whose reverse is neutral, positive or missing, by group. Its view draws negative ratings whatever the tie strength. A one-way rating can reflect how someone rates in general, or a colleague who did not answer, as much as the relationship.
 
 The conflict layers have weight 0 in the composite by default, so frequent conflict does not make a stronger tie; give them a weight in Custom if you want them counted.

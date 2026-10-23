@@ -24,6 +24,8 @@ NetworkX has no function or a different convention (docs/method-notes.md):
   missing direction leaves the pair missing; signed layers are symmetrised
   before they are split;
 * path metrics use distance = 1 / w;
+* local bridges and cut points read the ties without direction in the directed
+  view (both are defined on undirected graphs in NetworkX);
 * harmonic closeness is divided by (n - 1);
 * eigenvector centrality is computed on the largest strongly connected
   (directed) or connected (undirected) component only; ties in size go to the
@@ -35,7 +37,7 @@ NetworkX has no function or a different convention (docs/method-notes.md):
 
 Functions that NetworkX lacks (centralisation, E-I index, cross-group density,
 dyad reciprocity, signed in-valence and triads, multiplexity, resilience
-reachability) are computed in plain Python from NetworkX primitives; each
+reachability, members cut off by a cut point, load concentration) are computed in plain Python from NetworkX primitives; each
 fixture section records its source.
 """
 
@@ -670,6 +672,71 @@ def resilience(G, removed):
     }
 
 
+def tie_structure(G, n):
+    """Edge betweenness, local bridges with span and cut points (build plan session 7).
+
+    Local bridges and articulation points are defined on undirected graphs, so
+    in the directed view they are computed on the ties read without direction
+    (G.to_undirected()), as the engine does.
+    """
+    eb = nx.edge_betweenness_centrality(G, weight="distance", normalized=True)
+    lookup = {}
+    for (u, v), x in eb.items():
+        lookup[(u, v)] = x
+        if not G.is_directed():
+            lookup[(v, u)] = x
+    ties = []
+    for i in range(n):
+        for j in range(n) if G.is_directed() else range(i + 1, n):
+            if G.has_edge(i, j):
+                ties.append([i, j, lookup[(i, j)]])
+    U = G.to_undirected() if G.is_directed() else G
+    bridges = sorted(
+        [min(u, v), max(u, v), span] for u, v, span in nx.local_bridges(U, with_span=True)
+    )
+    points = sorted(nx.articulation_points(U))
+    cut_off = []
+    for v in points:
+        comp = nx.node_connected_component(U, v)
+        H = U.subgraph(comp - {v})
+        sizes = sorted((len(c) for c in nx.connected_components(H)), reverse=True)
+        cut_off.append(sum(sizes[1:]))
+    return {
+        "edge_betweenness": ties,
+        "local_bridges": bridges,
+        "articulation_points": points,
+        "cut_off": cut_off,
+    }
+
+
+def load(case, w_directed):
+    """Ties received per member from the directed ties, and the share held by the top 10 %."""
+    n = case.n
+    D = build_graph(n, w_directed, True)
+    incoming = [D.in_degree(i) for i in range(n)]
+
+    def share(members):
+        k = max(1, math.ceil(0.1 * len(members)))
+        ranked = sorted(members, key=lambda i: (-incoming[i], i))
+        received = sum(incoming[i] for i in members)
+        held = sum(incoming[i] for i in ranked[:k])
+        return {
+            "members": len(members),
+            "top": ranked[:k],
+            "received": received,
+            "held": held,
+            "share": held / received if received > 0 else NAN,
+        }
+
+    by_group = {}
+    for key, spec in case.attributes.items():
+        by_group[key] = [
+            {"group": g, **share([i for i in range(n) if spec["values"][i] == g])}
+            for g in group_order(spec)
+        ]
+    return {"incoming": incoming, "overall": share(list(range(n))), "by_group": by_group}
+
+
 def path_pairs(n):
     return [(0, n - 1), (n - 1, 0), (1, n // 2), (2, n // 3)]
 
@@ -833,6 +900,8 @@ def run_case(case):
             if not directed:
                 entry["network"]["communities"] = communities(G)
             if kind != "negative":
+                entry["ties_structure"] = tie_structure(G, n)
+                entry["load"] = load(case, ref_directed(case, kind, layer, composite))
                 entry["resilience"] = [resilience(G, r) for r in case.removals]
                 entry["shortest_paths"] = shortest_paths(G, n)
             refs[ref] = entry
@@ -878,7 +947,11 @@ def main():
                 "average clustering, components, Louvain and modularity",
                 "python": "symmetrisation, rescaling, composite, dyad reciprocity, centralisation, "
                 "E-I index, cross-group density, signed in-valence and triads, multiplexity, "
-                "resilience reachability and averages (from networkx shortest paths); "
+                "resilience reachability and averages (from networkx shortest paths), "
+                "cut-off counts (from networkx components) and load concentration "
+                "(from networkx in-degree); "
+                "edge betweenness uses nx.edge_betweenness_centrality, local bridges "
+                "nx.local_bridges(with_span=True) and cut points nx.articulation_points; "
                 "shortest paths use nx.all_shortest_paths and nx.dijkstra_path_length",
             },
             "views": run_case(case),

@@ -125,6 +125,45 @@ function constructed(): Observation[] {
       { group: { attribute: 'team', value: 'Finance' } },
     ),
     make('negativeCluster', 'valence-', { size: 5, pairs: 6 }),
+    make(
+      'onlyRoutes',
+      'connection_strength',
+      { cutPoint: 0, gateways: 2, size: 8, ties: 2, layers: 2 },
+      {
+        group: { attribute: 'team', value: 'Finance' },
+        groups: [{ attribute: 'team', value: 'Finance', other: 'Operations', count: 2 }],
+      },
+    ),
+    make(
+      'onlyRoutes',
+      'workflow_dependency',
+      { cutPoint: 0, gateways: 1, size: 6, ties: 19, layers: 1 },
+      {
+        group: { attribute: 'team', value: 'Integration Office' },
+        groups: [
+          { attribute: 'team', value: 'Integration Office', other: 'Customer', count: 7 },
+          { attribute: 'team', value: 'Integration Office', other: 'Finance', count: 6 },
+          { attribute: 'team', value: 'Integration Office', other: 'Technology', count: 4 },
+          { attribute: 'team', value: 'Integration Office', other: 'Legal', count: 2 },
+        ],
+      },
+    ),
+    make('onlyRoutes', 'connection_strength', { cutPoint: 1, cutOff: 8, layers: 2 }),
+    make('concentratedDemand', 'advice', {
+      share: 0.31,
+      held: 40,
+      received: 129,
+      top: 4,
+      of: 40,
+      even: 0.1,
+      highest: 14,
+    }),
+    make(
+      'concentratedDemand',
+      'workflow_dependency',
+      { share: 0.5, held: 23, received: 46, top: 1, of: 6, even: 1 / 6, highest: 23 },
+      { group: { attribute: 'team', value: 'Integration Office' } },
+    ),
     make('peripheral', 'composite', {
       count: 5,
       found: 9,

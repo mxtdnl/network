@@ -47,6 +47,18 @@ export interface FixtureRef {
       seed: number;
     } | null;
   };
+  /** Edge betweenness [from, to, value], local bridges [from, to, span (null = no other route)], cut points. */
+  ties_structure?: {
+    edge_betweenness: [number, number, number][];
+    local_bridges: [number, number, Num][];
+    articulation_points: number[];
+    cut_off: number[];
+  };
+  load?: {
+    incoming: number[];
+    overall: FixtureLoadShare;
+    by_group: Record<string, (FixtureLoadShare & { group: string })[]>;
+  };
   shortest_paths?: {
     from: number;
     to: number;
@@ -63,6 +75,14 @@ export interface FixtureRef {
     average_distance: Num;
     average_hops: Num;
   }[];
+}
+
+export interface FixtureLoadShare {
+  members: number;
+  top: number[];
+  received: number;
+  held: number;
+  share: Num;
 }
 
 export interface FixtureView {

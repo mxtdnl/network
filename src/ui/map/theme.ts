@@ -18,6 +18,9 @@ export interface MapTheme {
     diverging: Record<DivergingPalette, string[]>;
   };
   other: string;
+  /** The diamond marking a bridge tie, and half its diagonal (build plan session 7). */
+  bridge: string;
+  bridgeMark: number;
   /** Sequential ramp for edge colour by an unsigned layer, five steps from light to dark (D126). */
   ramp: string[];
   /** Node radius range in CSS pixels, and the radius of a member whose size metric is not defined. */
@@ -77,6 +80,8 @@ export function readMapTheme(source: Element | TokenSource = document.documentEl
       diverging: mapRecord(PALETTE_TOKENS.diverging, text),
     },
     other: text('--cat-other'),
+    bridge: text('--map-bridge'),
+    bridgeMark: number('--map-bridge-mark'),
     ramp: rampColours(text('--val-p3'), text('--paper'), number('--map-ramp-low')),
     nodeMin: number('--map-node-min'),
     nodeMax: number('--map-node-max'),

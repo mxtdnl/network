@@ -150,6 +150,13 @@ For path-based metrics, weight is converted to distance as 1/w. The method notes
 - centralisation;
 - E-I index and cross-group density, by any attribute.
 
+**Ties, cut points and load.** Computed per layer and for the composite, not on negative sub-layers:
+- edge betweenness of every tie;
+- local bridges (ties whose two members have no contact in common) with their span, the steps of the other route once the tie is removed;
+- cut points: members whose removal cuts others off, with the number cut off;
+- the members holding each group's ties with other groups, by the attribute the insight rules group by;
+- load concentration: ties received per member, from the directed ratings in either view, and the share held by the top 10 % of members, overall and within each group.
+
 **Signed layers (valence, energy).**
 - Negative weights are never passed to path-based algorithms.
 - Each signed layer is split into positive and negative sub-layers, which are computed separately.
@@ -229,6 +236,7 @@ The network map is an interactive node-link diagram of members and their weighte
 | Node size | Chosen metric, scaled by value (default) or by rank |
 | Node fill | Chosen attribute or detected community; a member who gave no ratings is drawn hollow (section 6, data quality) |
 | Community outline | Optional: an outline around each detected community, so communities can be read while fill shows another attribute |
+| Bridge ties | Optional: a diamond on each local bridge (a tie whose two members have no contact in common) of the layer drawn, in a mark colour that is neither the accent nor the shortest-path ink |
 | Edge width | The tie strength of the layer that sets the ties shown (strength or composite); or another unsigned layer; or the same width for every tie |
 | Edge colour | Valence, on a diverging scale that is safe for colour-vision deficiencies and has a neutral midpoint, colouring negative ratings only by default with a switch to show the full scale; or another signed layer; or whether a tie stays within a group or crosses between groups; or another unsigned layer on a sequential scale; or none |
 | Edge style | Off by default; formal versus informal when switched on and both are shown |
@@ -250,6 +258,7 @@ The network map is an interactive node-link diagram of members and their weighte
 **Linked secondary views.** Selection stays in sync across all views.
 - Adjacency matrix, sortable by attribute, community or metric, and heat-coded.
 - Metrics table, sortable and exportable.
+- Ranked bars of incoming ties: the members shown, most ties received first, on a chosen layer (advice by default), with each member's share of all ties received and the top 10 % marked; the chart is a table, so it is its own alternative for screen readers.
 - Groups view: members grouped by any category or ordered attribute, or by detected community, on the layer that sets the ties shown, in the current view. A group connection matrix (the share of possible ties within each group and between each pair of groups, heat-coded, with a sentence for the focused cell), a group map (one node per group, sized by its members, joined by lines whose width is the share of possible ties between the groups, with a table alternative), and a table of members, ties inside, ties leaving and E-I per group. Choosing a group makes its members the subgroup in every view.
 - Side-by-side comparison of two layers.
 
@@ -268,7 +277,9 @@ The network map is an interactive node-link diagram of members and their weighte
 The panel lists rule-based observations. Each one shows the rule that produced it and links to the view that shows it. Examples:
 - **Potential brokers:** high betweenness with low constraint.
 - **Peripheral members:** low in-strength across most layers.
+- **Only routes between groups:** a group whose ties with every other group are held by one or two of its members, and members through whom alone several colleagues are linked to the rest (cut points).
 - **Possible overload:** highest in-degree on advice or workflow dependency.
+- **Concentrated demand:** on advice or workflow dependency, the share of ties received that the top 10 % of members hold, overall and within each group.
 - **Silos:** groups with low cross-group density (E-I index).
 - **Negative clusters:** clusters of reciprocated negative valence.
 - **Negative ratings not returned:** negative ratings whose reverse rating is not negative, counted by group.

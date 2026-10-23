@@ -191,6 +191,15 @@
   stroke: var(--stone);
 }
 
+/* Bridge ties (build plan session 7): a diamond on a paper halo, as on the map. */
+.legend__bridge {
+  fill: var(--paper);
+}
+
+.legend__bridge--mark {
+  fill: var(--map-bridge);
+}
+
 .legend__arrow {
   fill: var(--stone);
 }
