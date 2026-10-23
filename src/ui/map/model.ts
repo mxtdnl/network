@@ -64,6 +64,8 @@ export interface MapEdge {
    * by the symmetrisation rule (CLAUDE.md D131). Source is the lower index.
    */
   reciprocated: boolean;
+  /** A local bridge on the layer drawn, marked when bridge ties are marked (build plan session 7). */
+  bridge: boolean;
 }
 
 export type FillGroupKind = 'value' | 'community' | 'other' | 'notRecorded' | 'noCommunity';
@@ -159,6 +161,13 @@ export interface MapModel {
   highlighted: Set<number> | null;
   /** Community per member on the selected layer, when communities are outlined (D136); -1 for none. */
   outlines: number[] | null;
+  /**
+   * Bridge ties are marked (build plan session 7): the setting is on and the
+   * layer drawn has tie structure (not a negative sub-layer).
+   */
+  markBridges: boolean;
+  /** Bridge ties drawn, when marked. */
+  bridges: number;
   /** The project's palettes (D127): renderers take their colours from the theme's palette of that id. */
   palette: PaletteChoice;
   /** Tie directions reconstructed from colleagues' ratings, all layers (build plan session 5). */
@@ -554,6 +563,10 @@ export function buildMapModel(
     };
   });
   const weights = result.refs[edgeLayer]?.weights;
+  // Local bridges of the layer drawn, from every tie (metrics use all ties), as unordered pairs.
+  const lb = settings.markBridges ? (result.refs[edgeLayer]?.ties?.localBridges ?? null) : null;
+  const bridgePairs = new Set<number>();
+  if (lb) lb.from.forEach((a, k) => bridgePairs.add(a * n + (lb.to[k] as number)));
 
   // Edge colour (D126). A choice whose layer is not in this analysis draws no
   // colour, and the legend says why.
@@ -682,6 +695,7 @@ export function buildMapModel(
           widthNotRated,
           style,
           reciprocated: both,
+          bridge: bridgePairs.has(Math.min(i, j) * n + Math.max(i, j)),
         });
         const ni = neighbours[i] as number[];
         const nj = neighbours[j] as number[];
@@ -788,6 +802,8 @@ export function buildMapModel(
     searchMatches,
     highlighted,
     outlines,
+    markBridges: lb !== null,
+    bridges: edges.filter((e) => e.bridge).length,
     palette: paletteChoice(project),
     reconstructed: Object.values(result.reconstructed).reduce((s, p) => s + p.length, 0),
     standardised: result.remedies.standardise === 'rank',

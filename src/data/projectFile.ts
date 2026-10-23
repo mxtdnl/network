@@ -381,6 +381,10 @@ export function checkSavedView(v: Obj): string[] {
       'has an invalid setting for negative ratings outside the range.',
     );
     need(
+      m.markBridges === undefined || isBool(m.markBridges),
+      'has an invalid setting for marking bridge ties.',
+    );
+    need(
       m.nonRespondents === undefined ||
         m.nonRespondents === 'mark' ||
         m.nonRespondents === 'leaveOut',

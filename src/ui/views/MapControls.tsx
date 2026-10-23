@@ -389,6 +389,17 @@ export function MapControls() {
             </p>
           )}
         </div>
+        {/* Bridge ties (build plan session 7): local bridges on the layer drawn. */}
+        <div className="field">
+          <Switch
+            label={C.markBridges}
+            checked={settings.markBridges}
+            onChange={(on) => {
+              setMap({ markBridges: on });
+            }}
+          />
+          <p className="field__help">{C.markBridgesHelp(layerLabel(settings.layer))}</p>
+        </div>
       </fieldset>
 
       <fieldset className="map-controls__group">

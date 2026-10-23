@@ -409,6 +409,8 @@ export interface InsightView {
   show: LayerKey[];
   /** Draw ties carrying a negative rating whatever the tie-strength range. */
   drawNegative?: boolean;
+  /** Mark bridge ties (local bridges) on the map. */
+  markBridges?: boolean;
 }
 
 /**

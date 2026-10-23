@@ -520,6 +520,29 @@ export function legendPrimitives(
                 node(x + box / 2 + t.nodeMin + t.line, cy, t.nodeMin, t.fade),
               ];
             if (item.mark === 'path') return [edge(x, cy, x + box, cy, t.ink, t.focusWidth)];
+            if (item.mark === 'bridge') {
+              // A tie with the diamond on its paper halo, as on the map.
+              const mid = x + box / 2;
+              const diamond = (fill: string, r: number): Primitive[] => [
+                {
+                  kind: 'polygon',
+                  fill,
+                  alpha: 1,
+                  points: [mid - r, cy, mid, cy - r, mid + r, cy],
+                },
+                {
+                  kind: 'polygon',
+                  fill,
+                  alpha: 1,
+                  points: [mid - r, cy, mid, cy + r, mid + r, cy],
+                },
+              ];
+              return [
+                edge(x, cy, x + box, cy, t.stone, t.edgeMin),
+                ...diamond(t.paper, t.bridgeMark + t.line),
+                ...diamond(t.bridge, t.bridgeMark),
+              ];
+            }
             if (item.mark === 'hollow') {
               const r = Math.min((t.nodeMin + t.nodeMax) / 2, box / 2 - t.line);
               return [

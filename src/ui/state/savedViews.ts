@@ -71,6 +71,7 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
     edgeStyle: map.edgeStyle,
     sizeScale: map.sizeScale,
     communityOutlines: map.communityOutlines,
+    markBridges: map.markBridges,
   };
 }
 
@@ -85,6 +86,8 @@ export function savedToMap(saved: SavedMapSettings, project: Project): MapSettin
     thresholdTo: saved.thresholdTo ?? DEFAULT_THRESHOLD_TO,
     // Absent in views saved before the switch (D145): off.
     negativeOutsideRange: saved.negativeOutsideRange === true,
+    // Absent in views saved before bridge marks (build plan session 7): off.
+    markBridges: saved.markBridges === true,
     // Absent in views saved before the remedies (D150, D151): off.
     nonRespondents: saved.nonRespondents ?? 'mark',
     reconstruct: saved.reconstruct === true,

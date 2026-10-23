@@ -56,7 +56,10 @@ export type LegendSection =
       kind: 'marks';
       title: string;
       variable: string;
-      items: { mark: 'group' | 'path' | 'highlight' | 'outline' | 'hollow'; label: string }[];
+      items: {
+        mark: 'group' | 'path' | 'highlight' | 'outline' | 'hollow' | 'bridge';
+        label: string;
+      }[];
     };
 
 /** A step of a colour scale: the valence scale (−3 … +3) or the sequential ramp (1 … 5). */
@@ -232,7 +235,13 @@ export function legendSections(
   const outlined = model.outlines !== null;
   // Members who gave no ratings are drawn hollow (session 4), whatever else is marked.
   const hollow = model.nodes.some((n) => n.visible && n.noRatings);
-  if (outlined || hollow || (extras && (extras.group > 0 || extras.path || highlighted > 0))) {
+  const bridges = model.markBridges;
+  if (
+    bridges ||
+    outlined ||
+    hollow ||
+    (extras && (extras.group > 0 || extras.path || highlighted > 0))
+  ) {
     sections.push({
       kind: 'marks',
       title: L.marks,
@@ -240,6 +249,14 @@ export function legendSections(
       items: [
         ...(hollow ? [{ mark: 'hollow' as const, label: L.noRatings }] : []),
         ...(outlined ? [{ mark: 'outline' as const, label: L.outlines(layerName(model)) }] : []),
+        ...(bridges
+          ? [
+              {
+                mark: 'bridge' as const,
+                label: model.bridges > 0 ? L.bridges(model.bridges) : L.noBridges,
+              },
+            ]
+          : []),
         ...(extras?.path ? [{ mark: 'path' as const, label: L.path }] : []),
         ...(extras && extras.group > 0
           ? [{ mark: 'group' as const, label: L.group(extras.group) }]

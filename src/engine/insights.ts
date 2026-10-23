@@ -709,6 +709,7 @@ export function onlyRoutes(
           filters: [],
           highlight: members,
           show: [],
+          markBridges: true,
         },
       });
     }
@@ -750,6 +751,7 @@ export function onlyRoutes(
           filters: [],
           highlight: [member, ...c.cutOff.map((i) => ids[i] as MemberId)],
           show: [],
+          markBridges: true,
         },
       };
     });

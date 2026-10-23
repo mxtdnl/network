@@ -377,6 +377,8 @@ export function buildScene(
   // between members of one row stay apart from it and from the reporting lines.
   const curved = annotation.kind === 'hierarchy';
   const SEGMENTS = 10;
+  // Bridge ties (build plan session 7): a diamond at the middle of the tie, on a paper halo.
+  const bridgeMarks: { x: number; y: number; alpha: number }[] = [];
   const curve = (e: (typeof edges)[number], a: Point, b: Point, stroke: string, alpha: number) => {
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     const px = -(b.y - a.y) / len;
@@ -408,6 +410,13 @@ export function buildScene(
       }
     };
     const bend = len * 0.2;
+    // The middle of the quadratic curve lies half the bend from the chord's middle.
+    if (model.markBridges && e.bridge)
+      bridgeMarks.push({
+        x: (a.x + b.x) / 2 + (px * bend) / 2,
+        y: (a.y + b.y) / 2 + (py * bend) / 2,
+        alpha,
+      });
     if (e.style === 'both') {
       drawOne(bend, dashFor('formal', e.width), true);
       drawOne(bend + e.width + theme.gap, dashFor('informal', e.width), false);
@@ -441,6 +450,8 @@ export function buildScene(
       curve(e, a, b, stroke, alpha);
       continue;
     }
+    if (model.markBridges && e.bridge)
+      bridgeMarks.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, alpha });
     let x1 = a.x;
     let y1 = a.y;
     let x2 = b.x;
@@ -490,6 +501,19 @@ export function buildScene(
       line(stroke, e.width, dashFor(e.style, e.width), alpha, x1, y1, x2, y2);
     }
   }
+
+  const diamond = (fill: string, alpha: number, x: number, y: number, r: number) => {
+    const key = `${fill}|${String(alpha)}`;
+    let ab = arrows.get(key);
+    if (!ab) {
+      ab = { fill, alpha, coords: [] };
+      arrows.set(key, ab);
+    }
+    ab.coords.push(x - r, y, x, y - r, x + r, y, x - r, y, x, y + r, x + r, y);
+  };
+  for (const m of bridgeMarks)
+    diamond(theme.paper, m.alpha, m.x, m.y, theme.bridgeMark + theme.line);
+  for (const m of bridgeMarks) diamond(theme.bridge, m.alpha, m.x, m.y, theme.bridgeMark);
 
   // A shortest path: ink segments over the ties, between the members in order.
   const pathLines: LineBatch[] = [];

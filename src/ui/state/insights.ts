@@ -48,6 +48,7 @@ export function insightMapPatch(
     threshold: 0,
     thresholdTo: 1,
     negativeOutsideRange: view.drawNegative === true,
+    markBridges: view.markBridges === true,
     layerToggles: toggles,
     ego: null,
     search: '',

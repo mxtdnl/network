@@ -104,6 +104,36 @@ describe('contrast of data marks and control boundaries', () => {
     expect(min).toBeGreaterThan(9);
   });
 
+  it('the bridge-tie mark (build plan session 7) stands out from every tie it can sit on', () => {
+    const bridge = token('map-bridge');
+    check('bridge mark on paper', bridge, paper, 3);
+    // Neither the UI accent (D12) nor the shortest-path ink.
+    expect(bridge).not.toEqual(accent);
+    expect(bridge).not.toEqual(ink);
+    const low = Number(/--map-ramp-low:\s*([\d.]+)/.exec(css)?.[1]);
+    const text = (name: string) =>
+      new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(css)?.[1] ?? '';
+    const ties: Rgb[] = [
+      ...Object.values(PALETTE_TOKENS.diverging).flatMap((names) =>
+        names.map((n) => token(n.replace(/^--/, ''))),
+      ),
+      ...rampColours(text('val-p3'), text('paper'), low).map(hex),
+      stone,
+      graphite,
+      ink,
+      accent,
+    ];
+    let min = Infinity;
+    for (const c of ['normal', ...Object.keys(CVD)]) {
+      const f = (x: Rgb) => (c === 'normal' ? x : simulate(x, c as keyof typeof CVD));
+      for (const t of ties) min = Math.min(min, deltaE00(f(bridge), f(t)));
+    }
+    rows.push(
+      `bridge mark vs every edge colour, ink and accent, worst ΔE00 over all conditions: ${min.toFixed(1)}`,
+    );
+    expect(min).toBeGreaterThanOrEqual(8);
+  });
+
   it('nodes: the ink outline carries the boundary; the fills are listed', () => {
     check('node outline and selection ring (ink) on paper', ink, paper, 3);
     check('selection ring (ink) against its paper halo', ink, paper, 3);

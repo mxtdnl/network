@@ -10,6 +10,18 @@ import type { MapModel } from '../map/model';
 import { hollowRadius } from '../map/scene';
 import type { MapTheme } from '../map/theme';
 
+/** A diamond of half-diagonal r centred on (x, y), as SVG polygon points (bridge ties). */
+function diamondPoints(x: number, y: number, r: number): string {
+  return [
+    [x - r, y],
+    [x, y - r],
+    [x + r, y],
+    [x, y + r],
+  ]
+    .map((p) => p.join(','))
+    .join(' ');
+}
+
 const VAL_CLASS: Record<number, string> = {
   [-3]: 'n3',
   [-2]: 'n2',
@@ -265,6 +277,25 @@ function Sample({
                       cy={box / 2}
                       r={Math.min(theme.nodeMin + theme.line + theme.labelGap * 2, box / 2)}
                       strokeWidth={theme.line}
+                    />
+                  </>
+                ) : item.mark === 'bridge' ? (
+                  <>
+                    <line
+                      className="legend__edge"
+                      x1={0}
+                      y1={box / 2}
+                      x2={box}
+                      y2={box / 2}
+                      strokeWidth={theme.edgeMin}
+                    />
+                    <polygon
+                      className="legend__bridge"
+                      points={diamondPoints(box / 2, box / 2, theme.bridgeMark + theme.line)}
+                    />
+                    <polygon
+                      className="legend__bridge legend__bridge--mark"
+                      points={diamondPoints(box / 2, box / 2, theme.bridgeMark)}
                     />
                   </>
                 ) : item.mark === 'path' ? (

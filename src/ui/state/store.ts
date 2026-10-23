@@ -143,6 +143,8 @@ export interface MapSettings {
   sizeScale: 'value' | 'rank';
   /** A stone outline around each community on the "Ties from" layer (D136). */
   communityOutlines: boolean;
+  /** Mark the ties whose two members have no contact in common (local bridges, build plan session 7). */
+  markBridges: boolean;
 }
 
 export type { EdgeColourChoice, EdgeWidthChoice };
@@ -289,6 +291,7 @@ export function initialMapSettings(): MapSettings {
     edgeStyle: 'none',
     sizeScale: 'value',
     communityOutlines: false,
+    markBridges: false,
   };
 }
 

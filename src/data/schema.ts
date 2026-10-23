@@ -165,6 +165,8 @@ export interface SavedMapSettings {
   /** Ties with a negative rating drawn outside the range (D145); absent means false. Added to
    *  schema 4 in place, before release. */
   negativeOutsideRange?: boolean;
+  /** Bridge ties marked (build plan session 7); absent means false. Schema 4 in place. */
+  markBridges?: boolean;
   /** Members who gave no ratings: marked (absent) or left out (build plan session 5; schema 4 in place). */
   nonRespondents?: 'mark' | 'leaveOut';
   /** Reconstruct their ties on mutual layers from colleagues' ratings; absent means false. */
