@@ -5,6 +5,8 @@ const count = (value: number, one: string, many: string) =>
   `${num(value)} ${value === 1 ? one : many}`;
 
 export const tableCopy = {
+  modeLabel: 'Show',
+  modes: { metrics: 'Metrics', incoming: 'Incoming ties' },
   caption: (layer: string, n: number) =>
     `Network position of ${count(n, 'member', 'members')}, from ${layer}`,
   layer: 'Ties from',
@@ -36,5 +38,21 @@ export const tableCopy = {
       `Rank ranges for ${metric} from ${count(replicates, 'resample', 'resamples')}.`,
     cancelled: 'Resampling cancelled. Run it again to see rank ranges.',
     failed: (reason: string) => `Resampling could not run. ${reason}`,
+  },
+
+  incoming: {
+    layer: 'Layer',
+    caption: (layer: string, n: number) =>
+      `Ties received on ${layer} by ${count(n, 'member', 'members')}, most first`,
+    rank: 'Rank',
+    member: 'Member',
+    ties: 'Ties received',
+    share: 'Share of all ties received',
+    bar: 'Bar',
+    top: 'top 10 %',
+    summary: (top: number, share: string, received: number, even: string) =>
+      `Across all members, the ${count(top, 'member', 'members')} who receive the most ties (10 % of members) receive ${share} of the ${num(received)} ties, against ${even} if ties were spread evenly.`,
+    none: 'No member receives a tie on this layer.',
+    help: 'Counted from the directed ratings in either view: how many colleagues name each member. A long bar shows where requests or reliance gather, not how well anyone works. Filters and the ego view choose the members listed; shares are of every tie received.',
   },
 };

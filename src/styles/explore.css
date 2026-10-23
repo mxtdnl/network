@@ -247,6 +247,8 @@
 /* Toolbars above the matrix, table and comparison views */
 .matrix-tab,
 .table-view,
+.table-view__body,
+.ranked,
 .compare {
   display: flex;
   flex-direction: column;
@@ -437,6 +439,31 @@
 
 .stability p:empty {
   display: none;
+}
+
+/* Ranked bars of incoming ties (build plan session 7): the bar's length is a
+   custom property in thousandths of the longest bar, set from script (D31). */
+.ranked__summary {
+  margin: 0;
+  max-width: var(--measure);
+}
+
+.ranked__bar-cell {
+  width: 40%;
+  min-width: calc(var(--s-8) * 2);
+}
+
+.ranked__bar {
+  display: block;
+  height: var(--s-2);
+  width: calc(var(--bar, 0) * 0.1%);
+  background: var(--graphite);
+}
+
+/* The last of the top 10 %: a rule under the row. */
+.data-table tbody tr.ranked__last-top th,
+.data-table tbody tr.ranked__last-top td {
+  border-bottom: var(--line-width) solid var(--stone);
 }
 
 .table-view__scroll {

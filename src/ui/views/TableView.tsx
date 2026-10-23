@@ -10,10 +10,11 @@ import { tableCopy } from '../copy/table';
 import { rankInterval } from '../map/rank';
 import { drawableLayers, useMapData, type MapData } from '../map/useMapModel';
 import { useMemberNames } from '../state/names';
-import { useAppStore, type SizeMetric } from '../state/store';
+import { useAppStore, type SizeMetric, type TableMode } from '../state/store';
 import { cancelBootstrap, runBootstrap } from '../state/tools';
 import { exportMetricsTable } from '../state/exportActions';
 import { EmptyState } from './EmptyState';
+import { RankedBars } from './RankedBars';
 
 const T = tableCopy;
 
@@ -37,11 +38,44 @@ interface Row {
 // CSV. Selection and the subgroup are shared with the map and the matrix.
 export function TableView() {
   const project = useAppStore((s) => s.data.project);
+  const mode = useAppStore((s) => s.ui.tableMode);
+  const setMode = useAppStore((s) => s.setTableMode);
   const data = useMapData();
+  const name = useId();
   if (!project || project.members.length === 0) return <EmptyState />;
-  if (!data) return <p className="placeholder">{mapCopy.calculating}</p>;
-  return <MetricsTable data={data} />;
+  return (
+    <div className="table-view">
+      <fieldset className="view-toolbar view-toolbar--modes">
+        <legend className="visually-hidden">{T.modeLabel}</legend>
+        <div className="segmented">
+          {TABLE_MODES.map((m) => (
+            <label key={m} className="segmented__option">
+              <input
+                type="radio"
+                className="segmented__input"
+                name={`${name}-mode`}
+                checked={mode === m}
+                onChange={() => {
+                  setMode(m);
+                }}
+              />
+              <span className="segmented__label">{T.modes[m]}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {!data ? (
+        <p className="placeholder">{mapCopy.calculating}</p>
+      ) : mode === 'incoming' ? (
+        <RankedBars data={data} />
+      ) : (
+        <MetricsTable data={data} />
+      )}
+    </div>
+  );
 }
+
+const TABLE_MODES: readonly TableMode[] = ['metrics', 'incoming'];
 
 function MetricsTable({ data }: { data: MapData }) {
   const { project, result, settings, model } = data;
@@ -175,7 +209,7 @@ function MetricsTable({ data }: { data: MapData }) {
   const running = bootstrap?.status === 'running';
 
   return (
-    <div className="table-view">
+    <div className="table-view__body">
       <div className="view-toolbar">
         <div className="field field--inline">
           <label htmlFor={layerId} className="field__label">

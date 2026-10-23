@@ -327,9 +327,49 @@ const ENCODINGS: {
     kept: ['Community outline, detected on Composite of all layers'],
     excluded: ['Community outline, detected on Composite of all layers'],
   },
+  {
+    name: 'bridge ties marked (build plan session 7)',
+    map: { markBridges: true, threshold: 0 },
+    kept: ['Bridge tie'],
+    excluded: ['Bridge tie'],
+  },
 ];
 
 const MAP_TYPES = ['png', 'svg', 'pdf'] as const;
+
+describe('bridge ties in exports (build plan session 7)', () => {
+  it.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])(
+    'draws one diamond per bridge tie drawn (names hidden %s, signed left out %s)',
+    async (anonymise, excludeSigned) => {
+      const ctx = await contextFor(project, {
+        anonymise,
+        excludeSigned,
+        weights: HEALTH,
+        map: {
+          markBridges: true,
+          threshold: 0,
+          layer: 'connection_strength',
+          view: 'symmetrised',
+          symmetrise: 'min',
+        },
+      });
+      const { doc, map } = mapExport(ctx, mapState, deps, '');
+      expect(map.model.markBridges).toBe(true);
+      expect(map.model.bridges).toBeGreaterThan(0);
+      const polygons = doc.layers
+        .flatMap((l) => l.items)
+        .filter((p) => p.kind === 'polygon' && p.fill === theme.map.bridge);
+      // Two triangles per diamond on the map, and two in the legend sample.
+      expect(polygons.length).toBe(2 * map.model.bridges + 2);
+    },
+    30_000,
+  );
+});
 
 describe.each(ENCODINGS)('map encoding: $name', ({ map, kept, excluded }) => {
   describe.each([

@@ -25,7 +25,9 @@ import type {
   SymmetriseRule,
   ViewKind,
 } from '../../src/engine/types';
+import type { MapModel } from '../../src/ui/map/model';
 import { effectiveWeights, initialWeightState } from '../../src/ui/state/presets';
+import { incomingLayer, incomingLayers, incomingRows } from '../../src/ui/views/incoming';
 import { scenarioFile } from '../../scripts/scenario-kit';
 
 /** Symmetric 0/1 weights from undirected edges. */
@@ -159,7 +161,7 @@ describe('only routes between groups', () => {
     for (let k = 0; k < gateways; k++) list.push([k, 8 + k]);
     return { n, w: edges(n, list) };
   };
-  const teams = column([...Array(8).fill('A'), ...Array(8).fill('B')] as string[]);
+  const teams = column([...new Array<string>(8).fill('A'), ...new Array<string>(8).fill('B')]);
   const groupObs = (o: InsightOutcome) => o.observations.filter((x) => x.evidence.cutPoint === 0);
 
   it(`names a group whose ties with other groups are held by ${String(T.maxGateways)} members`, () => {
@@ -344,5 +346,47 @@ describe('the rules on the demo and the scenarios', () => {
       expect((await outcome(slug, v, 'onlyRoutes')).observations).toEqual([]);
       expect((await outcome(slug, v, 'concentratedDemand')).observations).toEqual([]);
     }
+  });
+});
+
+describe('ranked bars of incoming ties', () => {
+  it('offers every layer with incoming ties, not negative ratings, and picks advice first', async () => {
+    const project = parseProject(
+      readFileSync(
+        join(import.meta.dirname, '..', '..', 'src', 'demo', scenarioFile('post-merger')),
+        'utf8',
+      ),
+    );
+    const weights = effectiveWeights(project, initialWeightState());
+    const r = await analyse(
+      buildAnalysisInput(project, { view: 'directed', symmetrise: 'mean', ...weights }, 'pm'),
+    );
+    const layers = incomingLayers(project, r);
+    expect(layers[0]).toBe('composite');
+    expect(layers).toContain('advice');
+    expect(layers.some((k) => k.endsWith('-'))).toBe(false);
+    expect(layers.some((k) => k.endsWith('+'))).toBe(true);
+    expect(incomingLayer(layers, null, 'composite')).toBe('advice');
+    expect(incomingLayer(layers, 'workflow_dependency', 'composite')).toBe('workflow_dependency');
+    expect(incomingLayer(layers, 'gone', 'composite')).toBe('advice');
+    expect(incomingLayer(['composite'], null, 'composite')).toBe('composite');
+
+    // Rows: visible members only, most ties first, bars relative to the longest, shares of every tie.
+    const load = r.refs.workflow_dependency?.load;
+    if (!load) throw new Error('no load');
+    const nodes = project.members.map((_, index) => ({ index, visible: index % 2 === 0 }));
+    const rows = incomingRows(project, r, 'workflow_dependency', { nodes } as unknown as MapModel);
+    expect(rows.length).toBe(Math.ceil(project.members.length / 2));
+    expect(rows.every((x) => x.index % 2 === 0)).toBe(true);
+    for (let k = 1; k < rows.length; k++)
+      expect((rows[k - 1]?.incoming ?? 0) >= (rows[k]?.incoming ?? 0)).toBe(true);
+    expect(rows[0]?.bar).toBe(1);
+    expect(rows[0]?.share).toBeCloseTo((rows[0]?.incoming ?? 0) / load.overall.received, 12);
+    const int01 = project.members.findIndex((m) => m.id === 'INT01');
+    const all = incomingRows(project, r, 'workflow_dependency', {
+      nodes: project.members.map((_, index) => ({ index, visible: true })),
+    } as unknown as MapModel);
+    expect(all[0]?.index).toBe(int01);
+    expect(all.filter((x) => x.top).length).toBe(load.overall.top.length);
   });
 });
