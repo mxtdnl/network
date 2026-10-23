@@ -375,6 +375,8 @@ export type InsightRuleId =
   | 'brokers'
   | 'peripheral'
   | 'overload'
+  | 'onlyRoutes'
+  | 'concentratedDemand'
   | 'silo'
   | 'negativeCluster'
   | 'formalOnly'
@@ -421,7 +423,10 @@ export interface Observation {
   members: MemberId[];
   /** The group a silo observation concerns; for a formal–informal gap, the pair of groups. */
   group?: { attribute: AttributeKey; value: string; other?: string };
-  /** Counts by pair of groups (rater's group first), for one-way negative ratings. */
+  /**
+   * Counts by pair of groups: for one-way negative ratings, the rater's group
+   * first; for only routes, the group's ties with each other group.
+   */
   groups?: { attribute: AttributeKey; value: string; other: string; count: number }[];
   /** Figures quoted in the wording; which keys are present depends on the rule. */
   evidence: Record<string, number>;

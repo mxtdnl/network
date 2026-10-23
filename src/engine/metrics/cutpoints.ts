@@ -2,10 +2,31 @@
 // removal splits the part of the network they belong to, on the ties read
 // without direction, as nx.articulation_points. For each, how many members
 // would be cut off from the largest part that remains.
+//
+// No graphology here: the insight rules, which the main thread also imports
+// for their thresholds, read these helpers.
 
 import type { DenseGraph } from '../graphs';
 import type { CutPoints } from '../types';
-import { undirectedNeighbours } from './bridges';
+
+/** Neighbour lists of `weights` (n × n, a layer's view weights) read without direction. */
+export function neighboursOf(weights: ArrayLike<number>, n: number): number[][] {
+  const out: number[][] = Array.from({ length: n }, () => []);
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if ((weights[i * n + j] as number) > 0 || (weights[j * n + i] as number) > 0) {
+        (out[i] as number[]).push(j);
+        (out[j] as number[]).push(i);
+      }
+    }
+  }
+  return out;
+}
+
+/** Neighbour lists of the ties read without direction (a tie in either direction). */
+export function undirectedNeighbours(g: DenseGraph): number[][] {
+  return neighboursOf(g.w, g.n);
+}
 
 /** Articulation points by Hopcroft–Tarjan (iterative), in member order. */
 export function articulationPoints(adj: readonly number[][]): number[] {
@@ -53,20 +74,20 @@ export function articulationPoints(adj: readonly number[][]): number[] {
   return out;
 }
 
-/** Sizes of the parts the member's own part falls into once the member is removed, largest first. */
-function partsWithout(adj: readonly number[][], v: number): number[] {
+/** The parts the member's own part falls into once the member is removed, largest first. */
+export function partsWithout(adj: readonly number[][], v: number): number[][] {
   const n = adj.length;
   const seen = new Uint8Array(n);
   seen[v] = 1;
-  const sizes: number[] = [];
+  const parts: number[][] = [];
   for (const start of adj[v] as number[]) {
     if (seen[start]) continue;
-    let size = 0;
+    const part: number[] = [];
     const queue = [start];
     seen[start] = 1;
     while (queue.length > 0) {
       const u = queue.pop() as number;
-      size += 1;
+      part.push(u);
       for (const w of adj[u] as number[]) {
         if (!seen[w]) {
           seen[w] = 1;
@@ -74,9 +95,10 @@ function partsWithout(adj: readonly number[][], v: number): number[] {
         }
       }
     }
-    sizes.push(size);
+    parts.push(part.sort((a, b) => a - b));
   }
-  return sizes.sort((a, b) => b - a);
+  // Largest first; among equal sizes, the part holding the lowest member index.
+  return parts.sort((a, b) => b.length - a.length || (a[0] as number) - (b[0] as number));
 }
 
 /** Cut points, with the members each would cut off from the largest remaining part. */
@@ -86,7 +108,7 @@ export function cutPoints(g: DenseGraph): CutPoints {
   const cutOff = members.map((v) =>
     partsWithout(adj, v)
       .slice(1)
-      .reduce((a, b) => a + b, 0),
+      .reduce((a, b) => a + b.length, 0),
   );
   return { members: Int32Array.from(members), cutOff: Int32Array.from(cutOff) };
 }

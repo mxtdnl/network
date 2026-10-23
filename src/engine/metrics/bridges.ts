@@ -15,6 +15,7 @@
 import edgeBetweennessCentrality from 'graphology-metrics/centrality/edge-betweenness';
 import { graphologyForPaths, type DenseGraph, type PathGraph } from '../graphs';
 import type { LocalBridges, TieBetweenness } from '../types';
+import { undirectedNeighbours } from './cutpoints';
 
 /** Normalised edge betweenness (distance 1/w) of every tie of the view graph. */
 export function edgeBetweenness(p: PathGraph): TieBetweenness {
@@ -39,21 +40,6 @@ export function edgeBetweenness(p: PathGraph): TieBetweenness {
     to: Int32Array.from(to),
     values: Float64Array.from(values),
   };
-}
-
-/** Neighbour lists of the ties read without direction (a tie in either direction). */
-export function undirectedNeighbours(g: DenseGraph): number[][] {
-  const { n, w } = g;
-  const out: number[][] = Array.from({ length: n }, () => []);
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      if ((w[i * n + j] as number) > 0 || (w[j * n + i] as number) > 0) {
-        (out[i] as number[]).push(j);
-        (out[j] as number[]).push(i);
-      }
-    }
-  }
-  return out;
 }
 
 /** Steps from a to b without using the tie a–b itself; Infinity when there is no route. */
