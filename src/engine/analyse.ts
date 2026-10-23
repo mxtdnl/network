@@ -20,6 +20,9 @@ import {
   mixing,
 } from './metrics/network';
 import { metricKeysFor, nodeMetrics } from './metrics/node';
+import { edgeBetweenness, localBridges } from './metrics/bridges';
+import { cutPoints } from './metrics/cutpoints';
+import { loadConcentration } from './metrics/load';
 import { resilience } from './metrics/resilience';
 import { leaveOut, reconstruct, standardiseRows } from './remedies';
 import { shortestPath } from './paths';
@@ -204,6 +207,16 @@ function refResult(p: Prepared, r: PreparedRef, warnings: EngineWarning[]): RefR
       communityMixing: found ? mixing(g, communityColumn(found)) : null,
     },
     communities: found,
+    // Path-based work is never done on negative sub-layers (plan Q11).
+    ties:
+      r.kind === 'negative'
+        ? null
+        : {
+            betweenness: edgeBetweenness(pathGraph(g)),
+            localBridges: localBridges(g),
+            cutPoints: cutPoints(g),
+          },
+    load: r.kind === 'negative' ? null : loadConcentration(r.directed, p.n, p.input.attributes),
     weights: r.view.slice(),
   };
 }

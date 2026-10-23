@@ -493,6 +493,103 @@ export function silos(
   return outcome('silo', observations);
 }
 
+// ------------------------------------------------------- routes between groups
+
+export interface GroupRoutes {
+  groups: {
+    group: string;
+    size: number;
+    /** Pairs (one in the group, one outside it, members with a value) tied in either direction. */
+    externalTies: number;
+    /** Members of the group in those ties, most ties first, then in member order. */
+    gateways: number[];
+    /** Ties each gateway holds, aligned with `gateways`. */
+    gatewayTies: number[];
+  }[];
+  pairs: {
+    a: string;
+    b: string;
+    sizeA: number;
+    sizeB: number;
+    /** Pairs of members, one in each group, tied in either direction. */
+    ties: number;
+    /** Members in those ties, most ties first. */
+    members: number[];
+  }[];
+}
+
+/**
+ * The ties between groups of an attribute, read without direction (a tie in
+ * either direction counts once): per group, the members holding every tie
+ * with other groups; per pair of groups, the ties directly between them.
+ * Members without a value are left out. `weights` are a layer's view weights.
+ */
+export function groupRoutes(
+  weights: ArrayLike<number>,
+  n: number,
+  column: AttributeColumn,
+): GroupRoutes {
+  const order = [...column.categories];
+  for (const v of column.values) if (v !== null && !order.includes(v)) order.push(v);
+  const present = order.filter((g) => column.values.includes(g));
+  const index = new Map(present.map((g, k) => [g, k]));
+  const gi = column.values.map((v) => (v === null ? -1 : (index.get(v) ?? -1)));
+  const k = present.length;
+  const size = new Array<number>(k).fill(0);
+  for (const g of gi) if (g >= 0) size[g] = (size[g] ?? 0) + 1;
+  const external = new Array<number>(k).fill(0);
+  const held = new Array<number>(n).fill(0);
+  const pairTies = new Array<number>(k * k).fill(0);
+  const pairMembers = Array.from({ length: k * k }, () => new Map<number, number>());
+  for (let i = 0; i < n; i++) {
+    const a = gi[i] as number;
+    if (a < 0) continue;
+    for (let j = i + 1; j < n; j++) {
+      const b = gi[j] as number;
+      if (b < 0 || a === b) continue;
+      if (!((weights[i * n + j] as number) > 0 || (weights[j * n + i] as number) > 0)) continue;
+      external[a] = (external[a] ?? 0) + 1;
+      external[b] = (external[b] ?? 0) + 1;
+      held[i] = (held[i] ?? 0) + 1;
+      held[j] = (held[j] ?? 0) + 1;
+      const key = Math.min(a, b) * k + Math.max(a, b);
+      pairTies[key] = (pairTies[key] ?? 0) + 1;
+      const m = pairMembers[key] as Map<number, number>;
+      m.set(i, (m.get(i) ?? 0) + 1).set(j, (m.get(j) ?? 0) + 1);
+    }
+  }
+  const byHeld = (xs: number[], count: (i: number) => number) =>
+    xs.sort((x, y) => count(y) - count(x) || x - y);
+  const groups = present.map((group, g) => {
+    const gateways = byHeld(
+      [...Array(n).keys()].filter((i) => gi[i] === g && (held[i] ?? 0) > 0),
+      (i) => held[i] ?? 0,
+    );
+    return {
+      group,
+      size: size[g] ?? 0,
+      externalTies: external[g] ?? 0,
+      gateways,
+      gatewayTies: gateways.map((i) => held[i] ?? 0),
+    };
+  });
+  const pairs: GroupRoutes['pairs'] = [];
+  for (let a = 0; a < k; a++) {
+    for (let b = a + 1; b < k; b++) {
+      const m = pairMembers[a * k + b] as Map<number, number>;
+      pairs.push({
+        a: present[a] as string,
+        b: present[b] as string,
+        sizeA: size[a] ?? 0,
+        sizeB: size[b] ?? 0,
+        ties: pairTies[a * k + b] ?? 0,
+        members: byHeld([...m.keys()], (i) => m.get(i) ?? 0),
+      });
+    }
+  }
+  return { groups, pairs };
+}
+
 // -------------------------------------------------------- negative clusters
 
 /**

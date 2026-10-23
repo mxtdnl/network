@@ -121,6 +121,64 @@ for (const name of CASES) {
               if (fr.kind === 'negative') expect(node?.omitted?.reason).toBe('negativeSubLayer');
             });
 
+            it('matches edge betweenness, local bridges, cut points and load', () => {
+              const r = run(view).result.refs[ref];
+              const ft = fr.ties_structure;
+              const fl = fr.load;
+              if (fr.kind === 'negative') {
+                expect([r?.ties, r?.load, ft, fl]).toEqual([null, null, undefined, undefined]);
+                return;
+              }
+              const t = r?.ties;
+              const l = r?.load;
+              if (!t || !l || !ft || !fl) throw new Error('missing tie structure or load');
+              expect(Array.from(t.betweenness.from, (a, k) => [a, t.betweenness.to[k]])).toEqual(
+                ft.edge_betweenness.map(([a, b]) => [a, b]),
+              );
+              const problems = compare(
+                'edge betweenness',
+                t.betweenness.values,
+                ft.edge_betweenness.map(([, , x]) => x),
+                tol.default,
+              );
+              expect(problems).toEqual([]);
+              expect(
+                Array.from(t.localBridges.from, (a, k) => [
+                  a,
+                  t.localBridges.to[k],
+                  t.localBridges.span[k] === Infinity ? null : t.localBridges.span[k],
+                ]),
+              ).toEqual(ft.local_bridges);
+              record('local bridges and span', 0, 0, ft.local_bridges.length);
+              expect(Array.from(t.cutPoints.members)).toEqual(ft.articulation_points);
+              expect(Array.from(t.cutPoints.cutOff)).toEqual(ft.cut_off);
+              record('cut points and members cut off', 0, 0, ft.articulation_points.length);
+              expect(Array.from(l.incoming)).toEqual(fl.incoming);
+              const share = (mine: typeof l.overall, theirs: typeof fl.overall) => {
+                expect([mine.members, Array.from(mine.top), mine.received, mine.held]).toEqual([
+                  theirs.members,
+                  theirs.top,
+                  theirs.received,
+                  theirs.held,
+                ]);
+                return compareScalar(
+                  'load share (top 10 %)',
+                  mine.share,
+                  theirs.share,
+                  tol.default,
+                );
+              };
+              const loadProblems = share(l.overall, fl.overall);
+              for (const [attr, groups] of Object.entries(fl.by_group)) {
+                const mine = l.byGroup[attr] ?? [];
+                expect(mine.map((g) => g.group)).toEqual(groups.map((g) => g.group));
+                groups.forEach((g, k) =>
+                  loadProblems.push(...share(mine[k] as typeof l.overall, g)),
+                );
+              }
+              expect(loadProblems).toEqual([]);
+            });
+
             it('matches the network metrics', () => {
               const net = run(view).result.refs[ref]?.network;
               if (!net) throw new Error('missing');

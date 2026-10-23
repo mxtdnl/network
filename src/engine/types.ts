@@ -201,6 +201,63 @@ export interface CommunityResult {
 
 export type RefKind = 'unsigned' | 'positive' | 'negative' | 'composite';
 
+// ------------------------------------------------- ties, cut points and load
+
+/** Edge betweenness of every tie of the view graph (directed: ordered; mutual: from < to). */
+export interface TieBetweenness {
+  from: Int32Array;
+  to: Int32Array;
+  /** nx.edge_betweenness_centrality(weight='distance', normalized=True). */
+  values: Float64Array;
+}
+
+/** Local bridges on the ties read without direction (nx.local_bridges, with_span), from < to. */
+export interface LocalBridges {
+  from: Int32Array;
+  to: Int32Array;
+  /** Steps between the two members once the tie is removed; Infinity when no other route. */
+  span: Float64Array;
+}
+
+/** Cut points on the ties read without direction (nx.articulation_points), in member order. */
+export interface CutPoints {
+  members: Int32Array;
+  /** Per cut point: members cut off from the largest part that remains once it is removed. */
+  cutOff: Int32Array;
+}
+
+export interface TieStructure {
+  betweenness: TieBetweenness;
+  localBridges: LocalBridges;
+  cutPoints: CutPoints;
+}
+
+export interface LoadShare {
+  /** Members counted. */
+  members: number;
+  /** The members receiving most ties, ⌈top share · members⌉ (at least one), highest first. */
+  top: Int32Array;
+  /** Ties the members receive. */
+  received: number;
+  /** Ties the top members receive. */
+  held: number;
+  /** held / received; NaN when nobody receives a tie. */
+  share: number;
+}
+
+export interface GroupLoad extends LoadShare {
+  group: string;
+}
+
+export interface LoadResult {
+  /** Ties received per member, from the directed ratings in either view. */
+  incoming: Float64Array;
+  topShare: number;
+  overall: LoadShare;
+  /** Within each group of every attribute, the share held by the group's own top members. */
+  byGroup: Record<AttributeKey, GroupLoad[]>;
+}
+
 export interface RefResult {
   ref: LayerRef;
   kind: RefKind;
@@ -210,6 +267,10 @@ export interface RefResult {
   network: NetworkMetrics;
   /** Louvain on the symmetrised graph of this layer (plan Q9), null when it has no ties. */
   communities: CommunityResult | null;
+  /** Edge betweenness, local bridges and cut points (build plan session 7); null on negative sub-layers. */
+  ties: TieStructure | null;
+  /** Ties received per member and their concentration; null on negative sub-layers. */
+  load: LoadResult | null;
   /**
    * n × n tie weights (0–1) in the requested view, NaN = not rated: the values
    * the metrics were computed from, used by the map for edge width, the
