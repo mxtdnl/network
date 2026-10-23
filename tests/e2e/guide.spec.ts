@@ -278,6 +278,21 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await page.getByRole('radio', { name: 'Tie strength' }).check();
   await centreTab(page, 'Table').click();
   await shot(page, 'metrics-table');
+  // The Groups view (D154), with Finance chosen as the subgroup, then cleared.
+  await centreTab(page, 'Groups').click();
+  // The compact layout's drawer, left open by an earlier step, would cover the group map.
+  const drawer = page.getByRole('button', {
+    name: 'Member, insights and coverage',
+    expanded: true,
+  });
+  if ((await drawer.count()) > 0) await drawer.click();
+  const finance = page
+    .getByRole('table', { name: /Ties inside and leaving each group/ })
+    .getByRole('button', { name: 'Finance' });
+  await finance.click();
+  await expect(finance).toHaveAttribute('aria-pressed', 'true');
+  await shot(page, 'groups-view');
+  await finance.click();
   await centreTab(page, 'Compare').click();
   await page.getByRole('radio', { name: 'Formal and informal' }).check();
   await page.waitForTimeout(500);

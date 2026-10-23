@@ -14,6 +14,7 @@ import {
   averageClustering,
   centralisation,
   communities,
+  communityColumn,
   components,
   density,
   mixing,
@@ -185,6 +186,7 @@ function refResult(p: Prepared, r: PreparedRef, warnings: EngineWarning[]): RefR
   const clusteringValues = table.columns.clustering ?? new Float64Array(0);
   const mix: RefResult['network']['mixing'] = {};
   for (const [key, column] of Object.entries(p.input.attributes)) mix[key] = mixing(g, column);
+  const found = communities(denseGraph(r.symmetric, p.n, false), p.input.settings.seed);
   return {
     ref: r.ref,
     kind: r.kind,
@@ -199,8 +201,9 @@ function refResult(p: Prepared, r: PreparedRef, warnings: EngineWarning[]): RefR
       components: components(g),
       centralisation: centralisation(p.n, directed, table),
       mixing: mix,
+      communityMixing: found ? mixing(g, communityColumn(found)) : null,
     },
-    communities: communities(denseGraph(r.symmetric, p.n, false), p.input.settings.seed),
+    communities: found,
     weights: r.view.slice(),
   };
 }

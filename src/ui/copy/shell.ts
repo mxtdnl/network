@@ -36,6 +36,7 @@ export const shellCopy = {
     map: 'Map',
     matrix: 'Matrix',
     table: 'Table',
+    groups: 'Groups',
     compare: 'Compare',
     members: 'Members',
     survey: 'Survey',

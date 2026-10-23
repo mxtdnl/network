@@ -35,11 +35,13 @@ export type {
 export type {
   BootstrapMetric,
   CompositeFormula,
+  GroupMixing,
   InsightOutcome,
   InsightRuleId,
   InsightUnavailable,
   InsightView,
   Observation,
+  RefResult,
   ResilienceSnapshot,
 } from '../engine/types';
 export { INSIGHT_RULES, INSIGHT_RULE_ORDER } from '../engine/insights';

@@ -219,6 +219,13 @@
 
   /* Roster editor (CLAUDE.md D124). Name fields use --matrix-label-width. */
   --members-field-width: 144px; /* attribute fields in the members table */
+
+  /* Groups view (CLAUDE.md D154). */
+  --group-cell-width: 64px; /* a group matrix cell: "100%" and "<1%" in tabular figures with padding */
+  --group-node-min: 8px; /* radius of the smallest group on the group map */
+  --group-node-max: 32px; /* radius of the largest; area is proportional to members */
+  --group-edge-max: 12px; /* the line of the largest share between two groups; the thinnest is --map-edge-min */
+  --group-map-height: 360px; /* the group map's canvas */
 }
 
 @media (prefers-reduced-motion: reduce) {

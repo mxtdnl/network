@@ -17,7 +17,7 @@ import { exportContext, type ExportContext } from '../../src/ui/export/context';
 import type { FontLoader, Inflate } from '../../src/ui/export/fonts';
 import type { TokenSource } from '../../src/ui/export/theme';
 import { effectiveWeights, initialWeightState, type WeightState } from '../../src/ui/state/presets';
-import { initialMapSettings, type MapSettings } from '../../src/ui/state/store';
+import { initialMapSettings, type Grouping, type MapSettings } from '../../src/ui/state/store';
 import { draftFor } from '../fixtures/surveyProject';
 
 export const root = join(import.meta.dirname, '..', '..');
@@ -144,6 +144,7 @@ export async function contextFor(
     excludeSigned: boolean;
     map?: Partial<MapSettings>;
     weights?: WeightState;
+    grouping?: Grouping | null;
   },
 ): Promise<ExportContext> {
   const map = { ...initialMapSettings(), ...options.map };
@@ -157,6 +158,7 @@ export async function contextFor(
       weights,
       anonymise: options.anonymise,
       excludeSigned: options.excludeSigned,
+      grouping: options.grouping ?? null,
     },
     (input) => analyse(input),
   );

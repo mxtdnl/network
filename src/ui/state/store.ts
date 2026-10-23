@@ -26,7 +26,7 @@ import {
   type WeightState,
 } from './presets';
 
-export type CentreView = 'map' | 'matrix' | 'table' | 'compare' | 'members' | 'survey';
+export type CentreView = 'map' | 'matrix' | 'table' | 'groups' | 'compare' | 'members' | 'survey';
 export type RightPanel = 'member' | 'explore' | 'insights' | 'views' | 'coverage';
 export type MatrixMode = 'explore' | 'enter';
 export type CompareMode = 'layers' | 'formalInformal';
@@ -49,9 +49,14 @@ export interface UiState {
   rightOpen: boolean;
   /** The map legend's form; null follows the layout (condensed in compact, else full). */
   legend: LegendMode | null;
+  /** The Groups view's grouping; null follows the insight rules' attribute (D154). */
+  grouping: Grouping | null;
 }
 
 export type LegendMode = 'full' | 'condensed' | 'beside';
+
+/** What the Groups view groups members by (D154): a category attribute or the layer's communities. */
+export type Grouping = { kind: 'attribute'; key: AttributeKey } | { kind: 'community' };
 
 export interface StatusMessage {
   text: string;
@@ -182,6 +187,7 @@ interface Actions {
   setLeftOpen: (open: boolean) => void;
   setRightOpen: (open: boolean) => void;
   setLegend: (legend: LegendMode | null) => void;
+  setGrouping: (grouping: Grouping | null) => void;
   setAnonymise: (on: boolean) => void;
   openNotice: () => void;
   closeNotice: () => void;
@@ -321,6 +327,7 @@ export function initialUiState(noticeSeen: boolean): UiState {
     leftOpen: true,
     rightOpen: false,
     legend: null,
+    grouping: null,
   };
 }
 
@@ -389,6 +396,9 @@ export const useAppStore = create<AppState>()((set, get) => {
     },
     setLegend: (legend) => {
       setUi({ legend });
+    },
+    setGrouping: (grouping) => {
+      setUi({ grouping });
     },
     setAnonymise: (anonymise) => {
       setUi({ anonymise });

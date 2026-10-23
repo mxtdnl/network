@@ -250,6 +250,7 @@ The network map is an interactive node-link diagram of members and their weighte
 **Linked secondary views.** Selection stays in sync across all views.
 - Adjacency matrix, sortable by attribute, community or metric, and heat-coded.
 - Metrics table, sortable and exportable.
+- Groups view: members grouped by any category or ordered attribute, or by detected community, on the layer that sets the ties shown, in the current view. A group connection matrix (the share of possible ties within each group and between each pair of groups, heat-coded, with a sentence for the focused cell), a group map (one node per group, sized by its members, joined by lines whose width is the share of possible ties between the groups, with a table alternative), and a table of members, ties inside, ties leaving and E-I per group. Choosing a group makes its members the subgroup in every view.
 - Side-by-side comparison of two layers.
 
 **Saved views.** A saved view captures weights, filters, layout, positions and selection. Views are named and can be restored.
@@ -304,7 +305,7 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
 - A PDF summary report generated client-side, containing:
   - the data-quality statement (section 6) on its cover;
   - the map;
-  - key metrics;
+  - key metrics, with ties within and between groups by the grouping chosen in the Groups view (team by default);
   - insights;
   - method notes;
   - data coverage.

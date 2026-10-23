@@ -236,6 +236,8 @@ the modularity of Newman & Girvan (2004), with m the total tie weight, s_i the s
 
 **Caveats.** A group of one has no internal density.
 
+The Groups view (section 15) shows these figures as a matrix and a group map, and offers communities as a grouping.
+
 ## 5. Signed layers
 
 ### Positive and negative in-valence
@@ -721,4 +723,14 @@ Reconstructed directions are labelled as reconstructed: in the member panel's ti
 **Why ranks.** The owner chose ranks over z-scores at the session's checkpoint. Ranks need no assumption that scale points are equally spaced (section 1.2), no clamping and no pooled mean to map back to; z-scores within each rater collapsed every same-answer rater to the overall mean (rank correlation of strength 0.04 with the unstandardised analysis in the polite dense team, mutual view, against 0.68 for ranks).
 
 **Caveats.** Ranks discard the size of the gaps between ratings, and a rater with few ties gets coarse values (two ties: 0.25 and 0.75). A rater who really is closer to everyone than most loses that difference, which the section 13 caveats also note. The composite's rescaled terms then mix standardised unsigned layers with unstandardised signed treatments.
+
+## 15. Groups view
+
+**Meaning.** How closely groups of members are tied to each other: for every group, the share of the ties possible inside it that exist, and for every pair of groups, the share of the ties possible between them. It answers "which groups work closely, and which hardly at all?" for teams, sites, legacy organisations, levels or any other category attribute, and for the communities detected on the layer.
+
+**Formula.** The E-I index and cross-group density of section 4, read from the engine's mixing figures for the layer the map draws ties from ("Ties from"), in the current view, on binary ties (any weight above 0). Each cell of the group connection matrix gives e_AB of p_AB possible ties and their share e_AB / p_AB, with p_AB = |A| |B| between groups and |A| (|A| − 1) within, halved within a group in the mutual view. In the directed view the matrix is read from row to column, and the group map adds both directions: (e_AB + e_BA) / (p_AB + p_BA). Communities are the Louvain partition of section 4 on the same layer, numbered from 1 by their lowest member; mixing by community uses the same formulas with each member's community as the group.
+
+**Group map.** One circle per group, its area proportional to the group's members, placed on a circle in group order. One line per pair of groups with at least one tie, its width linear in the share of possible ties between them, from the thinnest line to the thickest at the largest share between any two groups (stated in the key). No line is drawn where two groups have no ties.
+
+**Caveats.** Shares count ties, not their strength; on the composite, any pair the composite rates above 0 counts. Every member and every tie counts, whatever the map's tie-strength range, filters or ego view, as for every metric. Members with no value for the attribute are left out, with their ties, and the number is stated. Larger groups have more possible ties, so a share is comparable across groups where a count is not; a group of one has no tie possible within itself. Communities are found from the ties themselves, so a high share inside each community is partly by construction; they change when the layer or its weights change. The table's "ties leaving" counts every tie between the group and another group in either direction, as the E-I index does.
 

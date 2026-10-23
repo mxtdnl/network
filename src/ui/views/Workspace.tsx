@@ -11,6 +11,7 @@ import { LayerPanel } from './LayerPanel';
 import { MapControls } from './MapControls';
 import { CompareView } from './CompareView';
 import { ExplorePanel } from './ExplorePanel';
+import { GroupsView } from './GroupsView';
 import { MapView } from './MapView';
 import { MatrixTab } from './MatrixTab';
 import { MemberPanel } from './MemberPanel';
@@ -35,6 +36,7 @@ const centreItems: readonly TabItem<CentreView>[] = [
   { key: 'map', label: shellCopy.centreTabs.map, panel: <MapView /> },
   { key: 'matrix', label: shellCopy.centreTabs.matrix, panel: <MatrixTab /> },
   { key: 'table', label: shellCopy.centreTabs.table, panel: <TableView /> },
+  { key: 'groups', label: shellCopy.centreTabs.groups, panel: <GroupsView /> },
   { key: 'compare', label: shellCopy.centreTabs.compare, panel: <CompareView /> },
   { key: 'members', label: shellCopy.centreTabs.members, panel: <MembersView /> },
   {

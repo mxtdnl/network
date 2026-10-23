@@ -48,6 +48,7 @@ function request(): ExportRequest | null {
     weights: s.weights,
     anonymise: s.ui.anonymise,
     excludeSigned: project.settings.exclude_signed_from_exports,
+    grouping: s.ui.grouping,
   };
 }
 
