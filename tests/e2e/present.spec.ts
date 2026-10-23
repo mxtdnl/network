@@ -441,6 +441,23 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   // Table, comparison views, insights, coverage, saved views.
   await centreTab(page, 'Table').click();
   await check('metrics table');
+  // The Groups view (D154): by team and by community, with a group chosen as the subgroup.
+  await centreTab(page, 'Groups').click();
+  await page
+    .getByRole('table', { name: /Ties inside and leaving each group/ })
+    .getByRole('button')
+    .first()
+    .click();
+  await check('groups by team');
+  await page.getByLabel('Group by').selectOption({ label: 'Community' });
+  await check('groups by community');
+  await page.getByLabel('Group by').selectOption({ label: 'Team or function' });
+  // Choosing the same group again clears the subgroup.
+  await page
+    .getByRole('table', { name: /Ties inside and leaving each group/ })
+    .getByRole('button')
+    .first()
+    .click();
   await centreTab(page, 'Compare').click();
   await check('compare two layers');
   await page.getByRole('radio', { name: 'Formal and informal' }).check();

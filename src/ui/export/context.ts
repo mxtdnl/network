@@ -9,7 +9,7 @@ import { buildAnalysisInput } from '../engineClient';
 import { effectiveSettings } from '../map/useMapModel';
 import { memberNames, type MemberNames } from '../state/names';
 import { effectiveWeights, type WeightState } from '../state/presets';
-import type { MapSettings } from '../state/store';
+import type { Grouping, MapSettings } from '../state/store';
 import { exclusionApplies, exportProject } from './scope';
 import { analysisOptions } from '../state/remedies';
 
@@ -25,6 +25,8 @@ export interface ExportRequest {
   weights: WeightState;
   anonymise: boolean;
   excludeSigned: boolean;
+  /** The Groups view's grouping, which the report's mixing table follows (D154); absent follows the default. */
+  grouping?: Grouping | null;
 }
 
 export interface ExportContext {
@@ -45,6 +47,8 @@ export interface ExportContext {
   colourExcluded: boolean;
   weights: ReturnType<typeof effectiveWeights>;
   weightsPreset: WeightState['preset'];
+  /** The grouping the report's mixing table uses (D154). */
+  grouping: Grouping | null;
 }
 
 export async function exportContext(
@@ -93,5 +97,6 @@ export async function exportContext(
     colourExcluded,
     weights,
     weightsPreset: request.weights.preset,
+    grouping: request.grouping ?? null,
   };
 }

@@ -247,11 +247,14 @@ Selecting a member, a subgroup, a filter or an ego view applies to every view.
 
 - **Matrix → Tie strength**: an adjacency matrix, shaded by tie strength, which can be ordered by name, attribute, community or a metric.
 - **Table**: every member's metrics, sortable by any column. Export table saves it as CSV. Rank stability recalculates a metric many times, each time leaving out some members, and shows the range each rank falls in.
+- **Groups**: ties within and between groups. Choose "Group by" (any category attribute, such as team, location or level, or Community, the groups detected on the layer) and "Ties from". The matrix shows, for each group and each pair of groups, the share of the ties possible that exist, shaded from fewer to more; in the directed view rows give and columns receive. Arrow keys move between cells and a sentence names the cell ("Finance to Sales: 4 of 64 possible ties, 6%"). Enter makes the row's group the subgroup in every view, and Shift and Enter makes it both groups of the cell. The group map draws one circle per group, sized by its members, with thicker lines between groups that share more of their possible ties; click a circle to choose that group. The table lists each group's members, ties inside, ties leaving and E-I index; press a group's name to choose it, and again to clear the subgroup. Every member and tie counts, whatever the map's range and filters. The PDF report's table of ties within and between groups uses the grouping chosen here.
 - **Compare**: two layers side by side on the same positions, with their overlap; or formal against informal collaboration, classifying each pair as formal only, informal only, both or neither.
 
 ![The adjacency matrix, ordered by name, with the tie strength key](user-guide/adjacency-matrix.jpg)
 
 ![The metrics table: one row per member, one column per metric](user-guide/metrics-table.jpg)
+
+![The Groups view by team: the share of possible ties within and between teams, the group map and the table per team](user-guide/groups-view.jpg)
 
 ![Formal and informal ties compared: three small maps and a table of counts](user-guide/compare-formal-informal.jpg)
 

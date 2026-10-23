@@ -151,12 +151,14 @@ export function mixing(g: DenseGraph, column: AttributeColumn): GroupMixing {
     }
   }
   const densityMatrix = new Float64Array(k * k);
+  const possible = new Float64Array(k * k);
   for (let a = 0; a < k; a++) {
     for (let b = 0; b < k; b++) {
       const sa = size[a] as number;
       const sb = size[b] as number;
       let pairs = a === b ? sa * (sa - 1) : sa * sb;
       if (a === b && !g.directed) pairs /= 2;
+      possible[a * k + b] = pairs;
       densityMatrix[a * k + b] = pairs > 0 ? (e[a * k + b] as number) / pairs : NaN;
     }
   }
@@ -175,7 +177,19 @@ export function mixing(g: DenseGraph, column: AttributeColumn): GroupMixing {
       ei: ei(perExt[x] as number, perInt[x] as number),
     })),
     density: densityMatrix,
+    ties: e,
+    possible,
   };
+}
+
+/**
+ * The attribute column of a community partition: each member's community,
+ * numbered from 1 in the order Louvain's result numbers them (by lowest
+ * member index), so mixing by community reads like mixing by an attribute.
+ */
+export function communityColumn(c: CommunityResult): AttributeColumn {
+  const values = Array.from(c.membership, (x) => String(x + 1));
+  return { categories: Array.from({ length: c.count }, (_, x) => String(x + 1)), values };
 }
 
 /**

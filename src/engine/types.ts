@@ -169,6 +169,10 @@ export interface GroupMixing {
   perGroup: { group: string; size: number; internal: number; external: number; ei: number }[];
   /** groups × groups, row-major: tie density from row group to column group. */
   density: Float64Array;
+  /** groups × groups, row-major: ties from row group to column group (symmetric when mutual). */
+  ties: Float64Array;
+  /** groups × groups, row-major: the ties possible, the denominator of `density`. */
+  possible: Float64Array;
 }
 
 export interface NetworkMetrics {
@@ -180,6 +184,8 @@ export interface NetworkMetrics {
   components: Components;
   centralisation: Centralisation;
   mixing: Record<AttributeKey, GroupMixing>;
+  /** Mixing by the layer's own communities (groups named "1", "2", …), null without communities. */
+  communityMixing: GroupMixing | null;
 }
 
 export interface CommunityResult {

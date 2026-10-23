@@ -136,6 +136,8 @@ describe('silos', () => {
       { group: 'B', size: 4, internal: 4, external: 6, ei: 0.2 },
     ],
     density: new Float64Array(4),
+    ties: new Float64Array(4),
+    possible: new Float64Array(4),
   });
   const network = (m: GroupMixing) => ({ mixing: { team: m } }) as unknown as NetworkMetrics;
   const attributes = {

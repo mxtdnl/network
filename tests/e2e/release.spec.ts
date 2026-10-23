@@ -98,6 +98,8 @@ test(
     await page.getByRole('radio', { name: 'Tie strength' }).check();
     await centreTab(page, 'Table').click();
     await expect(page.getByRole('button', { name: 'Export table' })).toBeVisible();
+    await centreTab(page, 'Groups').click();
+    await expect(page.getByRole('grid', { name: /Share of possible ties/ })).toBeVisible();
     await centreTab(page, 'Compare').click();
     await expect(page.getByRole('radio', { name: 'Two layers' })).toBeVisible();
     await page.getByRole('radio', { name: 'Formal and informal' }).check();

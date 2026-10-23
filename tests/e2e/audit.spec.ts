@@ -228,6 +228,8 @@ for (const size of SIZES) {
     await page.getByRole('radio', { name: 'Tie strength' }).check();
     await centreTab(page, 'Table').click();
     await capture('21-table');
+    await centreTab(page, 'Groups').click();
+    await capture('21b-groups');
     await centreTab(page, 'Compare').click();
     await page.waitForTimeout(300);
     await capture('22-compare-layers');
@@ -365,6 +367,8 @@ test('phone: the workspace is read-only and usable at 390 px', async ({ page }) 
   await capture('07-matrix');
   await centreTab(page, 'Table').click();
   await capture('08-table');
+  await centreTab(page, 'Groups').click();
+  await capture('08b-groups');
   await centreTab(page, 'Compare').click();
   await capture('09-compare');
   await centreTab(page, 'Map').click();

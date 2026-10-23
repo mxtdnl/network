@@ -25,6 +25,8 @@ import { qualityCopy, qualityStatement } from '../copy/quality';
 import { computeQuality } from '../../data/quality';
 import type { ExportContext } from './context';
 import { insightGroup } from '../state/insightGroup';
+import { groupsCopy } from '../copy/groups';
+import { effectiveGrouping, groupMixing } from '../map/groupModel';
 import { insightCaveats, reportNotes } from './methodNotes';
 import { exportRefs, refName } from './tables';
 
@@ -121,16 +123,20 @@ function metricsSection(ctx: ExportContext): Block[] {
     });
   }
 
-  // Mixing between teams on the composite (or the first layer).
+  // Mixing between groups on the composite (or the first layer), by the Groups
+  // view's grouping (D154): an attribute, or the layer's communities.
   const main = result.refs[refs[0] ?? ''];
-  const mixKey = main
-    ? 'team' in main.network.mixing
-      ? 'team'
-      : Object.keys(main.network.mixing)[0]
-    : undefined;
-  const mix = main && mixKey ? main.network.mixing[mixKey] : undefined;
-  if (main && mix && mixKey) {
-    const attr = ctx.project.attribute_definitions.find((a) => a.key === mixKey)?.label ?? mixKey;
+  const grouping = effectiveGrouping(ctx.project, ctx.grouping);
+  const mix = groupMixing(main, grouping) ?? undefined;
+  const mixKey =
+    grouping.kind === 'community'
+      ? groupsCopy.community
+      : (ctx.project.attribute_definitions.find((a) => a.key === grouping.key)?.label ??
+        grouping.key);
+  const groupName = (g: string) =>
+    grouping.kind === 'community' ? groupsCopy.communityName(g) : g;
+  if (main && mix && mix.groups.length > 0) {
+    const attr = mixKey;
     blocks.push({
       kind: 'heading',
       text: R.metrics.mixing(attr.toLowerCase(), refName(ctx, refs[0] ?? '')),
@@ -146,7 +152,7 @@ function metricsSection(ctx: ExportContext): Block[] {
       ],
       rows: [
         ...mix.perGroup.map((g) => [
-          g.group,
+          groupName(g.group),
           value(g.size),
           value(g.internal),
           value(g.external),
