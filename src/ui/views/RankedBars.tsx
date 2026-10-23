@@ -35,7 +35,12 @@ export function RankedBars({ data }: { data: MapData }) {
   const layer = incomingLayer(layers, chosen, settings.layer);
   const rows = layer ? incomingRows(project, result, layer, model) : [];
   const load = layer ? result.refs[layer]?.load : undefined;
-  const label = (key: string) => refLabel(project, key);
+  const label = (key: string) =>
+    key === 'composite'
+      ? mapCopy.controls.composite
+      : key.endsWith('+')
+        ? T.positive(refLabel(project, key))
+        : refLabel(project, key);
   const fillKey = settings.fill.kind === 'attribute' ? settings.fill.key : settings.groupBy;
   const fillAttr = project.attribute_definitions.find((a) => a.key === fillKey);
   const inGroup = new Set(group);

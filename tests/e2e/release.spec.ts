@@ -147,7 +147,7 @@ test(
     const help = page.getByRole('dialog', { name: 'Help' });
     await expect(help.getByRole('heading', { name: 'Reading each metric' })).toBeVisible();
     await help.getByRole('tab', { name: 'Method notes' }).click();
-    await expect(help.getByRole('heading', { name: 'Betweenness' })).toBeVisible();
+    await expect(help.getByRole('heading', { name: 'Betweenness', exact: true })).toBeVisible();
     await help.getByRole('tab', { name: 'Help for respondents' }).click();
     await expect(help.getByRole('heading', { name: 'Who will see your answers' })).toBeVisible();
     await help.getByRole('button', { name: 'Close' }).click();

@@ -42,6 +42,7 @@ export const tableCopy = {
 
   incoming: {
     layer: 'Layer',
+    positive: (layer: string) => `${layer}, positive ratings`,
     caption: (layer: string, n: number) =>
       `Ties received on ${layer} by ${count(n, 'member', 'members')}, most first`,
     rank: 'Rank',

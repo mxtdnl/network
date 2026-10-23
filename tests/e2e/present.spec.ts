@@ -156,7 +156,17 @@ test('insights: every rule with its rule text, questions, and a link to the view
   await expect(panel.getByText(/Members are grouped by team or function\./).first()).toBeVisible();
   // Each rule states its thresholds; one that cannot run says why.
   await expect(panel.getByText(/among the highest 10% of members/)).toBeVisible();
-  await expect(panel.getByText(/Not applied: this rule reads the advice/)).toBeVisible();
+  // Possible overload and concentrated demand both read advice and workflow dependency.
+  await expect(panel.getByText(/Not applied: this rule reads the advice/)).toHaveCount(2);
+  // Only routes between groups: Finance's two routes on connection strength, and OPE04.
+  await expect(
+    panel.getByText(
+      /two members of the 8 in Finance hold all 2 ties between Finance and other groups/,
+    ),
+  ).toBeVisible();
+  await expect(
+    panel.getByText(/8 members are linked to the rest of the network only through one colleague/),
+  ).toBeVisible();
   // Questions, never verdicts.
   await expect(panel.getByText(/most ties involving Finance stay within Finance/)).toBeVisible();
   await expect(panel.getByText(/How does work reach the rest of the organisation\?/)).toBeVisible();
@@ -420,6 +430,11 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await page.getByLabel('Search', { exact: true }).fill('FIN');
   await check('map search');
   await page.getByLabel('Search', { exact: true }).fill('');
+  // Bridge ties marked (build plan session 7).
+  await page.getByRole('switch', { name: 'Mark bridge ties' }).click();
+  await settled(page);
+  await check('bridge ties');
+  await page.getByRole('switch', { name: 'Mark bridge ties' }).click();
 
   // Explore tools: ego view, path, subgroup, resilience.
   await rightTab(page, 'Explore').click();
@@ -441,6 +456,10 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   // Table, comparison views, insights, coverage, saved views.
   await centreTab(page, 'Table').click();
   await check('metrics table');
+  // Ranked bars of incoming ties (build plan session 7).
+  await page.getByRole('radio', { name: 'Incoming ties' }).check();
+  await check('incoming ties');
+  await page.getByRole('radio', { name: 'Metrics' }).check();
   // The Groups view (D154): by team and by community, with a group chosen as the subgroup.
   await centreTab(page, 'Groups').click();
   await page
