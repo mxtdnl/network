@@ -416,7 +416,7 @@ The insights panel (spec §9) lists rule-based observations. Each rule is a pure
 
 Quantiles use linear interpolation over the members whose value is defined (NumPy's default), as in the bootstrap.
 
-Three rules group members: silos, both formal–informal rules and negative ratings not returned. They use one attribute, chosen in the insights panel ("Group members by") and saved with the project (`settings.insight_group`); team by default, and team again if the chosen attribute is removed. Any category or ordered category attribute can be chosen, for example a programme in a matrix organisation or the legacy organisation after a merger. The rule text names the attribute.
+Five rules group members: only routes between groups, concentrated demand (its groups), silos, both formal–informal rules and negative ratings not returned. They use one attribute, chosen in the insights panel ("Group members by") and saved with the project (`settings.insight_group`); team by default, and team again if the chosen attribute is removed. Any category or ordered category attribute can be chosen, for example a programme in a matrix organisation or the legacy organisation after a merger. The rule text names the attribute.
 
 The silo and peripheral rules do not read layers in the conflict group (`INSIGHT_RULES.excludedLayerGroups`). Conflict is not a working tie: conflict between people who work together stays inside their group by nature, so on a conflict layer most groups look like silos, and receiving little conflict would count towards being peripheral.
 
@@ -424,7 +424,9 @@ The silo and peripheral rules do not read layers in the conflict group (`INSIGHT
 |---|---|---|---|
 | Potential brokers | Composite: weighted betweenness and constraint | Betweenness among the highest 10 % of members (at least one member; ties with the last included) and at least 0.05, and constraint at or below the median; at most 5 members | Ties from the composite, size by betweenness, the members highlighted |
 | Peripheral members | Received strength (strength when symmetrised) on every unsigned layer outside the conflict group and the positive part of each signed layer | At or below the 20th percentile and at least 10 % below the median on more than half of those layers; a layer on which nobody receives a tie is not counted, and a member at a layer's highest value is never low. At most 5 members are listed, most low layers first, then furthest below the median (mean value as a share of the median); the wording gives how many were found | Ties from the composite, size by received strength, the listed members highlighted |
+| Only routes between groups | The composite and each unsigned layer outside the conflict group, ties read without direction (section 16) | Applied to groups only when at least 2 groups have 3 members or more. A group of at least 3 members, with members outside it, whose ties with every other group are held by at most 2 of its members and at most half the group; the layer with the fewest such members is quoted, with the group's ties to each other group. Also every member who is a cut point cutting at least 3 members off from the largest part that remains; the layer on which it cuts off most is quoted | That layer, grouped by the attribute (or force-directed for a cut point), the members holding the ties (the cut point and the members it links) highlighted, bridge ties marked |
 | Possible overload | Connections in (connections when symmetrised) on advice and workflow dependency | At or above the 90th percentile and at least twice the median, and above 0; at most 5 per layer | That layer, size by connections in |
+| Concentrated demand | Ties received on advice and workflow dependency, from the directed ratings in either view (section 16) | The 10 % of members who receive the most ties (at least one) hold at least 25 % of at least 20 ties; or, within a group of at least 5 members receiving at least 10 ties, the group's own top 10 % hold at least 2.5 times their even share (top members ÷ group members) | That layer, size by connections in, the top members highlighted (grouped by the attribute for a group) |
 | Silos | E-I index per group on the composite and each unsigned layer outside the conflict group | Applied only when at least 2 groups have 3 members or more. A group of at least 3 members, with members outside it, with E-I −0.50 or lower on a layer on which at least 5 ties involve the group (at least three internal ties per external one); the lowest is quoted | That layer, grouped by the attribute, the group highlighted |
 | Negative clusters | Each signed layer's directed ratings | Pairs who rate each other negatively in both directions, joined through shared members into groups of at least 3 | The composite with valence colour on, the group highlighted |
 | Negative ratings not returned | Each signed layer's directed ratings | At least 3 negative ratings whose reverse rating is not negative (neutral, positive or not given) on a layer; counted by pair of groups, the rater's group first, and how many reverse ratings were not given | The composite with that layer's colour on, negative ratings drawn whatever the tie strength, everyone who gave or received one highlighted |
@@ -434,6 +436,8 @@ The silo and peripheral rules do not read layers in the conflict group (`INSIGHT
 **Silos and peripheral members together.** When at least half of a silo group's members are also peripheral members, the silo observation says how many, and the peripheral list leaves them out (saying how many more are named under silos), so one finding is not reported twice. On the demo all six peripheral members in the directed view are in Finance (six of its eight members), so Finance is reported once, as a silo.
 
 **Why these limits (build plan session 3).** The rules were measured on the demo and the twelve scenario projects (`docs/scenarios.md`, `npm run scenarios:measure`) before and after each limit. Without the two-group condition, a department of 64 members with one team value was reported as a silo with no tie outside it, because E-I is −1 by construction when there is no outside. Without the conflict exclusion, every function of the merger scenarios was a "silo" on personal friction, from as few as 2 ties. Without the betweenness floor, members were named as potential brokers at betweenness 0.01 in teams where everyone works with everyone. Without the 10 % spread, members within 10 % of the highest received strength were listed as peripheral. Without the cap, the peripheral list reached 13 members. The figures are in the pull request of that session; `tests/unit/scenarioOutcomes.test.ts` checks the outcomes on every scenario.
+
+**Only routes and concentrated demand (build plan session 7).** The thresholds were chosen by the owner from counts on the demo and the twelve scenarios (`npm run scenarios:bridges`), in the directed view and symmetrised by mean and by min. Only routes: on the composite alone, at most 3 members found Finance in the demo (3 of 8) and nothing else, and at most 2 found nothing; on the composite and the working layers, at most 2 (or 3) members found Finance (2 of 8 on connection strength) in every view and the post-merger Integration Office (1 of 6 on workflow dependency) in the directed and mean views. Without "at most half the group", every group of 3 in which all 3 hold ties with other groups would be named (5 groups in 4 scenarios). Cut points cutting off at least 1 member also named two members who cut off a single colleague, whom the peripheral rule already covers; at least 3 leaves the demo's OPE04 (8 members of Finance) and the post-merger's INT01 (23 members, workflow dependency). Concentrated demand: only the post-merger project has advice and workflow dependency ratings; the top 10 % hold 15 % and 22 % of their ties, and on every other working layer of the thirteen projects 10–24 %, so 25 % is above what these projects show without a hub. Within groups, the Integration Office's INT01 receives 50 % of the 46 ties its team receives (3 times the even share of 17 %). The rule keeps "Possible overload", which names members by connections in against the median, beside it: one describes the network, the other the members. `tests/unit/bridges.test.ts` checks both rules at their thresholds and their outcomes on every project.
 
 **Caveats.** The thresholds are conventions chosen for this tool, not published standards; they are stated wherever a rule is shown so a reader can judge them. Every rule inherits the caveats of the metric it reads (sections 3 to 6): betweenness assumes shortest-path flow, the E-I index counts ties and favours larger groups, received strength depends on who answered. A negative rating not returned negatively may reflect a real difference in experience, a rater who rates everyone low or high, or a colleague who did not answer; the signed rule counts ratings, not people. The rules describe positions in the network, which have many causes (role, tenure, location, workload, the survey itself); an observation is a reason to ask, not an answer. Below the coverage threshold the panel repeats the coverage warning.
 
@@ -620,9 +624,12 @@ References follow APA style (7th edition) and were checked against the publisher
 - Fagiolo, G. (2007). Clustering in complex directed networks. *Physical Review E*, *76*(2), 026107. https://doi.org/10.1103/PhysRevE.76.026107
 - Freeman, L. C. (1977). A set of measures of centrality based on betweenness. *Sociometry*, *40*(1), 35–41. https://doi.org/10.2307/3033543
 - Freeman, L. C. (1979). Centrality in social networks: Conceptual clarification. *Social Networks*, *1*(3), 215–239. https://doi.org/10.1016/0378-8733(78)90021-7
+- Granovetter, M. S. (1973). The strength of weak ties. *American Journal of Sociology*, *78*(6), 1360–1380. https://www.jstor.org/stable/2776392
+- Granovetter, M. (1983). The strength of weak ties: A network theory revisited. *Sociological Theory*, *1*, 201–233. https://doi.org/10.2307/202051
 - Hagberg, A. A., Schult, D. A., & Swart, P. J. (2008). Exploring network structure, dynamics, and function using NetworkX. In G. Varoquaux, T. Vaught, & J. Millman (Eds.), *Proceedings of the 7th Python in Science Conference (SciPy2008)* (pp. 11–15).
 - Heider, F. (1946). Attitudes and cognitive organization. *The Journal of Psychology*, *21*(1), 107–112. https://doi.org/10.1080/00223980.1946.9917275
 - Hevey, D. (2018). Network analysis: A brief overview and tutorial. *Health Psychology and Behavioral Medicine*, *6*(1), 301–328. https://doi.org/10.1080/21642850.2018.1521283
+- Hopcroft, J., & Tarjan, R. (1973). Algorithm 447: Efficient algorithms for graph manipulation. *Communications of the ACM*, *16*(6), 372–378.
 - Krackhardt, D., & Stern, R. N. (1988). Informal networks and organizational crises: An experimental simulation. *Social Psychology Quarterly*, *51*(2), 123–140. https://doi.org/10.2307/2786835
 - Marchiori, M., & Latora, V. (2000). Harmony in the small-world. *Physica A: Statistical Mechanics and Its Applications*, *285*(3–4), 539–546. https://doi.org/10.1016/S0378-4371(00)00311-3
 - Mayer, R. C., Davis, J. H., & Schoorman, F. D. (1995). An integrative model of organizational trust. *Academy of Management Review*, *20*(3), 709–734. https://doi.org/10.5465/amr.1995.9508080335
@@ -630,7 +637,7 @@ References follow APA style (7th edition) and were checked against the publisher
 - Onnela, J.-P., Saramäki, J., Kertész, J., & Kaski, K. (2005). Intensity and coherence of motifs in weighted complex networks. *Physical Review E*, *71*(6), 065103. https://doi.org/10.1103/PhysRevE.71.065103
 - Zachary, W. W. (1977). An information flow model for conflict and fission in small groups. *Journal of Anthropological Research*, *33*(4), 452–473. https://doi.org/10.1086/jar.33.4.3629752
 
-**Where each is used.** Hevey (2018): general concepts only (see "Design" at the top). Cross & Parker (2004): advice seeking as a core ONA relation, and the energy layer. Mayer, Davis & Schoorman (1995): competence-based trust, kept separate from benevolence-based trust. Edmondson (1999): psychological safety, defined at team level; the interpersonal safety layer is a one-to-one (dyadic) adaptation of it. The method sources are cited where each method is described (sections 3 to 7). Library software used by the tool itself (graphology and the other dependencies) is credited, with its licence, in `README.md` and `public/THIRD-PARTY-NOTICES.txt`.
+**Where each is used.** Hevey (2018): general concepts only (see "Design" at the top). Cross & Parker (2004): advice seeking as a core ONA relation, and the energy layer. Mayer, Davis & Schoorman (1995): competence-based trust, kept separate from benevolence-based trust. Edmondson (1999): psychological safety, defined at team level; the interpersonal safety layer is a one-to-one (dyadic) adaptation of it. The method sources are cited where each method is described (sections 3 to 7 and 16). Library software used by the tool itself (graphology and the other dependencies) is credited, with its licence, in `README.md` and `public/THIRD-PARTY-NOTICES.txt`.
 
 ## 13. Data-quality checks
 
@@ -734,3 +741,52 @@ Reconstructed directions are labelled as reconstructed: in the member panel's ti
 
 **Caveats.** Shares count ties, not their strength; on the composite, any pair the composite rates above 0 counts. Every member and every tie counts, whatever the map's tie-strength range, filters or ego view, as for every metric. Members with no value for the attribute are left out, with their ties, and the number is stated. Larger groups have more possible ties, so a share is comparable across groups where a count is not; a group of one has no tie possible within itself. Communities are found from the ties themselves, so a high share inside each community is partly by construction; they change when the layer or its weights change. The table's "ties leaving" counts every tie between the group and another group in either direction, as the E-I index does.
 
+## 16. Bridges, cut points and load concentration
+
+Added in build plan session 7. Every measure here is computed in the engine for the composite, each unsigned layer and each signed layer's positive ratings, in the current view, from every tie (any weight above 0), whatever the map shows. None is computed on negative sub-layers (section 3.1).
+
+### Edge betweenness
+
+**Meaning.** How many of the shortest routes between members pass through a tie. A tie with high edge betweenness carries routes between parts of the network that have few other links (Freeman, 1977; Brandes, 2001).
+
+**Formula.** EB(e) = Σ_{s ≠ t} σ_st(e) / σ_st, over ordered pairs of members, where σ_st is the number of shortest paths from s to t (distance 1/w, section 1.4) and σ_st(e) the number through tie e, divided by n(n − 1) in both views. This is `nx.edge_betweenness_centrality(G, weight='distance', normalized=True)`. Graticule uses graphology-metrics' `edgeBetweenness`, which accumulates and rescales in the same way; its values match NetworkX exactly on the four fixtures (12,956 ties across views). In the directed view each direction of a pair is its own tie.
+
+**Caveats.** As betweenness (section 3): it assumes that what flows takes shortest paths, and stronger ties count as shorter. It is listed per tie; the map marks local bridges instead, which do not depend on weights.
+
+### Local bridges and their span
+
+**Meaning.** A tie whose two members have no contact in common, so that the tie is their shortest link and, without it, any route between them is longer (Granovetter, 1973, 1983). The span is how many steps that other route takes. A local bridge with no other route at all is a bridge in the strict sense: removing it splits the network.
+
+**Formula.** On the ties read without direction (a tie in either direction counts once): a tie between u and v is a local bridge when N(u) ∩ N(v) = ∅. Its span is the number of steps between u and v in the network without that tie, by breadth-first search, or infinite when there is none; every local bridge has span at least 3. This is `nx.local_bridges(G, with_span=True, weight=None)`, which NetworkX defines for undirected graphs, so in the directed view the ties are read without direction as `G.to_undirected()` does. Values match NetworkX exactly on the fixtures.
+
+**Caveats.** Whether a tie is a local bridge depends on every tie of the layer, so a missing rating can create or remove one; read it with the coverage. On a dense layer there are few local bridges, because most pairs share a contact; on a sparse layer, such as a high threshold would draw, there are many. The map marks local bridges among every tie of the layer drawn, not among the ties drawn only.
+
+### Cut points
+
+**Meaning.** A member whose removal splits the part of the network they belong to: some colleagues are linked to the rest only through them. For each, Graticule counts the members who would be cut off from the largest part that remains.
+
+**Formula.** Articulation points of the ties read without direction (the depth-first search of Hopcroft & Tarjan, 1973), as `nx.articulation_points`. Cut off = the members of the cut point's part, less the cut point, less the largest part that remains once it is removed. Values match NetworkX's articulation points and its connected components exactly on the fixtures.
+
+**Caveats.** A cut point is a structural position, not a description of a person; many have it because of their role, location or the survey itself. A member who answered no survey can still be a cut point through colleagues' ratings of them. The resilience simulation (section 6) shows the effect of removing any member.
+
+### Routes between groups
+
+**Meaning.** For the grouping attribute of the insight rules: which members hold every tie between a group and other groups, and how many ties link each pair of groups directly.
+
+**Formula.** On the ties read without direction, a group's ties with other groups are the pairs (one member inside, one outside, both with a value) tied in either direction; the members holding them are listed most ties first. Members without a value are left out. The "Only routes between groups" rule (section 8) reads these on the composite and each working layer.
+
+**Caveats.** Direct ties only: two groups can reach each other through a third. A group with no tie to any other group is described by the silo rule, not this one.
+
+### Load concentration
+
+**Meaning.** How far the ties members receive gather on a few of them: the share of all incoming ties held by the 10 % of members who receive the most. On advice and workflow dependency it describes where requests and reliance gather (review §6, "Load concentration"; the "points of overload" ONA is used to find).
+
+**Formula.** Ties received by member i: the number of members j with w(j → i) > 0, read from the directed ratings in either view, so the mutual view does not lose who named whom. With m members, k = ⌈0.1 m⌉ (at least 1) members are taken by ties received, highest first (ties broken by member order, which does not change the share); share = Σ_top received / Σ_all received, not defined when no one receives a tie. Within a group the same is computed over the group's members, against the ties they receive; spread evenly, the top members would hold k / m. The fixtures compute the same from NetworkX in-degree; values match exactly.
+
+**Caveats.** Counts, not strength: a member named once by many colleagues counts more than one named often by a few. A share near k / m means ties are spread evenly, not that anyone's load is right; a high share may reflect a role (a coordinator, a single expert) that the organisation intends. Members who gave no ratings still receive ties from others, so their count is complete, but members who did not answer do not name anyone, which lowers others' counts.
+
+### Ranked bars of incoming ties
+
+The Table tab's "Incoming ties" mode lists the members the map shows, most ties received first, on a chosen layer (advice by default, then workflow dependency, then "Ties from"), with each member's share of all ties received and a bar relative to the longest. A rule marks the last of the top 10 % of all members. The list is a table, so it is also the alternative for screen readers. Filters and the ego view choose the members listed; shares are always of every tie received.
+
+The references cited here are listed in section 12.
