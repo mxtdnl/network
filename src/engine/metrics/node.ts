@@ -13,7 +13,8 @@ import {
   type PathGraph,
 } from '../graphs';
 import { harmonic } from '../paths';
-import type { NodeFlag, NodeMetricKey, NodeMetricTable, RefKind } from '../types';
+import { brandes } from './bridges';
+import type { NodeFlag, NodeMetricKey, NodeMetricTable, RefKind, TieBetweenness } from '../types';
 
 export const EIGENVECTOR_MAX_ITERATIONS = 10000;
 export const EIGENVECTOR_TOLERANCE = 1e-12;
@@ -255,6 +256,8 @@ export function nodeMetrics(
 ): {
   table: NodeMetricTable;
   eigenvectorReason: 'noComponent' | 'notConverged' | null;
+  /** Edge betweenness from the same pass as weighted betweenness; null on negative sub-layers. */
+  edges: TieBetweenness | null;
 } {
   const columns: NodeMetricTable['columns'] = {};
   const flags: NodeMetricTable['flags'] = {};
@@ -285,11 +288,14 @@ export function nodeMetrics(
         },
       },
       eigenvectorReason: null,
+      edges: null,
     };
   }
 
   const p = pathGraph(g);
-  columns.betweenness = betweenness(p, true);
+  // Weighted betweenness of members and ties in one Brandes pass (metrics/bridges.ts).
+  const weighted = brandes(p);
+  columns.betweenness = weighted.node;
   columns.betweennessBinary = betweenness(p, false);
   const h = harmonic(p);
   if (g.directed) {
@@ -306,7 +312,11 @@ export function nodeMetrics(
   columns.effectiveSize = sh.effectiveSize;
   flags.constraint = sh.flags;
   flags.effectiveSize = sh.flags;
-  return { table: { columns, flags, omitted: null }, eigenvectorReason: ev.reason };
+  return {
+    table: { columns, flags, omitted: null },
+    eigenvectorReason: ev.reason,
+    edges: weighted.edges,
+  };
 }
 
 /** One node metric on its own (used by the bootstrap). */
@@ -323,7 +333,7 @@ export function singleNodeMetric(g: DenseGraph, metric: NodeMetricKey): Float64A
     case 'degree':
       return strengthAndDegree(g).outD;
     case 'betweenness':
-      return betweenness(pathGraph(g), true);
+      return brandes(pathGraph(g)).node;
     case 'betweennessBinary':
       return betweenness(pathGraph(g), false);
     case 'harmonicIn':

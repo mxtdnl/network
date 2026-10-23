@@ -212,7 +212,7 @@ function refResult(p: Prepared, r: PreparedRef, warnings: EngineWarning[]): RefR
       r.kind === 'negative'
         ? null
         : {
-            betweenness: edgeBetweenness(pathGraph(g)),
+            betweenness: metrics.edges ?? edgeBetweenness(pathGraph(g)),
             localBridges: localBridges(g),
             cutPoints: cutPoints(g),
           },

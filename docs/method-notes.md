@@ -115,7 +115,7 @@ Negative sub-layers get strength, degree and clustering only. Betweenness, harmo
 
 **Meaning.** How often a member lies on the shortest routes between other members. High betweenness marks someone who connects parts of the network that are otherwise far apart.
 
-**Formula.** Freeman (1977), computed with Brandes' (2001) algorithm, as graphology and NetworkX do: B_i = Σ over pairs s ≠ i ≠ t of σ_st(i) / σ_st, where σ_st is the number of shortest paths from s to t and σ_st(i) the number passing through i, with tie length 1/w. Normalised so values run from 0 to 1: divided by (n − 1)(n − 2) for ordered pairs in the directed view, and by (n − 1)(n − 2)/2 for unordered pairs in the symmetrised view.
+**Formula.** Freeman (1977), computed with Brandes' (2001) algorithm, as graphology and NetworkX do: B_i = Σ over pairs s ≠ i ≠ t of σ_st(i) / σ_st, where σ_st is the number of shortest paths from s to t and σ_st(i) the number passing through i, with tie length 1/w. Normalised so values run from 0 to 1: divided by (n − 1)(n − 2) for ordered pairs in the directed view, and by (n − 1)(n − 2)/2 for unordered pairs in the symmetrised view. Weighted betweenness comes from Graticule's own Brandes pass, which gives edge betweenness at the same time (section 16); binary betweenness from graphology. Both match NetworkX on the fixtures.
 
 **Caveats.** Assumes that things travel along shortest paths only. Sensitive to single ties: one extra tie can move a member's value a great deal. Paths of exactly equal length are compared by floating-point equality, so two paths whose lengths differ only by rounding are not both counted. A binary version (every tie length 1) is also computed, for centralisation.
 
@@ -749,7 +749,7 @@ Added in build plan session 7. Every measure here is computed in the engine for 
 
 **Meaning.** How many of the shortest routes between members pass through a tie. A tie with high edge betweenness carries routes between parts of the network that have few other links (Freeman, 1977; Brandes, 2001).
 
-**Formula.** EB(e) = Σ_{s ≠ t} σ_st(e) / σ_st, over ordered pairs of members, where σ_st is the number of shortest paths from s to t (distance 1/w, section 1.4) and σ_st(e) the number through tie e, divided by n(n − 1) in both views. This is `nx.edge_betweenness_centrality(G, weight='distance', normalized=True)`. Graticule uses graphology-metrics' `edgeBetweenness`, which accumulates and rescales in the same way; its values match NetworkX exactly on the four fixtures (12,956 ties across views). In the directed view each direction of a pair is its own tie.
+**Formula.** EB(e) = Σ_{s ≠ t} σ_st(e) / σ_st, over ordered pairs of members, where σ_st is the number of shortest paths from s to t (distance 1/w, section 1.4) and σ_st(e) the number through tie e, divided by n(n − 1) in both views. This is `nx.edge_betweenness_centrality(G, weight='distance', normalized=True)`, computed with Brandes' accumulation in the same pass as members' weighted betweenness (section 3); its values match NetworkX on the four fixtures within 1e-16 (12,956 ties across views). In the directed view each direction of a pair is its own tie.
 
 **Caveats.** As betweenness (section 3): it assumes that what flows takes shortest paths, and stronger ties count as shorter. It is listed per tie; the map marks local bridges instead, which do not depend on weights.
 
