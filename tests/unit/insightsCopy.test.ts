@@ -288,3 +288,94 @@ describe('insight wording is neutral', () => {
     }
   });
 });
+
+// Questions and readouts (build plan session 8): the question picker's
+// questions, its notes and help, and every sentence read out beside a number,
+// pass the same list. They are generated on the demo and every scenario
+// project, in both views, so every kind of readout is checked as shown.
+
+/** Every string in a copy object; functions are called with placeholder arguments. */
+function copyStrings(value: unknown): string[] {
+  if (typeof value === 'string') return [value];
+  if (typeof value === 'function') {
+    const out = (value as (...a: unknown[]) => unknown)(
+      'Placeholder',
+      'Placeholder',
+      'Placeholder',
+    );
+    return typeof out === 'string' ? [out] : [];
+  }
+  if (value && typeof value === 'object') return Object.values(value).flatMap(copyStrings);
+  return [];
+}
+
+async function readoutStrings(): Promise<{ text: string; names: string[] }[]> {
+  const { readdirSync } = await import('node:fs');
+  const { QUESTION_IDS, questionAvailability, questionLayer } =
+    await import('../../src/ui/state/questions');
+  const { memberReadout, networkReadouts, questionReadouts } =
+    await import('../../src/ui/state/readouts');
+  const { memberSentence, readoutSentence } = await import('../../src/ui/copy/readouts');
+  const { DIRECTED_METRICS, SYMMETRISED_METRICS } = await import('../../src/ui/copy/metrics');
+  const { effectiveWeights, initialWeightState } = await import('../../src/ui/state/presets');
+  const out: { text: string; names: string[] }[] = [];
+  const files = readdirSync(join(root, 'src/demo')).filter((f) => f.endsWith('.ona.json'));
+  for (const file of files) {
+    const project = parseProject(readFileSync(join(root, 'src/demo', file), 'utf8'));
+    const names = project.members.map((m) => m.display_name);
+    const name = (id: string) => project.members.find((m) => m.id === id)?.display_name ?? id;
+    const weights = effectiveWeights(project, initialWeightState());
+    for (const view of ['directed', 'symmetrised'] as const) {
+      const result = await analyse(
+        buildAnalysisInput(project, { view, symmetrise: 'mean', ...weights }, `${file}-${view}`),
+      );
+      for (const id of QUESTION_IDS) {
+        if (!questionAvailability(id, project).ok) continue;
+        const layer = questionLayer(id, project);
+        for (const r of questionReadouts(id, project, result, layer, layer))
+          out.push({ text: readoutSentence(r, name), names: [] });
+      }
+      for (const ref of ['composite', 'connection_strength']) {
+        for (const r of networkReadouts(project, result, ref, ref))
+          out.push({ text: readoutSentence(r, name), names });
+        const columns = result.refs[ref]?.node.columns ?? {};
+        for (const m of view === 'directed' ? DIRECTED_METRICS : SYMMETRISED_METRICS) {
+          const column = columns[m];
+          if (!column) continue;
+          for (let i = 0; i < project.members.length; i += 7) {
+            const readout = memberReadout(project, column, i, m);
+            if (readout) out.push({ text: memberSentence(readout), names });
+          }
+        }
+      }
+    }
+  }
+  return out;
+}
+
+describe('question and readout wording is neutral', () => {
+  it('asks every question as a question, naming no member', async () => {
+    const { questionsCopy } = await import('../../src/ui/copy/questions');
+    for (const q of Object.values(questionsCopy.questions)) {
+      expect(q.trim().endsWith('?'), q).toBe(true);
+      expect(findBanned(q, words), q).toEqual([]);
+    }
+  });
+
+  it('uses no banned word in the picker, its notes and help, or the composite statement', async () => {
+    const { questionsCopy } = await import('../../src/ui/copy/questions');
+    const { memberPhrases } = await import('../../src/ui/copy/readouts');
+    for (const text of [...copyStrings(questionsCopy), ...copyStrings(memberPhrases)])
+      expect(findBanned(text, words), text).toEqual([]);
+  });
+
+  it('uses no banned word in any readout on the demo or the scenario projects', async () => {
+    const strings = await readoutStrings();
+    expect(strings.length).toBeGreaterThan(500);
+    for (const { text, names } of strings) {
+      expect(findBanned(text, words), text).toEqual([]);
+      // Network readouts and member sentences never name a member.
+      for (const n of names) expect(text.includes(n), `${n} in ${text}`).toBe(false);
+    }
+  }, 120_000);
+});

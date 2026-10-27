@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import { syntheticProject } from '../fixtures/synthetic';
 import { seededMembersCsv, seededTiesCsv } from '../fixtures/validation/seeded-errors';
+import { useComposite } from './advanced';
 import { NIGHTLY } from './nightly';
 
 // Phase 8 design and accessibility audit (docs/design-audit.md). Every view
@@ -649,11 +650,11 @@ test('compact layout: the drawer and the rails by keyboard', async ({ page }) =>
   await key('Enter');
   await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(leftToggle(page)).toBeFocused();
-  await expect(page.getByRole('heading', { name: 'Weights', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Advanced: combine layers' })).toHaveCount(0);
   await key('Enter');
   await expect(leftToggle(page)).toHaveAttribute('aria-expanded', 'true');
   await expect(leftToggle(page)).toBeFocused();
-  await expect(page.getByRole('heading', { name: 'Weights', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Advanced: combine layers' })).toBeVisible();
 
   // The legend's three forms; it is never removed.
   const legend = page.getByRole('region', { name: 'Legend' });
@@ -779,6 +780,7 @@ test('colour-vision simulations of the map', async ({ page }) => {
     [
       'map-relationship-health',
       async () => {
+        await useComposite(page);
         await page.getByLabel('Preset').selectOption({ label: 'Relationship health' });
         await page.getByRole('radio', { name: 'Circular' }).check();
       },

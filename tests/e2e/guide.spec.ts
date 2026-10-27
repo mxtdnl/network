@@ -6,6 +6,7 @@ import { memberCodes } from '../../src/data/anonymise';
 import { parseProject, serialiseProject } from '../../src/data/projectFile';
 import type { Project } from '../../src/data/schema';
 import { seededMembersCsv, seededTiesCsv } from '../fixtures/validation/seeded-errors';
+import { openAdvanced, useComposite } from './advanced';
 import { NIGHTLY } from './nightly';
 
 // Phase 9: the in-app help, and the screenshots in docs/user-guide.md.
@@ -186,7 +187,14 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await settled(page);
   await expectNoNames(page);
   await shot(page, 'map');
+  // Questions first (build plan session 8): the picker, the title and its sentences.
+  await page.getByRole('button', { name: 'About this network' }).click();
+  await shot(page, 'question');
+  await page.getByRole('button', { name: 'About this network' }).click();
+  // The weight panel waits under "Advanced: combine layers".
+  await openAdvanced(page);
   await shot(page, 'weights', page.locator('.weights'));
+  await page.locator('summary', { hasText: 'Advanced: combine layers' }).click();
   // At 1440 × 900 the layout is compact, so the legend starts condensed (D125).
   await shot(page, 'legend-condensed', page.getByRole('region', { name: 'Legend' }));
   const legendForm = page.getByRole('combobox', { name: 'Legend' });
@@ -261,6 +269,7 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
 
   // Saved views and a presentation.
   await rightTab(page, 'Views').click();
+  await useComposite(page);
   await page.getByLabel('Preset').selectOption({ label: 'Informal network' });
   await settled(page);
   await page.getByLabel('Name of the new view').fill('Informal network');

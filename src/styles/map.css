@@ -809,3 +809,16 @@
 .legend__node--hole {
   fill: var(--paper);
 }
+
+/* A sentence under each measure: how the value compares (build plan session 8). */
+.member__metric-row th,
+.member__metric-row td {
+  padding-bottom: 0;
+}
+
+.member__table td.member__readout {
+  padding: 0 0 var(--s-2);
+  font-size: var(--t--1-size);
+  line-height: var(--t--1-line);
+  color: var(--graphite);
+}

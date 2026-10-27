@@ -20,12 +20,14 @@ import { StatusLine } from './StatusLine';
 import { TableView } from './TableView';
 import { TopBar } from './TopBar';
 import { WeightPanel } from './WeightPanel';
+import { QuestionHeader } from './QuestionHeader';
+import { QuestionPicker } from './QuestionPicker';
+import { questionsCopy } from '../copy/questions';
 import { exploreCopy } from '../copy/explore';
 import { savedViewsCopy } from '../copy/savedViews';
 import { InsightsPanel } from './InsightsPanel';
 import { PresentationView } from './PresentationView';
 import { SavedViewsPanel } from './SavedViewsPanel';
-import { weightsCopy } from '../copy/weights';
 import { DEFAULT_DIVERGING } from '../map/palettes';
 import { DRAWER_ID, LayoutContext, ReadOnlyContext, useLayoutMode } from '../state/layoutMode';
 
@@ -69,6 +71,9 @@ export function Workspace() {
   const setRightPanel = useAppStore((s) => s.setRightPanel);
   const setLeftOpen = useAppStore((s) => s.setLeftOpen);
   const setRightOpen = useAppStore((s) => s.setRightOpen);
+  const setAdvancedOpen = useAppStore((s) => s.setAdvancedOpen);
+  const setMap = useAppStore((s) => s.setMap);
+  const usingComposite = useAppStore((s) => s.map.layer === 'composite');
   const closeNotice = useAppStore((s) => s.closeNotice);
   const hasProject = useAppStore((s) => (s.data.project?.members.length ?? 0) > 0);
   const mode = useLayoutMode();
@@ -161,11 +166,11 @@ export function Workspace() {
         <p className="workspace__elsewhere">{shellCopy.left.elsewhere}</p>
       )}
       {showWeights && (
-        <section className="workspace__section" aria-labelledby="weights-heading">
-          <h2 id="weights-heading" className="panel-heading">
-            {weightsCopy.heading}
+        <section className="workspace__section" aria-labelledby="question-heading">
+          <h2 id="question-heading" className="panel-heading">
+            {questionsCopy.heading}
           </h2>
-          <WeightPanel />
+          <QuestionPicker />
         </section>
       )}
       {showMapControls && (
@@ -175,6 +180,36 @@ export function Workspace() {
           </h2>
           <MapControls />
         </section>
+      )}
+      {showWeights && (
+        // The composite and its weights are a method choice, so they wait under
+        // Advanced, closed until opened (build plan session 8).
+        <details
+          className="workspace__section workspace__advanced"
+          open={ui.advancedOpen}
+          onToggle={(e) => {
+            const open = e.currentTarget.open;
+            if (open !== ui.advancedOpen) setAdvancedOpen(open);
+          }}
+        >
+          <summary className="workspace__advanced-summary">
+            <Icon name={ui.advancedOpen ? 'collapse' : 'expand'} />
+            <h2 className="workspace__advanced-heading">{questionsCopy.advanced}</h2>
+          </summary>
+          <p className="field__help">{questionsCopy.advancedHelp}</p>
+          {!usingComposite && (
+            <button
+              type="button"
+              className="button button--secondary workspace__use-composite"
+              onClick={() => {
+                setMap({ layer: 'composite' });
+              }}
+            >
+              {questionsCopy.useComposite}
+            </button>
+          )}
+          <WeightPanel />
+        </details>
       )}
     </>
   );
@@ -285,6 +320,7 @@ export function Workspace() {
           {leftColumn}
           <main className="workspace__centre" aria-label={shellCopy.regions.centre}>
             {readOnly && <p className="workspace__read-only">{shellCopy.phone.readOnly}</p>}
+            {hasProject && !editing(centreView) && <QuestionHeader />}
             <Tabs
               label={shellCopy.regions.centre}
               items={centre}

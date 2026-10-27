@@ -371,6 +371,31 @@ describe('bridge ties in exports (build plan session 7)', () => {
   );
 });
 
+describe('the composite’s weights in exports (build plan session 8)', () => {
+  it.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])(
+    'states the weights when ties come from the composite (names hidden %s, signed left out %s)',
+    async (anonymise, excludeSigned) => {
+      const flat = async (map: Partial<MapSettings>) => {
+        const ctx = await contextFor(project, { anonymise, excludeSigned, weights: HEALTH, map });
+        const out = await produce('svg', ctx);
+        return out.text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      };
+      const composite = await flat({ layer: 'composite' });
+      expect(composite).toContain('Combined layers: ');
+      // Relationship health scales by valence: stated while kept, gone with the layer.
+      if (excludeSigned) expect(composite).not.toContain('Valence adjusts each tie');
+      else expect(composite).toContain('Valence adjusts each tie');
+      expect(await flat({ layer: 'connection_strength' })).not.toContain('Combined layers');
+    },
+    30_000,
+  );
+});
+
 describe.each(ENCODINGS)('map encoding: $name', ({ map, kept, excluded }) => {
   describe.each([
     [true, true],

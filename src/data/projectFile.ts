@@ -385,6 +385,10 @@ export function checkSavedView(v: Obj): string[] {
       'has an invalid setting for marking bridge ties.',
     );
     need(
+      m.question === undefined || m.question === null || typeof m.question === 'string',
+      'has an invalid question.',
+    );
+    need(
       m.nonRespondents === undefined ||
         m.nonRespondents === 'mark' ||
         m.nonRespondents === 'leaveOut',

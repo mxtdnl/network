@@ -5,7 +5,7 @@ export const savedViewsCopy = {
   tab: 'Views',
   heading: 'Saved views',
   intro:
-    'A saved view keeps the weights, filters, layout, node positions and pins, selection and encodings on the map. Present steps through them in this order.',
+    'A saved view keeps the question it answers, the weights, filters, layout, node positions and pins, selection and encodings on the map; its caption starts as the question. Present steps through them in this order.',
   empty: 'No saved views yet. Set up the map, then save it as a view.',
   noProject: 'Saved views appear here once you add data.',
   nameLabel: 'Name of the new view',

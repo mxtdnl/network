@@ -20,6 +20,20 @@ import { effectiveWeights, initialWeightState, type WeightState } from '../../sr
 import { initialMapSettings, type Grouping, type MapSettings } from '../../src/ui/state/store';
 import { draftFor } from '../fixtures/surveyProject';
 
+/**
+ * The map settings these tests were written against: ties from the composite, sized by
+ * bridging, as the map opened before questions (build plan session 8 opens it on
+ * connection strength).
+ */
+function compositeMap() {
+  return {
+    ...initialMapSettings(),
+    layer: 'composite',
+    sizeMetric: 'betweenness' as const,
+    question: null,
+  };
+}
+
 export const root = join(import.meta.dirname, '..', '..');
 
 /** Custom properties of tokens.css, with var() references resolved (as getComputedStyle does). */
@@ -147,7 +161,7 @@ export async function contextFor(
     grouping?: Grouping | null;
   },
 ): Promise<ExportContext> {
-  const map = { ...initialMapSettings(), ...options.map };
+  const map = { ...compositeMap(), ...options.map };
   const weights = options.weights ?? initialWeightState();
   const result = await screenResult(project, map, weights);
   return exportContext(

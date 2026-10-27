@@ -166,9 +166,13 @@ test('with signed layers left out, the exports and the table export hold no vale
   const pending = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export table' }).click();
   const table = await pending;
-  expect(table.suggestedFilename()).toBe('graticule-metrics-composite-directed-no-signed.csv');
+  expect(table.suggestedFilename()).toBe(
+    'graticule-metrics-connection_strength-directed-no-signed.csv',
+  );
   await expect(
-    page.getByText('Table exported as graticule-metrics-composite-directed-no-signed.csv.'),
+    page.getByText(
+      'Table exported as graticule-metrics-connection_strength-directed-no-signed.csv.',
+    ),
   ).toBeVisible();
 
   // The setting is saved with the project.

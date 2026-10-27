@@ -389,3 +389,13 @@
 :root[data-layout='compact'] .presentation__legend .legend {
   gap: var(--s-3);
 }
+
+/* Compact layout: the question header is tighter, so the map keeps its height (build plan session 8). */
+:root[data-layout='compact'] .question-header {
+  padding: var(--s-2) var(--s-4) 0;
+}
+
+:root[data-layout='compact'] .question-header__title {
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+}

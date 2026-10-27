@@ -1,11 +1,13 @@
-import { useId, useMemo, useState, type KeyboardEvent } from 'react';
+import { Fragment, useId, useMemo, useState, type KeyboardEvent } from 'react';
 import { DEFAULT_WAVE, isCategorical, type LayerDefinition, type Project } from '../../data/schema';
 import type { AnalysisResult } from '../engineClient';
 import { Icon } from '../components/Icon';
 import { formatValue, mapCopy } from '../copy/map';
 import { DIRECTED_METRICS, SYMMETRISED_METRICS, flagCopy, metricCopy } from '../copy/metrics';
 import { ratingFlagCopy } from '../copy/quality';
+import { memberSentence } from '../copy/readouts';
 import { remediesCopy } from '../copy/remedies';
+import { memberReadout } from '../state/readouts';
 import { shellCopy } from '../copy/shell';
 import { focusMapMember } from '../map/focus';
 import { rankInterval, rankOf } from '../map/rank';
@@ -312,29 +314,40 @@ function Position({
             // Values the analysis leaves out (build plan session 5) say so instead.
             const own =
               flagKey !== 'leftOut' && result.ownRatingMetrics.includes(m) ? ratingFlag : null;
+            // How the value compares with colleagues', in words (build plan session 8).
+            const readout = memberReadout(project, column, memberIndex, m);
             return (
-              <tr key={m}>
-                <th scope="row">
-                  <span className="member__metric">
-                    {metricCopy[m].label}
-                    <MetricInfo metric={m} flag={flag} rating={own && flagCopy[own]} />
-                  </span>
-                </th>
-                <td className="numeric">
-                  {formatValue(value)}
-                  {own && (
-                    <span className="rating-flag" aria-hidden="true">
-                      {ratingFlagCopy.marker}
+              <Fragment key={m}>
+                <tr className={readout ? 'member__metric-row' : undefined}>
+                  <th scope="row">
+                    <span className="member__metric">
+                      {metricCopy[m].label}
+                      <MetricInfo metric={m} flag={flag} rating={own && flagCopy[own]} />
                     </span>
-                  )}
-                  {own && <span className="visually-hidden">{ratingFlagCopy.short[own]}</span>}
-                </td>
-                <td className="numeric">
-                  {interval && interval.metric === m
-                    ? rankInterval(interval.rankLow[memberIndex], interval.rankHigh[memberIndex])
-                    : rankOf(column, memberIndex)}
-                </td>
-              </tr>
+                  </th>
+                  <td className="numeric">
+                    {formatValue(value)}
+                    {own && (
+                      <span className="rating-flag" aria-hidden="true">
+                        {ratingFlagCopy.marker}
+                      </span>
+                    )}
+                    {own && <span className="visually-hidden">{ratingFlagCopy.short[own]}</span>}
+                  </td>
+                  <td className="numeric">
+                    {interval && interval.metric === m
+                      ? rankInterval(interval.rankLow[memberIndex], interval.rankHigh[memberIndex])
+                      : rankOf(column, memberIndex)}
+                  </td>
+                </tr>
+                {readout && (
+                  <tr className="member__readout-row">
+                    <td colSpan={3} className="member__readout">
+                      {memberSentence(readout)}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>

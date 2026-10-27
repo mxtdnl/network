@@ -52,6 +52,8 @@ export function insightMapPatch(
     layerToggles: toggles,
     ego: null,
     search: '',
+    // An observation is not one of the catalogue's questions (build plan session 8).
+    question: null,
   };
 }
 

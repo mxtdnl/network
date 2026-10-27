@@ -8,6 +8,31 @@ This guide is also in Graticule, under Help → User guide. The definition of ev
 
 Every screenshot here uses the fictional demo, with names hidden.
 
+## Start with a question
+
+Graticule starts from a question your client asks, not from a method. Choose one under "What do you want to know?" at the top of the left column, and Graticule sets the map, or the view that answers it best, for you: which relationship the ties come from, what the size of each person shows, the layout and the colours. The question becomes the title above the view, and sentences under it read out what the figures show.
+
+![The question picker at the top of the left column, and the question "Who is connected to whom?" as the title above the map, with sentences describing the network](user-guide/question.jpg)
+
+| Question | What it uses | What it shows |
+|---|---|---|
+| Who is connected to whom? | Connection strength | The map, with larger members named by more colleagues and colour by team. The map opens on this question. |
+| How does information reach people? | Advice | The map, with larger members asked by more colleagues; "Show incoming advice ties" ranks them. |
+| Where do teams connect, and where not? | Connection strength | The Groups tab: how many ties stay within each team and how many cross to each other team. |
+| Who links groups that otherwise rarely meet? | Informal collaboration | The map, with clusters outlined and larger members on more of the shortest routes between colleagues. |
+| Whose time do others depend on? | Workflow dependency | The Table's incoming ties, most first, and how much of the demand the busiest tenth receives. |
+| Where does work happen outside the formal structure? | Formal and informal collaboration | The map in the formal and informal line styles, over the formal hierarchy when managers are recorded. |
+| Where does the network rely on a single route? | Connection strength | The map with bridge ties marked, and the members whose absence would cut others off highlighted. |
+| Where are relationships rated negatively, and is that returned? | Valence | The map with negative ratings coloured and drawn however weak the tie. |
+
+If a project does not have the relationship a question needs, or it is switched off or not rated yet, the question says so in the list ("needs advice and information seeking") and, when chosen, explains how to add it. It changes nothing: Graticule never answers with a different relationship under the same title. The demo rates the four core relationships only, so its advice and dependency questions say they need those ratings; the post-merger scenario project (`src/demo/scenario-post-merger.ona.json`) answers all eight.
+
+**Every number has a sentence.** Under the question's title, its figures are read out in words: for example "On connection strength, 546 of the 1,560 possible ties are present (35%), counting each direction separately." "About this network" adds, in the same way, the six network measures (density, reciprocity, separate parts, communities, centralisation and the E-I index) that the question has not already read out. In the member panel each measure has a sentence beside its rank, comparing the person with their colleagues and with their team's median: "Lies on more of the shortest routes between colleagues than any of their 39 colleagues." Every figure counts all ties, including any the map hides.
+
+**From a question to a saved view.** Choose a question, read the sentences, adjust the map if you need to (the range, filters and layout keep the question), and save it in the Views tab: the question becomes the view's caption, ready for a presentation. Choosing another relationship under Ties from is your own analysis rather than the question's, so the title then names the relationship instead.
+
+**Combining layers is advanced.** Several relationships can be combined into one weighted set of ties, the composite, under "Advanced: combine layers" below the map settings. It is closed until you open it, because the weights are a statement of priorities you make, not a measurement (see [Composite weighting](#composite-weighting)).
+
 ## Getting started
 
 Open Graticule in a current version of Chrome, Edge, Firefox or Safari on a computer. A tablet works too; on a phone, projects can be viewed and explored but not changed.
@@ -20,7 +45,7 @@ The empty workspace offers four ways in: run a survey, add members by hand (see 
 
 ![The empty workspace with the buttons Run a survey, Add members, Import survey data and Load demo](user-guide/empty-workspace.jpg)
 
-The workspace has three columns: settings on the left (weights, map settings and layers), views in the centre (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Check the data). While the Members or Survey tab is open, the left column holds the layers only; the weights and map settings are on the Map tab. The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
+The workspace has three columns: settings on the left (the question, map settings, "Advanced: combine layers" and layers), views in the centre under the question's title (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Check the data). While the Members or Survey tab is open, the left column holds the layers only; the weights and map settings are on the Map tab. The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
 
 ### Compact and full layouts
 
@@ -225,7 +250,7 @@ The legend shows:
 
 **Map settings** (left column, under Map):
 
-- **Ties from** chooses the layer, or the composite, that sets which ties are drawn, their width, the layout, node size, communities and ranks.
+- **Ties from** chooses the layer, or the composite, that sets which ties are drawn, their width, the layout, node size, communities and ranks. A question sets it for you; choosing another layer here leaves the question for your own settings.
 - **Show on the map**: with "Hide its ties", a switch for each layer hides the pairs tied on it; every layer starts on. With "Keep its ties" (the default) every layer's ties are drawn.
 - **Edges**: Edge colour, Edge width and Edge style, as in the legend above. Each line encoding shows one thing at a time. **Mark bridge ties** puts an orange diamond on each tie whose two members have no contact in common (a local bridge): without that tie, any route between them is longer, or there is none. Bridges are found from every tie of the layer drawn, not only those within the range, and the legend counts the ones drawn.
 
@@ -276,7 +301,7 @@ The Explore tab (right column) holds four tools, all using the ties from the lay
 
 ## Reading each metric
 
-Open a member's panel to see their position in the network: each metric's value and rank (1 is the highest), for the layer you choose. The information button beside each metric gives its meaning, caveats and technical name. The formulas are in the [method notes](method-notes.md#3-node-metrics).
+Open a member's panel to see their position in the network: each metric's value and rank (1 is the highest), for the layer you choose, with a sentence under it that compares the person with their colleagues ("Is named by fewer colleagues than 32 of their 39 colleagues") and gives their team's median. Constraint reads the other way: a low value is a more open network, so the sentence says "a more open network than …". The information button beside each metric gives its meaning, caveats and technical name. The formulas are in the [method notes](method-notes.md#3-node-metrics).
 
 ![The member panel: attributes, actions, and each metric with value and rank](user-guide/member-panel.jpg)
 
@@ -295,7 +320,7 @@ A value can be "Not defined", with the reason, for example for someone with no t
 
 A value marked * rests on other people's reports, because the member gave no ratings or fewer than half of the ratings possible: their own view of their ties is missing. The note under the metrics says which, and the metric's information button gives the reason. In the directed view the incoming metrics (received strength, connections in, reach from others) do not depend on the member's own answers and are not marked. The Table labels such members and marks their values the same way, and the member metrics export gives the reason in its last column. On the map, a member who gave no ratings is drawn hollow, with its own legend entry.
 
-**Network measures** (in the network metrics export, the report and the Compare tab): density (the share of possible ties that exist), reciprocity (how often ties are returned), average clustering, components (separate parts), communities found by the Louvain method with their modularity, centralisation (how dominated the network is by one person), the E-I index and cross-group density (whether ties stay within groups or cross between them), structural balance on signed layers, and layer overlap. Each is defined in the [method notes](method-notes.md#4-network-metrics).
+**Network measures** (read out under "About this network" above the views, and in the network metrics export, the report and the Compare tab): density (the share of possible ties that exist), reciprocity (how often ties are returned), average clustering, components (separate parts), communities found by the Louvain method with their modularity, centralisation (how dominated the network is by one person), the E-I index and cross-group density (whether ties stay within groups or cross between them), structural balance on signed layers, and layer overlap. Each is defined in the [method notes](method-notes.md#4-network-metrics).
 
 **Ranks are not scores.** A rank orders positions in this network, on this layer, from these answers. Positions have many causes (role, tenure, location, workload, who answered the survey), and a small change in ties can change a rank. Run Rank stability in the Table to see how much each rank depends on exactly who took part; a wide range means the ranking should not be read precisely.
 
@@ -345,7 +370,7 @@ The conflict layers have weight 0 in the composite by default, so frequent confl
 
 ## Composite weighting
 
-Different questions need different relationships. The weight panel at the top of the left column combines the layers into one composite score per pair, which then drives the layout, edge width, node size and all rankings when Ties from is set to the composite.
+Different questions need different relationships, and the questions above each use one. The weight panel, under "Advanced: combine layers" in the left column, combines several layers into one composite score per pair, which then drives the layout, edge width, node size and all rankings when Ties from is set to the composite. Open the section and choose "Draw ties from the combined layers" to use it. While it is used, its weights are stated above the map and in the legend, and so in every export of the map: for example "Combined layers: Connection strength 33%, Informal collaboration 33%, Formal collaboration 33%; Valence adjusts each tie."
 
 ![The weight panel: preset, one slider per layer with its share, the valence treatment, and the composite formula](user-guide/weights.jpg)
 
@@ -358,7 +383,7 @@ When the weights change, members move smoothly to their new positions so you can
 
 ## Saved views and presentations
 
-A saved view keeps the map as it is: the weights, filters, layout, node positions and pins, selection and encodings. Set up the map, then in the Views tab type a name and Save view. Add a caption to each view: it is shown under the map when presenting, and about 60 characters per line reads well from the back of a room. Use Show to restore a view, Update to replace it with the map as it is now, and the arrows to change the order.
+A saved view keeps the map as it is: the weights, filters, layout, node positions and pins, selection and encodings. Set up the map, then in the Views tab type a name and Save view. A view saved while a question is chosen keeps the question, and takes it as its caption. Add or edit a caption for each view: it is shown under the map when presenting, and about 60 characters per line reads well from the back of a room. Use Show to restore a view, Update to replace it with the map as it is now, and the arrows to change the order.
 
 ![The Views tab: two saved views in presentation order, each with a caption](user-guide/saved-views.jpg)
 

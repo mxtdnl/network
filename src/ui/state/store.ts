@@ -56,6 +56,10 @@ export interface UiState {
   tableMode: TableMode;
   /** The layer of the incoming-ties bars; null follows advice, workflow dependency, then "Ties from". */
   incomingLayer: string | null;
+  /** The left column's "Advanced: combine layers" section is open (closed by default, build plan session 8). */
+  advancedOpen: boolean;
+  /** The centre column's "About this network" readouts are shown (build plan session 8). */
+  aboutOpen: boolean;
 }
 
 export type LegendMode = 'full' | 'condensed' | 'beside';
@@ -150,6 +154,11 @@ export interface MapSettings {
   communityOutlines: boolean;
   /** Mark the ties whose two members have no contact in common (local bridges, build plan session 7). */
   markBridges: boolean;
+  /**
+   * The question the map answers (build plan session 8, ui/state/questions.ts), or null for
+   * the analyst's own settings. Changing "Ties from" drops it (setMap).
+   */
+  question: string | null;
 }
 
 export type { EdgeColourChoice, EdgeWidthChoice };
@@ -197,6 +206,8 @@ interface Actions {
   setGrouping: (grouping: Grouping | null) => void;
   setTableMode: (mode: TableMode) => void;
   setIncomingLayer: (layer: string | null) => void;
+  setAdvancedOpen: (open: boolean) => void;
+  setAboutOpen: (open: boolean) => void;
   setAnonymise: (on: boolean) => void;
   openNotice: () => void;
   closeNotice: () => void;
@@ -269,12 +280,19 @@ export const DEFAULT_THRESHOLD = 0.3;
 /** The tie strength above which the map hides ties when it opens: none (D141). */
 export const DEFAULT_THRESHOLD_TO = 1;
 
+/**
+ * The map opens on the first question, "Who is connected to whom?" (build plan
+ * session 8): ties from connection strength, sized by connections in. A project
+ * that cannot answer it opens on the composite with the analyst's own settings.
+ */
+export const DEFAULT_LAYER = 'connection_strength';
+
 export function initialMapSettings(): MapSettings {
   return {
     view: 'directed',
     symmetrise: 'mean',
-    layer: 'composite',
-    sizeMetric: 'betweenness',
+    layer: DEFAULT_LAYER,
+    sizeMetric: 'inDegree',
     fill: { kind: 'attribute', key: 'team' },
     // Display only: the map opens with ties below 0.3 hidden (CLAUDE.md D129).
     threshold: DEFAULT_THRESHOLD,
@@ -299,7 +317,22 @@ export function initialMapSettings(): MapSettings {
     sizeScale: 'value',
     communityOutlines: false,
     markBridges: false,
+    question: 'connected',
   };
+}
+
+/** The opening map settings for a project: the first question, or the composite when it cannot be answered. */
+export function openingMapSettings(project: Project | null): MapSettings {
+  const map = initialMapSettings();
+  const fill = project?.attribute_definitions.some((a) => a.key === 'team')
+    ? map.fill
+    : ({ kind: 'community' } as const);
+  const layer = project?.layers.find((l) => l.key === DEFAULT_LAYER);
+  const rated =
+    layer?.enabled === true &&
+    project?.ties.some((t) => t.variable === DEFAULT_LAYER && typeof t.value === 'number') === true;
+  if (!project || rated) return { ...map, fill };
+  return { ...map, fill, layer: 'composite', sizeMetric: 'betweenness', question: null };
 }
 
 // The same metric in the other view: in- and out- columns become the single
@@ -340,6 +373,8 @@ export function initialUiState(noticeSeen: boolean): UiState {
     grouping: null,
     tableMode: 'metrics',
     incomingLayer: null,
+    advancedOpen: false,
+    aboutOpen: false,
   };
 }
 
@@ -415,6 +450,12 @@ export const useAppStore = create<AppState>()((set, get) => {
     setIncomingLayer: (incomingLayer) => {
       setUi({ incomingLayer });
     },
+    setAdvancedOpen: (advancedOpen) => {
+      setUi({ advancedOpen });
+    },
+    setAboutOpen: (aboutOpen) => {
+      setUi({ aboutOpen });
+    },
     setGrouping: (grouping) => {
       setUi({ grouping });
     },
@@ -449,13 +490,10 @@ export const useAppStore = create<AppState>()((set, get) => {
       });
       // A new project starts from the default encodings; filters and the
       // selection name members and categories of the old one.
-      const fill = project?.attribute_definitions.some((a) => a.key === 'team')
-        ? initialMapSettings().fill
-        : ({ kind: 'community' } as const);
       // A project saved with names hidden opens with names hidden.
       if (project?.settings.anonymise) setUi({ anonymise: true });
       set({
-        map: { ...initialMapSettings(), fill },
+        map: openingMapSettings(project),
         selection: { member: null, hovered: null, group: [] },
         results: { status: 'idle', current: null, error: null },
         weights: initialWeightState(),
@@ -540,6 +578,13 @@ export const useAppStore = create<AppState>()((set, get) => {
     setMap: (patch) => {
       set((s) => {
         const next = { ...s.map, ...patch };
+        // A question is answered by its own "Ties from" layer: choosing another drops it.
+        if (
+          patch.layer !== undefined &&
+          patch.layer !== s.map.layer &&
+          patch.question === undefined
+        )
+          next.question = null;
         if (patch.view && patch.sizeMetric === undefined) {
           next.sizeMetric = metricForView(next.sizeMetric, patch.view);
         }

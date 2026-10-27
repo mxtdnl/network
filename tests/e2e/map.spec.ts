@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import { syntheticProject } from '../fixtures/synthetic';
+import { useComposite } from './advanced';
 import { REGION } from './regions';
 
 // Phase 4: the network map. Screenshots go to test-results/screenshots, or to
@@ -67,13 +68,22 @@ async function inkShare(page: Page): Promise<number> {
   });
 }
 
-/** Moves the pointer across the canvas until it is over a member (the cursor class changes). */
+/**
+ * Moves the pointer over the canvas until it is over a member (the cursor class changes),
+ * in rings outwards from the centre, where the force layout puts most members.
+ */
 async function findMemberOnCanvas(page: Page): Promise<{ x: number; y: number }> {
   const canvas = page.locator('canvas.map__canvas');
   const box = await canvas.boundingBox();
   if (!box) throw new Error('No canvas');
-  for (let y = box.y + 40; y < box.y + box.height * 0.6; y += 10) {
-    for (let x = box.x + box.width * 0.3; x < box.x + box.width - 60; x += 10) {
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  for (let r = 0; r < Math.max(box.width, box.height) / 2; r += 8) {
+    const steps = Math.max(1, Math.round((2 * Math.PI * r) / 8));
+    for (let k = 0; k < steps; k++) {
+      const x = cx + r * Math.cos((2 * Math.PI * k) / steps);
+      const y = cy + r * Math.sin((2 * Math.PI * k) / steps);
+      if (x < box.x || y < box.y || x > box.x + box.width || y > box.y + box.height) continue;
       await page.mouse.move(x, y);
       if (await canvas.evaluate((c) => c.classList.contains('map__canvas--member')))
         return { x, y };
@@ -94,6 +104,8 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   await start(page);
   await loadDemo(page);
   const map = page.getByRole('tabpanel', { name: 'Map' });
+  // This test reads the composite's map, the default before build plan session 8.
+  await useComposite(page);
 
   // The map renders: canvas drawn, legend for every encoding, hidden table of the same members.
   await settled(page);
@@ -111,7 +123,7 @@ test('load demo, map renders, filter, select a member, open the panel, traverse 
   await expect(style).toHaveValue('none');
   await style.selectOption({ label: 'Formal and informal collaboration' });
   await expect(legend.getByText('Edge style', { exact: true })).toBeVisible();
-  await expect(legend.getByText('Bridging', { exact: true })).toBeVisible();
+  await expect(legend.getByText('Connections in', { exact: true })).toBeVisible();
   await expect(map.getByRole('table')).toHaveCount(1);
   await expect(map.getByRole('table').getByRole('row')).toHaveCount(41);
   // Demo coverage (95 %) is above the threshold: no warning on the map.

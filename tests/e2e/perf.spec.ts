@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import { syntheticProject } from '../fixtures/synthetic';
+import { useComposite } from './advanced';
 import { NIGHTLY } from './nightly';
 
 // Phase 8 performance measurements (spec §8: 250 members, about 10,000 ties).
@@ -183,7 +184,8 @@ test('performance at 250 members and about 10,000 ties', NIGHTLY, async ({ page 
 
   // Weight changes: the composite drives the map; 12 slider steps, then the
   // re-analysis and the layout transition that follow, until the map is still.
-  await page.getByLabel('Ties from').selectOption({ index: 0 });
+  // The weight panel sits under "Advanced: combine layers" (build plan session 8).
+  await useComposite(page);
   await settled(page);
   const before = (await analysisTimes(page)).length;
   const slider = page.getByRole('slider', { name: 'Informal collaboration' });
