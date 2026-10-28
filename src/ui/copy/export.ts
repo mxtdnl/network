@@ -236,12 +236,24 @@ export const reportCopy = {
   },
   sections: {
     map: 'Network map',
-    metrics: 'Key network metrics',
-    insights: 'Insights',
-    method: 'Method notes',
-    coverage: 'Data coverage',
+    coverage: 'Data quality',
+    brief: 'The method in brief',
+    metrics: 'Appendix A. Key network metrics',
+    insights: 'Appendix B. Insight rules',
+    method: 'Appendix C. Technical notes',
     ethics: 'Ethics statement',
   },
+  brief: {
+    intro:
+      'What the measures in this report mean, in a sentence or two each. They describe how people say they work together; none of them is a judgement of anyone.',
+    more: 'Graticule’s method notes give every definition in full, with its formula, caveats and references.',
+    moreAppendix:
+      'Appendix C gives the technical notes for the measures in this report; Graticule’s method notes give every formula, with its references.',
+  },
+  view: {
+    question: 'Question',
+  },
+  questionLine: (q: string) => `Question: ${q}`,
   map: {
     intro: (layer: string) => `Ties drawn from ${layer}. The legend explains every encoding.`,
     groups: (layer: string) =>

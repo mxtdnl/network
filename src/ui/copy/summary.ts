@@ -38,11 +38,16 @@ export const summaryCopy = {
   matters: 'Why it may matter',
   questions: 'Questions for discussion',
   intro: (members: number, groups: number | null, groupLabel: string, layers: number) =>
-    `This summary covers ${num(members)} people${groups !== null && groups > 1 ? ` in ${num(groups)} groups by ${lower(groupLabel)}` : ''} and ${num(layers)} kinds of working relationship. It describes patterns in how people say they work together, between groups rather than individuals. It is not an assessment of anyone. Each headline comes from a rule stated in the appendix, and its questions are for discussion with the people involved.`,
+    `This summary covers ${num(members)} people${groups !== null && groups > 1 ? ` in ${num(groups)} groups by ${lower(groupLabel)}` : ''} and ${num(layers)} kinds of working relationship. It describes patterns in how people say they work together, between groups rather than individuals. It is not an assessment of anyone. Each headline comes from a fixed rule applied to every group alike, and its questions are for discussion with the people involved.`,
   fewer: (k: number) =>
     k === 0
       ? 'None of the rules found a pattern between groups that this summary can report, so it has no headlines. The figures and the method follow.'
       : `The rules found ${word(k)} ${k === 1 ? 'pattern' : 'patterns'} between groups that this summary can report.`,
+  flags: {
+    heading: 'Not drafted as a headline',
+    negativeCluster: (layer: string, size: number, pairs: number) =>
+      `On ${layer}, the rules found a group of ${num(size)} members in which ${num(pairs)} pairs rate each other negatively in both directions. It is not drafted as a headline, because it concerns a few people. Add a headline yourself if it belongs in this summary, worded for the audience.`,
+  },
   closing:
     'These patterns describe the network as the people in it reported it at one time. They are starting points for conversation with the groups involved, who will know what lies behind them.',
   audience: {
@@ -205,6 +210,68 @@ export function headlineText(f: HeadlineFacts, ctx: InsightContext): HeadlineTex
         questions: [
           'What would happen to these routes if one of these people were away?',
           'Who else could connect these parts of the organisation?',
+        ],
+      };
+    }
+    case 'noTies': {
+      const label = lower(ctx.attributeLabel(f.attribute));
+      const shown = f.none.slice(0, 3).map(([a, b]) => `${a} and ${b}`);
+      const extra = f.none.length - shown.length;
+      const items =
+        extra > 0 ? [...shown, `${word(extra)} other ${extra === 1 ? 'pair' : 'pairs'}`] : shown;
+      return {
+        title:
+          f.none.length === 1
+            ? `No tie joins ${shown[0] ?? ''}.`
+            : `${Word(f.none.length)} pairs of groups have no tie between them.`,
+        saw: `On ${layer(f.ref)}, ${num(f.none.length)} of the ${num(f.pairs)} pairs of groups by ${label} have no tie between them: ${listWords(items)}.`,
+        matters:
+          'Groups with no tie between them may have no shared work. Where their work does meet, information may pass through other groups or not at all.',
+        questions: [
+          `Does the work of ${listWords(
+            f.none.slice(0, 2).map(([a, b]) => `${a} and ${b}`),
+            'or',
+          )} meet anywhere?`,
+          'If it does, how do these groups find out what the other is doing?',
+        ],
+      };
+    }
+    case 'balance': {
+      const share = (x: number) => percent(x / f.tied);
+      const most =
+        f.both >= f.formalOnly && f.both >= f.informalOnly
+          ? 'Most working ties are both formal and informal.'
+          : f.informalOnly > f.formalOnly
+            ? 'Many working ties are informal only.'
+            : 'Many working ties are formal only.';
+      return {
+        title: most,
+        saw: `Of the ${num(f.tied)} pairs who work together${f.directed ? ', counting each direction' : ''}, ${share(f.formalOnly)} do so formally only, ${share(f.informalOnly)} informally only and ${share(f.both)} both.`,
+        matters:
+          'Formal ties show the work as it is assigned; informal ties show how people actually reach one another. Where the two differ, the formal structure may not show how work gets done.',
+        questions: [
+          'Where does work rely on informal ties that the formal structure does not show?',
+          'Where do formal arrangements exist without the informal ties that usually come with them?',
+        ],
+      };
+    }
+    case 'teamTies': {
+      const total = f.internal + f.external;
+      const others = [
+        ...f.others.slice(0, 3).map((o) => `${num(o.ties)} with ${o.group}`),
+        ...(f.pooled ? [`${num(f.pooled.ties)} with other groups`] : []),
+      ];
+      return {
+        title:
+          f.external === 0
+            ? `${f.team}’s ties all stay within the team.`
+            : `${f.team} has ${num(f.external)} ${f.external === 1 ? 'tie' : 'ties'} with other groups.`,
+        saw: `On ${layer(f.ref)}, ${f.team}’s ${num(f.size)} members have ${num(f.internal)} ties with one another and ${num(f.external)} with people in other groups${others.length > 0 ? ` (${listWords(others)})` : ''}${total > 0 ? `; ${percent(f.external / total)} of the team’s ties reach outside it` : ''}.`,
+        matters:
+          'Ties inside a team help it coordinate; ties outside it bring in information and carry the team’s work to others.',
+        questions: [
+          `Which groups does ${f.team} most need to work with, and do these ties reflect that?`,
+          'What would the team want this picture to look like in a year?',
         ],
       };
     }

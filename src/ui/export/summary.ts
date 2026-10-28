@@ -6,13 +6,19 @@
 // their figures; ui/copy/summary.ts writes them (D9). The analyst edits the
 // draft before export (SummaryEditor), and the edit is saved with the project.
 
-import { isCategorical, type AttributeKey } from '../../data/schema';
+import {
+  isCategorical,
+  type AttributeKey,
+  type SavedSummary,
+  type SavedSummaryHeadline,
+} from '../../data/schema';
 import type { InsightContext } from '../copy/insights';
 import { audienceLine, headlineText, summaryCopy, type HeadlineText } from '../copy/summary';
 import { refName } from './tables';
 import type { InsightOutcome, Observation } from '../engineClient';
 import { audienceInsights } from '../state/audience';
 import { insightGroup } from '../state/insightGroup';
+import { groupMixing, pairCell } from '../map/groupModel';
 import type { ExportContext } from './context';
 
 /** Headlines a summary aims for, and at most. */
@@ -103,8 +109,57 @@ export interface MixingFacts {
   possibleBetween: number;
 }
 
+/** Pairs of groups with no tie between them. */
+export interface NoTiesFacts {
+  kind: 'noTies';
+  attribute: AttributeKey;
+  ref: string;
+  none: [string, string][];
+  /** Pairs of groups considered. */
+  pairs: number;
+}
+
+/** Working ties by formal and informal collaboration, across the network. */
+export interface BalanceFacts {
+  kind: 'balance';
+  tied: number;
+  formalOnly: number;
+  informalOnly: number;
+  both: number;
+  directed: boolean;
+}
+
+/** A workshop team's ties inside and with other groups. */
+export interface TeamTiesFacts {
+  kind: 'teamTies';
+  team: string;
+  ref: string;
+  size: number;
+  internal: number;
+  external: number;
+  others: { group: string; ties: number }[];
+  /** Ties with groups below the minimum size, pooled. */
+  pooled: { members: number; ties: number } | null;
+}
+
 export type HeadlineFacts =
-  GroupFacts | PairFacts | OneWayFacts | RoutesFacts | LoadFacts | MixingFacts;
+  | GroupFacts
+  | PairFacts
+  | OneWayFacts
+  | RoutesFacts
+  | LoadFacts
+  | MixingFacts
+  | NoTiesFacts
+  | BalanceFacts
+  | TeamTiesFacts;
+
+/** A pattern the rules found that is not drafted as a headline (shown to the analyst only). */
+export interface SummaryFlag {
+  kind: 'negativeCluster';
+  ref: string;
+  size: number;
+  pairs: number;
+}
 
 export interface DraftHeadline {
   /** Stable across redrafts of the same analysis: the kind and the groups it is about. */
@@ -125,7 +180,12 @@ function headlineId(f: HeadlineFacts): string {
     case 'load':
       return `${f.kind}:${f.ref}`;
     case 'mixing':
-      return `mixing:${f.attribute}`;
+    case 'noTies':
+      return `${f.kind}:${f.attribute}`;
+    case 'balance':
+      return 'balance';
+    case 'teamTies':
+      return `teamTies:${f.team}`;
     case 'routes':
       return 'routes';
   }
@@ -291,23 +351,38 @@ export function draftHeadlines(ctx: ExportContext): DraftHeadline[] {
     ...(routes ? [routes] : []),
   ];
 
-  // Too few: the network's ties within and between groups, when they lean either way.
+  // Too few: patterns between groups that every analysis has, in this order (owner, session 10).
   if (out.length < SUMMARY_RULES.minHeadlines) {
-    const m = mixingFacts(ctx);
-    if (m) out.push(m);
+    const fillers: (HeadlineFacts | null)[] =
+      policy.level === 'workshop'
+        ? [teamTiesFacts(ctx)]
+        : [
+            mixingFacts(ctx),
+            noTiesFacts(ctx),
+            out.some((f) => f.kind === 'formalOnly' || f.kind === 'informalOnly')
+              ? null
+              : balanceFacts(ctx),
+          ];
+    for (const f of fillers) if (f && out.length < SUMMARY_RULES.minHeadlines) out.push(f);
   }
   return out
     .slice(0, SUMMARY_RULES.maxHeadlines)
     .map((facts) => ({ id: headlineId(facts), facts }));
 }
 
-/** The mixing of the rules' grouping on the composite (or the first layer), when it leans. */
+/** The layer the fillers read: the composite, else the first layer of the analysis. */
+function mainRef(ctx: ExportContext): string | null {
+  if (ctx.result.refs.composite) return 'composite';
+  return Object.keys(ctx.result.refs).find((r) => !r.endsWith('-')) ?? null;
+}
+
+/** The mixing of the rules' grouping on the main layer, when it leans either way. */
 function mixingFacts(ctx: ExportContext): MixingFacts | null {
   const attr = insightGroup(ctx.project);
-  if (!attr || ctx.policy.level === 'workshop') return null;
-  const ref = ctx.result.refs.composite ? 'composite' : Object.keys(ctx.result.refs)[0];
-  const mix = ref ? ctx.result.refs[ref]?.network.mixing[attr.key] : undefined;
-  if (!ref || !mix || mix.groups.length < 2 || mix.internal + mix.external === 0) return null;
+  const ref = mainRef(ctx);
+  if (!attr || !ref) return null;
+  const mix = ctx.result.refs[ref]?.network.mixing[attr.key];
+  if (!mix || mix.groups.length < 2 || mix.internal + mix.external === 0) return null;
   if (mix.ei > SUMMARY_RULES.mixingInward && mix.ei < SUMMARY_RULES.mixingOutward) return null;
   const sizes = mix.perGroup.map((g) => g.size);
   const total = sizes.reduce((a, b) => a + b, 0);
@@ -321,6 +396,101 @@ function mixingFacts(ctx: ExportContext): MixingFacts | null {
     ei: mix.ei,
     possibleBetween: total > 1 ? 1 - same / (total * (total - 1)) : NaN,
   };
+}
+
+/** Pairs of groups with no tie between them, among groups the audience may see. */
+function noTiesFacts(ctx: ExportContext): NoTiesFacts | null {
+  const attr = insightGroup(ctx.project);
+  const ref = mainRef(ctx);
+  if (!attr || !ref) return null;
+  const mix = ctx.result.refs[ref]?.network.mixing[attr.key];
+  if (!mix || mix.groups.length < 2) return null;
+  const directed = ctx.result.view === 'directed';
+  const min = ctx.policy.groupsOnly ? ctx.policy.minGroupSize : 1;
+  const shown = mix.groups
+    .map((g, i) => ({ g, i, size: mix.perGroup[i]?.size ?? 0 }))
+    .filter((x) => x.size >= min);
+  const none: [string, string][] = [];
+  let pairs = 0;
+  for (let a = 0; a < shown.length; a++)
+    for (let b = a + 1; b < shown.length; b++) {
+      const x = shown[a];
+      const y = shown[b];
+      if (!x || !y) continue;
+      pairs += 1;
+      if (pairCell(mix, x.i, y.i, directed).ties === 0) none.push([x.g, y.g]);
+    }
+  if (none.length === 0) return null;
+  return { kind: 'noTies', attribute: attr.key, ref, none, pairs };
+}
+
+/** The split of working ties into formal only, informal only and both. */
+function balanceFacts(ctx: ExportContext): BalanceFacts | null {
+  const fi = ctx.result.multiplex?.formalInformal;
+  if (!fi) return null;
+  const { formalOnly, informalOnly, both } = fi.counts;
+  const tied = formalOnly + informalOnly + both;
+  if (tied === 0) return null;
+  return {
+    kind: 'balance',
+    tied,
+    formalOnly,
+    informalOnly,
+    both,
+    directed: ctx.result.view === 'directed',
+  };
+}
+
+/** A workshop's team: its ties inside and with each other group (small groups pooled). */
+function teamTiesFacts(ctx: ExportContext): TeamTiesFacts | null {
+  const attr = ctx.policy.attribute;
+  const team = ctx.policy.team;
+  const ref = ctx.settings.layer;
+  if (!attr || team === null) return null;
+  const mix = groupMixing(ctx.result.refs[ref], { kind: 'attribute', key: attr.key });
+  if (!mix) return null;
+  const t = mix.groups.indexOf(team);
+  if (t < 0) return null;
+  const directed = ctx.result.view === 'directed';
+  const others: { group: string; ties: number }[] = [];
+  let pooledTies = 0;
+  let pooledMembers = 0;
+  let external = 0;
+  mix.groups.forEach((g, h) => {
+    if (h === t) return;
+    const ties = pairCell(mix, t, h, directed).ties;
+    external += ties;
+    const size = mix.perGroup[h]?.size ?? 0;
+    if (size >= ctx.policy.minGroupSize) {
+      if (ties > 0) others.push({ group: g, ties });
+    } else {
+      pooledTies += ties;
+      pooledMembers += size;
+    }
+  });
+  others.sort((a, b) => b.ties - a.ties || a.group.localeCompare(b.group));
+  return {
+    kind: 'teamTies',
+    team,
+    ref,
+    size: mix.perGroup[t]?.size ?? 0,
+    internal: pairCell(mix, t, t, directed).ties,
+    external,
+    others,
+    pooled: pooledTies > 0 ? { members: pooledMembers, ties: pooledTies } : null,
+  };
+}
+
+/** Patterns the rules found that the summary does not draft, for the analyst's attention. */
+export function summaryFlags(ctx: ExportContext): SummaryFlag[] {
+  if (ctx.policy.level !== 'analyst' || ctx.excludeSigned) return [];
+  const clusters = ctx.result.insights.find((o) => o.rule === 'negativeCluster');
+  return (clusters?.observations ?? []).map((o) => ({
+    kind: 'negativeCluster',
+    ref: o.ref,
+    size: o.evidence.size ?? o.members.length,
+    pairs: o.evidence.pairs ?? 0,
+  }));
 }
 
 // ------------------------------------------------------------------ the text
@@ -368,4 +538,89 @@ export function draftSummary(ctx: ExportContext): SummaryText {
   if (headlines.length < SUMMARY_RULES.minHeadlines)
     intro.push(summaryCopy.fewer(headlines.length));
   return { intro, headlines, closing: summaryCopy.closing };
+}
+
+// --------------------------------------------------------------- the edit
+
+/** The draft as an edit to start from: every headline included. */
+export function savedFromDraft(draft: SummaryText): SavedSummary {
+  return {
+    intro: draft.intro.join('\n\n'),
+    headlines: draft.headlines.map((h) => ({ ...h, questions: [...h.questions], include: true })),
+    closing: draft.closing,
+  };
+}
+
+/** A headline in the editor: the saved text, and how it relates to the current draft. */
+export interface EditorHeadline {
+  headline: SavedSummaryHeadline;
+  /** Saved from a draft headline the analysis no longer produces. */
+  stale: boolean;
+  /** In the current draft but not in the saved summary (offered, not yet included). */
+  fresh: boolean;
+}
+
+export const isCustomHeadline = (id: string) => id.startsWith('custom:');
+
+/**
+ * The saved summary set against the current draft: saved headlines in their
+ * order, marked stale when the draft no longer has them, then draft headlines
+ * the saved summary lacks, left out until the analyst includes them.
+ */
+export function reconcileSummary(
+  draft: SummaryText,
+  saved: SavedSummary | undefined,
+): { intro: string; closing: string; headlines: EditorHeadline[] } {
+  const base = saved ?? savedFromDraft(draft);
+  const ids = new Set(draft.headlines.map((h) => h.id));
+  const have = new Set(base.headlines.map((h) => h.id));
+  return {
+    intro: base.intro,
+    closing: base.closing,
+    headlines: [
+      ...base.headlines.map((h) => ({
+        headline: h,
+        stale: !isCustomHeadline(h.id) && !ids.has(h.id),
+        fresh: false,
+      })),
+      ...draft.headlines
+        .filter((h) => !have.has(h.id))
+        .map((h) => ({
+          headline: { ...h, questions: [...h.questions], include: false },
+          stale: false,
+          fresh: true,
+        })),
+    ],
+  };
+}
+
+const paragraphs = (text: string) =>
+  text
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s+/g, ' ').trim())
+    .filter((p) => p !== '');
+
+/**
+ * The summary the report prints: the analyst's edit for this audience level
+ * when there is one, otherwise the draft. Names in edited text are replaced
+ * as the export's names layer replaces them in captions (D79, D164).
+ */
+export function reportSummary(ctx: ExportContext): SummaryText {
+  const draft = draftSummary(ctx);
+  const saved = ctx.source.settings.summaries?.[ctx.policy.level];
+  if (!saved) return draft;
+  const t = (s: string) => ctx.names.text(s);
+  return {
+    intro: paragraphs(saved.intro).map(t),
+    headlines: saved.headlines
+      .filter((h) => h.include)
+      .map((h) => ({
+        id: h.id,
+        title: t(h.title.trim()),
+        saw: t(h.saw.trim()),
+        matters: t(h.matters.trim()),
+        questions: h.questions.map((q) => t(q.trim())).filter((q) => q !== ''),
+      })),
+    closing: t(saved.closing.trim()),
+  };
 }

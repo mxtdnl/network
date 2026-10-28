@@ -838,3 +838,75 @@ Every presentation and export is prepared for an audience: the analyst (no restr
 **Free text.** View names, captions and the project title have every member the level may not show replaced by "a colleague", by full name or by code; at board level that is every member.
 
 **Limits.** An audience level controls what Graticule outputs; it cannot stop someone recognising a colleague from context (a group of five in which only one person is new), and a group's figures always describe its members together. Agreement to be named is recorded by the analyst; Graticule does not collect it.
+
+## 19. Notes for readers
+
+These notes are written for the readers of a report rather than for the analyst: one or two sentences on what each measure means, without formulas. The PDF report prints them as "The method in brief" (build plan session 10); the sections above give the full definitions and caveats, and the report's technical appendix quotes them.
+
+### How the data was gathered
+
+Each person rated their colleagues on a few kinds of working relationship, such as how often they collaborate or whom they ask for advice. A tie is a rating above the lowest point of a scale; a rating someone did not give is treated as unknown, never as no tie.
+
+### Kinds of relationship
+
+Each kind of relationship is analysed on its own, as a layer of the network. Where the report combines layers, it says which ones and how much each counts; the combination states the analyst's priorities and is not a finding.
+
+### Directions
+
+A tie has a direction: one person's rating of another may differ from the reverse. A report either counts each direction separately or reads the two directions of a pair together, and says which.
+
+### How dense the network is
+
+The share of possible ties that are present. A dense network is one in which most people are tied to most others.
+
+### Ties returned
+
+The share of ties that are given in both directions: the colleague named also names the person who named them.
+
+### Separate parts
+
+Groups of people with no route of ties between them. In most organisations everyone is connected, directly or through others.
+
+### Clusters
+
+Groups of people who are tied mostly to one another, found automatically from the ties alone. Modularity says how clear the clusters are; networks with clear clusters typically score between 0.3 and 0.7.
+
+### Ties within and between groups
+
+How many ties stay within a group, such as a team, and how many cross to other groups. The E-I index runs from −1, when every tie stays inside, to +1, when every tie crosses.
+
+### Concentration
+
+Whether ties fall evenly across people or gather on a few. Centralisation runs from 0, when everyone has as many ties, to 1, when every tie involves the same person.
+
+### Bridging
+
+How often a person lies on the shortest routes between colleagues. People with high bridging join up parts of the network that would otherwise be further apart.
+
+### Connections in and out
+
+How many colleagues name a person, and how many they name. These count ties; they say nothing about the quality of anyone's work.
+
+### Bridge ties and cut points
+
+A bridge tie joins two people who have no contact in common. A cut point is a person through whom alone some colleagues are linked to the rest of the network.
+
+### Demand on a few people
+
+The share of all requests, such as for advice, that the people named most often receive, set against the share they would receive if requests were spread evenly.
+
+### Formal and informal collaboration
+
+Formal collaboration is work that a role, process or reporting line requires; informal collaboration is work people choose to do together. Comparing the two shows where work runs outside the formal structure.
+
+### Negative ratings
+
+Some relationships are rated on a scale from negative to positive. Negative ratings are counted on their own and never offset by positive ones; a trio of people is balanced when none or two of their three ties are negative.
+
+### Insight rules
+
+Each pattern in the report was found by a fixed rule, with stated thresholds, applied to every group in the same way. A pattern is a question for the people involved, not a finding about anyone.
+
+### How complete the data is
+
+The share of possible ratings that were given. When coverage is below the threshold, figures about the whole network rest on incomplete data; people who gave few ratings are described largely by others' reports.

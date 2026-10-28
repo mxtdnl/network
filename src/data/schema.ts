@@ -242,6 +242,27 @@ export interface ProjectSettings {
   /** Audience levels for presentation and exports (build plan session 9); absent means the
    *  analyst's own, unrestricted outputs. Schema 4 in place. */
   audience?: AudienceSettings;
+  /** The executive summary as the analyst edited it, one per audience level (build plan
+   *  session 10); absent for a level means the draft. Schema 4 in place. */
+  summaries?: Partial<Record<AudienceLevel, SavedSummary>>;
+}
+
+/** One headline of an edited executive summary (build plan session 10). */
+export interface SavedSummaryHeadline {
+  /** The draft headline it came from (export/summary.ts), or `custom:<n>` for one the analyst added. */
+  id: string;
+  title: string;
+  saw: string;
+  matters: string;
+  questions: string[];
+  /** Left out of the report while false, but kept for later. */
+  include: boolean;
+}
+
+export interface SavedSummary {
+  intro: string;
+  headlines: SavedSummaryHeadline[];
+  closing: string;
 }
 
 /** Who an output is for (build plan session 9, spec §8 and §11). */
