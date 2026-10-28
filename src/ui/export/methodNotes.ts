@@ -119,7 +119,8 @@ export const REPORT_NOTES: readonly {
 
 /** The selected notes; with `excludeSigned`, notes on signed layers and every sentence about them are left out. */
 export function reportNotes(markdown: string, excludeSigned: boolean): ReportNote[] {
-  const sections = parseMethodNotes(markdown);
+  // The notes for readers (section 19) repeat some headings in plain words; they are read by readerNotes.
+  const sections = parseMethodNotes(markdown.split(READERS)[0] ?? markdown);
   const byHeading = new Map(sections.map((s) => [s.heading, s]));
   const clean = (s: string | null) => (s === null || !excludeSigned ? s : withoutSignedText(s));
   const out: ReportNote[] = [];
@@ -149,4 +150,50 @@ export function insightCaveats(markdown: string, excludeSigned: boolean): string
   if (!p) return null;
   const body = p.slice('Caveats.'.length).trim();
   return excludeSigned ? withoutSignedText(body) : body;
+}
+
+/** Section 19 of the notes, "Notes for readers": the report's method in brief (build plan session 10). */
+const READERS = /^## 19\. Notes for readers$/m;
+
+/** Reader notes that apply only when the analysis has these layers. */
+const READER_NEEDS: Record<string, 'signed' | 'formalInformal'> = {
+  'Negative ratings': 'signed',
+  'Formal and informal collaboration': 'formalInformal',
+};
+
+export interface ReaderNote {
+  heading: string;
+  text: string;
+}
+
+/**
+ * The reader-facing notes, in the order written: one or two sentences per
+ * measure. Notes on layers the analysis lacks are left out, and with
+ * `excludeSigned` so is every sentence about signed or conflict layers.
+ */
+export function readerNotes(
+  markdown: string,
+  has: { signed: boolean; formalInformal: boolean; excludeSigned: boolean },
+): { intro: string | null; notes: ReaderNote[] } {
+  const body = markdown.split(READERS)[1]?.split(/^## /m)[0];
+  if (body === undefined)
+    throw new Error('docs/method-notes.md has no section "19. Notes for readers".');
+  const intro =
+    body
+      .split(/^### /m)[0]
+      ?.split(/\n\s*\n/)
+      .map(plainText)
+      .find((p) => p !== '') ?? null;
+  const notes: ReaderNote[] = [];
+  for (const s of parseMethodNotes(`## 19\n${body}`)) {
+    const need = READER_NEEDS[s.heading];
+    if (need === 'signed' && (!has.signed || has.excludeSigned)) continue;
+    if (need === 'formalInformal' && !has.formalInformal) continue;
+    const text = s.paragraphs
+      .map((p) => (has.excludeSigned ? withoutSignedText(p) : p))
+      .filter((p) => p !== '')
+      .join(' ');
+    if (text !== '') notes.push({ heading: s.heading, text });
+  }
+  return { intro, notes };
 }

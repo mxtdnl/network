@@ -627,11 +627,13 @@ describe('report details', () => {
     expect(text).toContain('75%');
     expect(out.pages).toBeGreaterThanOrEqual(8);
     for (const section of [
+      'Executive summary',
       'Network map',
-      'Key network metrics',
-      'Insights',
-      'Method notes',
-      'Data coverage',
+      'Data quality',
+      'The method in brief',
+      'Appendix A. Key network metrics',
+      'Appendix B. Insight rules',
+      'Appendix C. Technical notes',
       'Ethics statement',
     ])
       expect(text).toContain(section);

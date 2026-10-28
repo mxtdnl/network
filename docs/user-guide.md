@@ -431,9 +431,29 @@ Export (top bar) opens the export dialog. Under its settings it shows the data-q
 | Network metrics (CSV) | Density, reciprocity, components, communities, centralisation, mixing between groups and more, per layer |
 | Formal and informal ties (CSV) | Every pair classified as formal only, informal only, both or neither |
 | Table (CSV, from the Table tab) | The rows and columns shown, in their order |
-| Report (PDF) | The data-quality statement on the cover, the map, key network metrics, insights, method notes, data coverage with survey response rates, and an ethics statement. For a signed layer's negative ratings, the metrics table gives ties, density and reciprocity, but not separate parts, communities, modularity or the centralisation of bridging, which describe how a network holds together |
+| Report (PDF) | A briefing built from your saved views: see "The report" below |
 
 The dialog follows **Prepared for** (above): at board or leadership level the map export is the group map and the report shows groups, with roles for a leadership team; a team workshop's files hold its team only; a one-to-one offers **Export network card** (PDF) and nothing else. Exports a level does not offer are disabled with the reason.
+
+### The report
+
+The report is written for the people you present to, with the technical material at the back. In order:
+
+1. **Cover**: the question the report answers (the map's question, or the first view's), who it was prepared for, how ties are read, and the data-quality statement. The contents follow on the next page.
+2. **Executive summary**, about two pages: three to five headlines about groups, each with **What we saw** (the figures), **Why it may matter** and **Questions for discussion**.
+3. **One page per saved view** in the order of the Views tab: its name, question and caption, the sentences that read out its figures, and its map. With no view chosen, the map as it is on screen.
+4. **Data quality**: coverage, where the ratings came from and survey response rates.
+5. **The method in brief**: a sentence or two on each measure, in plain words ([method notes, section 19](method-notes.md#19-notes-for-readers)).
+6. **Appendices**, if chosen: A, key network metrics; B, the insight rules with every observation; C, the technical notes (definitions and caveats). For a signed layer's negative ratings, the metrics table gives ties, density and reciprocity, but not separate parts, communities, modularity or the centralisation of bridging, which describe how a network holds together.
+7. **Ethics statement**.
+
+Under **Report** in the Export dialog, choose the saved views to include (all, by default), whether to **Include the appendices**, and the audience under **Prepared for**. Each view is calculated with its own weights and settings, drawn at its saved positions, and follows the dialog's settings and audience: for a board or a leadership team each view is its group picture, and a team workshop's view shows the team only.
+
+**The executive summary** is drafted from the insight rules by fixed templates: no text leaves the browser. Groups whose ties stay mostly inside them come first, then the largest formal-only and informal-only gaps between groups, negative ratings not returned and, for you and a team workshop, routes and demand that run through a few people (counted, never named). When the rules find fewer than three patterns, the draft adds how ties fall within and between groups, pairs of groups with no tie and the split of formal and informal ties, or, for a workshop, the team's ties with each other group; if it still has fewer than three, it says so rather than inventing one. Negative clusters, which concern a few people, are never drafted; at your own level the editor lists them under "Not drafted as a headline", so you can decide.
+
+Select **Edit summary** to change the draft before exporting. You can edit the opening, closing and every headline, include or leave out a headline, move headlines up and down, add your own, and restore a headline or the whole summary to the draft. Fields are saved with the project when you leave them, one summary for each audience level (all team workshops share one). If the analysis changes, a headline it no longer finds is marked, and a new one is offered but left out until you include it. Names you type are replaced in the report as the audience and Hide names require, as in captions. The summary cannot be edited on a phone; the report then uses the saved summary or the draft.
+
+![The summary editor: the opening, then each headline with its fields and its place in the order](user-guide/summary-editor.jpg)
 
 In CSV files an empty cell means not defined or not rated. File names end in `-board`, `-leadership`, `-workshop` or `-one-to-one` for an audience, `-codes` when names are hidden and `-no-signed` when those layers were left out. Exports are ordinary files: store and share them as personal data unless names are hidden and you are sure no code identifies anyone.
 

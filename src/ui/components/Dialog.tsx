@@ -37,7 +37,10 @@ export function Dialog({
       className={wide ? 'dialog dialog--wide' : 'dialog'}
       aria-labelledby={titleId}
       aria-describedby={describedBy}
-      onClose={onClose}
+      onClose={(e) => {
+        // React passes a nested dialog's close up the tree; only this dialog's own close counts.
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <h2 id={titleId} className="dialog__title">
         {title}

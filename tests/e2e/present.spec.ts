@@ -381,7 +381,7 @@ test('presentation: steps through saved views with captions, keys and Escape, le
 
 test('anonymisation: no display name in the DOM or on the canvas in any view', async ({ page }) => {
   // About 27 s alone, so close to the default 30 s that load tips it over (as D114).
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   await start(page);
   await loadDemo(page);
   await rightTab(page, 'Views').click();
@@ -540,6 +540,16 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await check('presentation one-to-one card');
   await page.keyboard.press('Escape');
   await right(page).getByLabel('Prepared for').selectOption({ label: 'Analyst (no restriction)' });
+
+  // The Export dialog and the executive summary editor (build plan session 10).
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await check('export dialog');
+  await page.getByRole('button', { name: 'Edit summary' }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit the executive summary' });
+  await expect(editor.getByRole('button', { name: 'Add a headline' })).toBeVisible();
+  await check('summary editor');
+  await editor.getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('dialog', { name: 'Export' }).getByRole('button', { name: 'Close' }).click();
 
   expect(failures).toEqual([]);
 

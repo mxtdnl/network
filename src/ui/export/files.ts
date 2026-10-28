@@ -4,16 +4,24 @@
 
 import { exportCopy, reportCopy } from '../copy/export';
 import type { ExportContext } from './context';
-import { composeMap, type MapDocument, type Measure } from './document';
+import { composeMap, wrap, type MapDocument, type Measure } from './document';
 import type { FontLoader, Inflate } from './fonts';
 import { exportMap, type ExportMap, type MapState } from './mapScene';
 import { groupMapExport } from './groupDocument';
 import { assertAllowed } from '../state/audience';
 import { buildCard, type CardModel } from '../state/card';
-import { buildReport, type ReportModel } from './report';
+import { buildReport, type ReportModel, type ReportView } from './report';
+import type { ViewSource } from './viewPages';
+import { mapCopy } from '../copy/map';
 import { documentToSvg } from './svg';
-import { viewSlug } from './tables';
-import { readExportTheme, readPrintTheme, type ExportTheme, type TokenSource } from './theme';
+import { refName, viewSlug } from './tables';
+import {
+  readExportTheme,
+  readPrintTheme,
+  type ExportTheme,
+  type PrintTheme,
+  type TokenSource,
+} from './theme';
 
 export interface ExportDeps {
   tokens: TokenSource;
@@ -111,9 +119,48 @@ export interface PdfExport {
   fileName: string;
   bytes: Uint8Array;
   report: ReportModel;
+  /** The first view's picture. */
   doc: MapDocument;
+  /** Every view's picture, in page order. */
+  docs: MapDocument[];
   pages: number;
   substituted: string[];
+}
+
+/** What the report holds besides the export context (build plan session 10). */
+export interface ReportChoice {
+  /** Saved views to show, one page each, in presentation order; none shows the map on screen. */
+  views?: readonly ViewSource[];
+  /** Print the appendices; on by default. */
+  appendices?: boolean;
+}
+
+/** The plain name of the layer a picture draws, as pictureExport names it. */
+function pictureLayerName(ctx: ExportContext): string {
+  const layer = ctx.settings.layer;
+  if (ctx.policy.groupsOnly) return refName(ctx, layer);
+  return layer === 'composite'
+    ? mapCopy.controls.composite
+    : (ctx.project.layers.find((l) => l.key === layer)?.label ?? layer);
+}
+
+/** Height of a view page's text above its map, laid out as export/pdf.ts lays it out. */
+function viewTextHeight(v: ReportView, print: PrintTheme, measure: Measure): number {
+  const width = print.pageHeight - print.margin * 2;
+  const measureWidth = Math.min(print.measure, width);
+  const lines = (text: string, size: number, w: number, role: 'regular' | 'medium') =>
+    wrap(text, w, (x) => measure(x, role, size)).length;
+  let h = lines(v.title, print.heading.size, width, 'medium') * print.heading.line;
+  h += print.space[3] ?? 0;
+  const para = (text: string, small: boolean) => {
+    const style = small ? print.small : print.body;
+    h += lines(text, style.size, measureWidth, 'regular') * style.line + (print.space[1] ?? 0);
+  };
+  if (v.question) para(`${reportCopy.view.question} ${v.question}`, false);
+  if (v.caption !== '') para(v.caption, false);
+  for (const s of v.sentences) para(s, true);
+  para(v.mapIntro, true);
+  return h;
 }
 
 export async function pdfExport(
@@ -121,32 +168,53 @@ export async function pdfExport(
   state: MapState,
   deps: ExportDeps,
   caption: string,
+  choice: ReportChoice = {},
 ): Promise<PdfExport> {
-  // The map page is A4 landscape: the members are fitted into the space beside
-  // the legend, at full size, so legend and labels print at their token sizes.
+  assertAllowed(ctx.policy, 'report');
+  const sources =
+    choice.views && choice.views.length > 0 ? choice.views : [{ view: null, ctx, state } as const];
+  const report = buildReport(ctx, {
+    notes: deps.notes,
+    now: deps.now,
+    layerName: pictureLayerName(ctx),
+    caption,
+    appendices: choice.appendices ?? true,
+    ...(choice.views && choice.views.length > 0
+      ? {
+          views: choice.views.map((v) => ({
+            name: v.view.name,
+            caption: v.view.caption,
+            ctx: v.ctx,
+            layerName: pictureLayerName(v.ctx),
+          })),
+        }
+      : {}),
+  });
+  // Each view's page is A4 landscape: the members are fitted into the space
+  // beside the legend and below the page's text, at full size, so legend and
+  // labels print at their token sizes.
   const print = readPrintTheme(deps.tokens);
   const ex = readExportTheme(deps.tokens);
-  const pageW = print.pageHeight - print.margin * 2 + ex.padding * 2;
-  const pageH =
-    print.pageWidth -
-    print.margin * 2 -
-    print.heading.line -
-    (print.space[3] ?? 0) -
-    print.small.line * 2 -
-    (print.space[1] ?? 0) +
-    ex.padding;
-  const captionH = caption.trim() === '' ? 0 : ex.gap + ex.caption.line * 2;
-  const fitTo = {
-    width: pageW - ex.padding * 2 - ex.gap - ex.legendWidth,
-    height: pageH - ex.padding * 2 - captionH,
-  };
-  assertAllowed(ctx.policy, 'report');
-  const { doc, theme, layerName } = pictureExport(ctx, state, deps, caption, fitTo);
-  const report = buildReport(ctx, { notes: deps.notes, now: deps.now, layerName });
+  const maps: MapDocument[] = [];
+  let theme = ex;
+  sources.forEach((source, k) => {
+    const page = report.views[k];
+    if (!page) return;
+    const fitTo = {
+      width: print.pageHeight - print.margin * 2 - ex.gap - ex.legendWidth,
+      height: Math.max(
+        print.pageWidth - print.margin * 2 - viewTextHeight(page, print, deps.measure) - ex.padding,
+        ex.legendWidth,
+      ),
+    };
+    const picture = pictureExport(source.ctx, source.state, deps, '', fitTo);
+    maps.push(picture.doc);
+    theme = picture.theme;
+  });
   const { reportPdf } = await import('./pdf');
   const out = await reportPdf({
     report,
-    map: doc,
+    maps,
     exportTheme: theme,
     print,
     loadFont: deps.loadFont,
@@ -160,7 +228,8 @@ export async function pdfExport(
     ),
     bytes: out.bytes,
     report,
-    doc,
+    doc: maps[0] as MapDocument,
+    docs: maps,
     pages: out.pages,
     substituted: out.substituted,
   };

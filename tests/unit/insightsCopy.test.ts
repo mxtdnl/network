@@ -397,3 +397,56 @@ describe('question and readout wording is neutral', () => {
     }
   }, 120_000);
 });
+
+// Build plan session 10: the executive summary's templates.
+describe('executive summary wording is neutral', () => {
+  it('uses no banned word, and names no member, in any drafted summary or the editor', async () => {
+    const { readdirSync } = await import('node:fs');
+    const { contextFor } = await import('./exportHarness');
+    const { draftSummary, summaryFlags, summaryLabels } =
+      await import('../../src/ui/export/summary');
+    const { summaryCopy } = await import('../../src/ui/copy/summary');
+    const { openingMapSettings } = await import('../../src/ui/state/store');
+    const files = readdirSync(join(root, 'src/demo')).filter((f) => f.endsWith('.ona.json'));
+    let count = 0;
+    for (const file of files) {
+      const project = parseProject(readFileSync(join(root, 'src/demo', file), 'utf8'));
+      const names = project.members.map((m) => m.display_name);
+      const team = project.members[0]?.attributes.team ?? null;
+      for (const view of ['directed', 'symmetrised'] as const)
+        for (const level of ['analyst', 'board', 'workshop'] as const) {
+          const ctx = await contextFor(project, {
+            anonymise: false,
+            excludeSigned: false,
+            map: { ...openingMapSettings(project), view },
+            audience: { level, team: typeof team === 'string' ? team : null, member: null },
+          });
+          const s = draftSummary(ctx);
+          const labels = summaryLabels(ctx);
+          const texts = [
+            ...s.intro,
+            s.closing,
+            ...s.headlines.flatMap((h) => [h.title, h.saw, h.matters, ...h.questions]),
+            ...summaryFlags(ctx).map((f) =>
+              summaryCopy.flags.negativeCluster(labels.layerLabel(f.ref), f.size, f.pairs),
+            ),
+          ];
+          for (const h of s.headlines) {
+            expect(h.questions.length).toBeGreaterThan(0);
+            for (const q of h.questions) expect(q.endsWith('?'), q).toBe(true);
+          }
+          for (const text of texts) {
+            count += 1;
+            expect(findBanned(text, words), text).toEqual([]);
+            for (const n of names) expect(text.includes(n), `${n} in ${text}`).toBe(false);
+          }
+        }
+    }
+    const editor = Object.values(summaryCopy.editor).map((v) =>
+      typeof v === 'function' ? (v as (...a: unknown[]) => string)(1, 2) : v,
+    );
+    for (const text of [...editor, summaryCopy.saw, summaryCopy.matters, summaryCopy.questions])
+      expect(findBanned(text, words), text).toEqual([]);
+    expect(count).toBeGreaterThan(300);
+  }, 300_000);
+});

@@ -74,7 +74,16 @@ export const exportCopy = {
 
   report: {
     heading: 'Report',
-    help: 'A PDF summary: the map with the caption above, key network metrics, insights, method notes, data coverage with survey response rates, and an ethics statement.',
+    help: 'A PDF briefing: a cover with the question, the audience and the data-quality statement; an executive summary; a page for each saved view chosen; data quality; the method in brief; appendices with the key metrics, the insight rules and the technical notes; and an ethics statement.',
+    views: 'Saved views in the report',
+    viewsHelp:
+      'One page each, in presentation order, with its caption and the sentences that describe it.',
+    noViews:
+      'No view is saved yet, so the report shows the map as it is on screen. Save views in the Views tab to tell a story with several.',
+    noneChosen: 'No view chosen: the report shows the map as it is on screen.',
+    appendices: 'Include the appendices',
+    appendicesHelp:
+      'Key metrics, insight rules and technical notes. Leave them out for a shorter briefing; the method in brief stays.',
     export: 'Export report',
     exporting: 'Preparing the report…',
     exported: (file: string) => `Report exported as ${file}.`,
@@ -236,12 +245,24 @@ export const reportCopy = {
   },
   sections: {
     map: 'Network map',
-    metrics: 'Key network metrics',
-    insights: 'Insights',
-    method: 'Method notes',
-    coverage: 'Data coverage',
+    coverage: 'Data quality',
+    brief: 'The method in brief',
+    metrics: 'Appendix A. Key network metrics',
+    insights: 'Appendix B. Insight rules',
+    method: 'Appendix C. Technical notes',
     ethics: 'Ethics statement',
   },
+  brief: {
+    intro:
+      'What the measures in this report mean, in a sentence or two each. They describe how people say they work together; none of them is a judgement of anyone.',
+    more: 'Graticule’s method notes give every definition in full, with its formula, caveats and references.',
+    moreAppendix:
+      'Appendix C gives the technical notes for the measures in this report; Graticule’s method notes give every formula, with its references.',
+  },
+  view: {
+    question: 'Question',
+  },
+  questionLine: (q: string) => `Question: ${q}`,
   map: {
     intro: (layer: string) => `Ties drawn from ${layer}. The legend explains every encoding.`,
     groups: (layer: string) =>

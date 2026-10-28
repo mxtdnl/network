@@ -64,3 +64,56 @@
   min-height: var(--t-0-line);
   color: var(--graphite);
 }
+
+/* Build plan session 10: the executive summary editor. */
+
+.summary-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  max-width: var(--measure-wide);
+}
+
+.summary-editor__about,
+.summary-editor__flags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.summary-editor__headline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-4) 0 0;
+  border: 0;
+  border-top: var(--line-width) solid var(--stone);
+  min-width: 0;
+}
+
+.summary-editor__legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-weight: var(--weight-semibold);
+}
+
+.summary-editor__note {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.summary-editor__count {
+  color: var(--graphite);
+}
+
+.summary-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.summary-editor .text-input {
+  width: 100%;
+}

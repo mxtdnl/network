@@ -25,6 +25,9 @@ import { currentMapViewport } from '../map/viewport';
 import { useAppStore } from './store';
 import { audienceChoice } from './audienceSettings';
 import { audienceCopy } from '../copy/audience';
+import { summaryCopy } from '../copy/summary';
+import type { SummaryText } from '../export/summary';
+import type { AudienceLevel, Project, SavedSummary } from '../../data/schema';
 
 export type MapFormat = 'png' | 'svg';
 export type Resolution = 'x1' | 'x2' | 'print';
@@ -203,17 +206,24 @@ export async function exportMetricsTable(spec: TableSpec): Promise<string | null
 
 export async function exportReportFile(caption: string): Promise<string | null> {
   try {
-    const ctx = await context();
+    const r = request();
+    if (!r) throw new Error(exportCopy.noAnalysis);
+    const ctx = await exportContext(r, analyseSeparately);
     const { tokens, measure } = await deps();
-    const [{ pdfExport }, { default: notes }] = await Promise.all([
+    const [{ pdfExport }, { viewSources, chosenViews }, { default: notes }] = await Promise.all([
       import('../export/files'),
+      import('../export/viewPages'),
       import('../../../docs/method-notes.md?raw'),
     ]);
+    // The views the Export dialog chose, each with the analysis it asks for (build plan session 10).
+    const choice = useAppStore.getState().ui.report;
+    const views = await viewSources(r, chosenViews(r.project, choice.views), analyseSeparately);
     const out = await pdfExport(
       ctx,
       mapState(),
       { tokens, measure, loadFont: fetchFont, inflate: browserInflate, now: new Date(), notes },
       caption,
+      { views, appendices: choice.appendices },
     );
     download(
       out.fileName,
@@ -248,4 +258,42 @@ export async function exportCardFile(): Promise<string | null> {
     status(audienceCopy.exports.cardFailed(reason(e)), 'error');
     return null;
   }
+}
+
+/** The executive summary as drafted for the export settings and audience chosen, for the editor. */
+export async function draftReportSummary(): Promise<{
+  draft: SummaryText;
+  flags: string[];
+  level: AudienceLevel;
+} | null> {
+  try {
+    const ctx = await context();
+    const { draftSummary, summaryFlags, summaryLabels } = await import('../export/summary');
+    const labels = summaryLabels(ctx);
+    return {
+      draft: draftSummary(ctx),
+      flags: summaryFlags(ctx).map((f) =>
+        summaryCopy.flags.negativeCluster(labels.layerLabel(f.ref).toLowerCase(), f.size, f.pairs),
+      ),
+      level: ctx.policy.level,
+    };
+  } catch (e) {
+    status(exportCopy.report.failed(reason(e)), 'error');
+    return null;
+  }
+}
+
+/** Saves the analyst's edit of the summary for one audience level; null returns it to the draft. */
+export function saveReportSummary(level: AudienceLevel, summary: SavedSummary | null): void {
+  useAppStore.getState().updateProjectViews((p) => {
+    const summaries = Object.fromEntries(
+      Object.entries(p.settings.summaries ?? {}).filter(([k]) => k !== level),
+    ) as NonNullable<Project['settings']['summaries']>;
+    if (summary) summaries[level] = summary;
+    const settings: Project['settings'] = { ...p.settings };
+    // An empty map is written as no field, as before any summary was edited.
+    Reflect.deleteProperty(settings, 'summaries');
+    if (Object.keys(summaries).length > 0) settings.summaries = summaries;
+    return { ...p, settings };
+  });
 }

@@ -63,6 +63,9 @@ export interface UiState {
   /** The team of a team workshop and the member of a one-to-one (build plan session 9); the level
    *  itself is saved in the project. */
   audience: { team: string | null; member: MemberId | null };
+  /** What the PDF report holds (build plan session 10): saved views by id (null: every view, in
+   *  presentation order) and whether the appendices are printed. View state, not saved. */
+  report: { views: string[] | null; appendices: boolean };
 }
 
 export type LegendMode = 'full' | 'condensed' | 'beside';
@@ -207,6 +210,7 @@ interface Actions {
   setRightOpen: (open: boolean) => void;
   setLegend: (legend: LegendMode | null) => void;
   setGrouping: (grouping: Grouping | null) => void;
+  setReportChoice: (patch: Partial<UiState['report']>) => void;
   setTableMode: (mode: TableMode) => void;
   setIncomingLayer: (layer: string | null) => void;
   setAdvancedOpen: (open: boolean) => void;
@@ -380,6 +384,7 @@ export function initialUiState(noticeSeen: boolean): UiState {
     advancedOpen: false,
     aboutOpen: false,
     audience: { team: null, member: null },
+    report: { views: null, appendices: true },
   };
 }
 
@@ -466,6 +471,9 @@ export const useAppStore = create<AppState>()((set, get) => {
     },
     setGrouping: (grouping) => {
       setUi({ grouping });
+    },
+    setReportChoice: (patch) => {
+      set((s) => ({ ui: { ...s.ui, report: { ...s.ui.report, ...patch } } }));
     },
     setAnonymise: (anonymise) => {
       setUi({ anonymise });

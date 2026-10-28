@@ -44,6 +44,7 @@ import {
 } from 'pdf-lib';
 import { APP_VERSION } from '../../data/schema';
 import { reportCopy } from '../copy/export';
+import { summaryCopy } from '../copy/summary';
 import type { FontRole, MapDocument, Primitive } from './document';
 import { ROLE_FACE, fontFile, woffToSfnt, type Face, type FontLoader, type Inflate } from './fonts';
 import type { Block, ReportModel } from './report';
@@ -122,7 +123,8 @@ export interface PdfOutput {
 
 export interface PdfInput {
   report: ReportModel;
-  map: MapDocument;
+  /** One picture per view page of the report, in the same order. */
+  maps: MapDocument[];
   exportTheme: ExportTheme;
   print: PrintTheme;
   loadFont: FontLoader;
@@ -451,6 +453,24 @@ function paragraph(w: Writer, b: Extract<Block, { kind: 'paragraph' }>, indent =
   w.y += P.space[1] ?? 0;
 }
 
+/** Questions for discussion: one per line, hanging after a dash. */
+function list(w: Writer, items: readonly string[]) {
+  const P = w.print;
+  const style = P.body;
+  const indent = w.width('– ', 'regular', style.size);
+  for (const item of items) {
+    const lines = w.wrap(item, Math.min(P.measure, w.contentWidth) - indent, 'regular', style.size);
+    lines.forEach((line, k) => {
+      if (w.y + style.line > w.bottom) w.addPage();
+      const baseline = w.y + (style.line + style.size * 0.7) / 2;
+      if (k === 0) w.text('–', P.margin, baseline, 'regular', style.size, P.colours.graphite);
+      w.text(line, P.margin + indent, baseline, 'regular', style.size, P.colours.ink);
+      w.y += style.line;
+    });
+  }
+  w.y += P.space[1] ?? 0;
+}
+
 function warning(w: Writer, text: string) {
   const P = w.print;
   const icon = P.body.size;
@@ -701,6 +721,10 @@ export async function reportPdf(input: PdfInput): Promise<PdfOutput> {
     P.colours.graphite,
   );
   w.y += P.body.line + (P.space[6] ?? 0);
+  // The question the report answers and who it was prepared for come first (build plan session 10).
+  if (report.question)
+    paragraph(w, { kind: 'paragraph', lead: reportCopy.view.question, text: report.question });
+  paragraph(w, { kind: 'paragraph', text: report.audience });
   for (const line of report.cover) paragraph(w, { kind: 'paragraph', text: line });
   // The data-quality statement (session 4) travels on the cover.
   heading(w, report.statementHeading);
@@ -718,21 +742,49 @@ export async function reportPdf(input: PdfInput): Promise<PdfOutput> {
     P.colours.graphite,
   );
 
-  // Page numbers count from the map page; the cover is not numbered.
+  // Page numbers count from the executive summary; the cover is not numbered.
   const starts: number[] = [];
 
-  // The map, on a landscape page.
-  w.addPage(true);
+  // The executive summary (build plan session 10).
+  w.addPage();
   starts.push(w.bodyPages.length);
-  sectionTitle(w, report.contents[0] ?? '');
-  paragraph(w, { kind: 'paragraph', text: report.mapIntro, tone: 'graphite', small: true });
-  // The picture's own padding sits in the margin, so the caption lines up with the text.
+  sectionTitle(w, summaryCopy.heading);
+  for (const text of report.summary.intro) paragraph(w, { kind: 'paragraph', text });
+  for (const h of report.summary.headlines) {
+    heading(w, h.title);
+    if (h.saw !== '') paragraph(w, { kind: 'paragraph', lead: summaryCopy.saw, text: h.saw });
+    if (h.matters !== '')
+      paragraph(w, { kind: 'paragraph', lead: summaryCopy.matters, text: h.matters });
+    if (h.questions.length > 0) {
+      paragraph(w, { kind: 'paragraph', lead: summaryCopy.questions, text: '' });
+      list(w, h.questions);
+    }
+  }
+  if (report.summary.closing !== '') {
+    w.y += P.space[2] ?? 0;
+    paragraph(w, { kind: 'paragraph', text: report.summary.closing, tone: 'graphite' });
+  }
+
+  // One landscape page per view: question, caption and sentences above the map.
   const pad = input.exportTheme.padding;
-  drawMap(w, input.map, {
-    x: P.margin - pad,
-    y: w.y - pad,
-    width: w.contentWidth + pad * 2,
-    height: w.bottom - w.y + pad,
+  report.views.forEach((v, k) => {
+    w.addPage(true);
+    starts.push(w.bodyPages.length);
+    sectionTitle(w, v.title);
+    if (v.question)
+      paragraph(w, { kind: 'paragraph', lead: reportCopy.view.question, text: v.question });
+    if (v.caption !== '') paragraph(w, { kind: 'paragraph', text: v.caption });
+    for (const text of v.sentences) paragraph(w, { kind: 'paragraph', text, small: true });
+    paragraph(w, { kind: 'paragraph', text: v.mapIntro, tone: 'graphite', small: true });
+    const map = input.maps[k];
+    // The picture's own padding sits in the margin, so the map lines up with the text.
+    if (map)
+      drawMap(w, map, {
+        x: P.margin - pad,
+        y: w.y - pad,
+        width: w.contentWidth + pad * 2,
+        height: w.bottom - w.y + pad,
+      });
   });
 
   for (const section of report.sections) {
@@ -749,11 +801,18 @@ export async function reportPdf(input: PdfInput): Promise<PdfOutput> {
 
   // Contents on the cover, with the page each part starts on.
   const pages = w.bodyPages.length;
-  w.page = cover;
+  const C = P.subheading;
+  const contentsHeight = C.line + (P.space[0] ?? 0) + report.contents.length * P.body.line;
+  // With many views the contents may not fit under the cover text: they then take a page of their own.
+  if (contentsTop + contentsHeight > w.bottom - P.small.line * 2) {
+    w.page = doc.insertPage(1, [P.pageWidth * PT, P.pageHeight * PT]);
+    w.y = P.margin;
+  } else {
+    w.page = cover;
+    w.y = contentsTop;
+  }
   w.pageWidth = P.pageWidth;
   w.pageHeight = P.pageHeight;
-  w.y = contentsTop;
-  const C = P.subheading;
   w.text(
     reportCopy.cover.contents,
     P.margin,

@@ -1,8 +1,11 @@
-// The PDF report's content (spec §11): a cover, the map, key network metrics,
-// insights, method notes, data coverage with survey response rates, and an
-// ethics statement. Built as plain blocks from the export context, so the
-// wording, anonymisation and the signed-layer exclusion can be tested without
-// a PDF; export/pdf.ts lays the blocks out on pages.
+// The PDF report's content (spec §11), built as a storyline (build plan
+// session 10): a cover with the question, the audience and the data-quality
+// statement; an executive summary; one page per saved view with its caption
+// and sentences; data quality; the method in brief; appendices with the key
+// metrics, the insight rules and the technical notes; and an ethics
+// statement. Built as plain blocks from the export context, so the wording,
+// anonymisation, the signed-layer exclusion and the audience level can be
+// tested without a PDF; export/pdf.ts lays the blocks out on pages.
 
 import { DEFAULT_WAVE, isCategorical } from '../../data/schema';
 import { surveyStatus } from '../../survey/model';
@@ -32,6 +35,13 @@ import { exportRefs, refName } from './tables';
 import { audienceCopy } from '../copy/audience';
 import { audienceGroups, audienceInsights, roleSentences, shownIndices } from '../state/audience';
 import { subgroupDensity } from '../engineClient';
+import { questionsCopy } from '../copy/questions';
+import { isQuestionId } from '../state/questions';
+import { readoutSentence } from '../copy/readouts';
+import { networkReadouts, questionReadouts, type Readout } from '../state/readouts';
+import { reportSummary, type SummaryText } from './summary';
+import { readerNotes } from './methodNotes';
+import { summaryCopy } from '../copy/summary';
 
 export type Block =
   | { kind: 'heading'; text: string }
@@ -46,6 +56,41 @@ export type Block =
 export interface ReportSection {
   title: string;
   blocks: Block[];
+  /** Printed among the appendices, after the main part. */
+  appendix?: boolean;
+}
+
+/** One saved view's page: its map (drawn by export/pdf.ts), caption and sentences. */
+export interface ReportView {
+  title: string;
+  /** The question the view answers (build plan session 8), when it has one. */
+  question: string | null;
+  caption: string;
+  /** The question's readouts, or the network's, as the audience may see them. */
+  sentences: string[];
+  /** What the map draws. */
+  mapIntro: string;
+}
+
+/** A view the report shows, with the export context built for it. */
+export interface ReportViewInput {
+  name: string;
+  caption: string;
+  ctx: ExportContext;
+  layerName: string;
+}
+
+export interface ReportOptions {
+  notes: string;
+  now: Date;
+  /** The layer the map draws, for the page of the map on screen when no view is chosen. */
+  layerName: string;
+  /** The saved views to show, in presentation order; none shows the map on screen. */
+  views?: ReportViewInput[];
+  /** Print the appendices (key metrics, insight rules, technical notes); on by default. */
+  appendices?: boolean;
+  /** The caption of the map on screen, when no view is chosen. */
+  caption?: string;
 }
 
 export interface ReportModel {
@@ -53,13 +98,21 @@ export interface ReportModel {
   title: string;
   subtitle: string;
   date: string;
+  /** The question the report answers, on the cover. */
+  question: string | null;
+  /** Who the report was prepared for, on the cover. */
+  audience: string;
   cover: string[];
   /** The data-quality statement (session 4), from the project the export shows. */
   statementHeading: string;
   statement: string[];
-  contents: string[];
-  mapIntro: string;
+  /** The executive summary: the analyst's edit for this level, else the draft. */
+  summary: SummaryText;
+  views: ReportView[];
+  /** Data quality, the method in brief, roles or the team, appendices and the ethics statement. */
   sections: ReportSection[];
+  /** One line per part, in page order: summary, each view, each section. */
+  contents: string[];
 }
 
 const M = exportCopy.csv.measures;
@@ -503,11 +556,61 @@ function ethicsSection(ctx: ExportContext): Block[] {
   ];
 }
 
-export function buildReport(
-  ctx: ExportContext,
-  options: { notes: string; now: Date; layerName: string },
-): ReportModel {
+/** The method in brief: the reader notes of method notes section 19 (build plan session 10). */
+function methodBriefSection(ctx: ExportContext, notes: string, appendices: boolean): Block[] {
+  const brief = readerNotes(notes, {
+    signed: Object.keys(ctx.result.signed).length > 0,
+    formalInformal: ctx.result.multiplex?.formalInformal != null,
+    excludeSigned: ctx.excludeSigned,
+  });
+  const blocks: Block[] = [];
+  if (brief.intro) blocks.push({ kind: 'paragraph', text: R.brief.intro, tone: 'graphite' });
+  for (const note of brief.notes)
+    blocks.push({ kind: 'paragraph', lead: note.heading, text: note.text });
+  blocks.push({
+    kind: 'paragraph',
+    text: appendices ? R.brief.moreAppendix : R.brief.more,
+    tone: 'graphite',
+    small: true,
+  });
+  return blocks;
+}
+
+/** Readout kinds that describe one member: left out for every audience but the analyst. */
+const MEMBER_READOUTS: ReadonlySet<Readout['kind']> = new Set([
+  'topBroker',
+  'cutPoints',
+  'asked',
+  'centralisation',
+]);
+
+/** A view's page: the question, the caption and the sentences that read out its figures. */
+function viewPage(input: ReportViewInput): ReportView {
+  const { ctx } = input;
+  const { project, result, settings, policy } = ctx;
+  const layer = settings.layer;
+  const label = refName(ctx, layer);
+  const question = isQuestionId(settings.question) ? settings.question : null;
+  const readouts = question
+    ? questionReadouts(question, project, result, layer, label)
+    : networkReadouts(project, result, layer, label).filter(
+        (r) => r.kind === 'density' || r.kind === 'parts' || r.kind === 'mixing',
+      );
+  const sentences = readouts
+    .filter((r) => policy.level === 'analyst' || !MEMBER_READOUTS.has(r.kind))
+    .map((r) => readoutSentence(r, ctx.names.of));
+  return {
+    title: ctx.names.text(input.name),
+    question: question ? questionsCopy.questions[question] : null,
+    caption: ctx.names.text(input.caption).trim(),
+    sentences,
+    mapIntro: policy.groupsOnly ? R.map.groups(input.layerName) : R.map.intro(input.layerName),
+  };
+}
+
+export function buildReport(ctx: ExportContext, options: ReportOptions): ReportModel {
   const { project, result } = ctx;
+  const appendices = options.appendices ?? true;
   const date = options.now.toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'long',
@@ -525,37 +628,58 @@ export function buildReport(
     ctx.anonymised ? R.cover.anonymised : R.cover.named,
     ...appliedRemedies(result).map((id) => R.cover.remedy(remediesCopy.applied[id])),
     ...(ctx.excludeSigned ? [ctx.reanalysed ? R.cover.excluded : R.cover.excludedNone] : []),
-    ...(ctx.policy.level === 'analyst'
-      ? []
-      : [audienceCopy.cover(ctx.policy.level, ctx.policy.minGroupSize)]),
     R.cover.descriptive,
   ];
+  const inputs: ReportViewInput[] =
+    options.views && options.views.length > 0
+      ? options.views
+      : [
+          {
+            name: R.sections.map,
+            caption: options.caption ?? '',
+            ctx,
+            layerName: options.layerName,
+          },
+        ];
+  const views = inputs.map(viewPage);
+  // The report's question: the one on screen, else the first view's.
+  const question =
+    (isQuestionId(ctx.settings.question) ? questionsCopy.questions[ctx.settings.question] : null) ??
+    views.find((v) => v.question !== null)?.question ??
+    null;
+
   const S = R.sections;
   const sections: ReportSection[] = [
-    { title: S.metrics, blocks: metricsSection(ctx) },
     ...(ctx.policy.level === 'workshop'
       ? [{ title: audienceCopy.workshop.teamTies, blocks: teamSection(ctx) }]
       : []),
-    { title: S.insights, blocks: insightsSection(ctx, options.notes) },
     ...(ctx.policy.level === 'leadership'
       ? [{ title: audienceCopy.rolesHeading, blocks: rolesSection(ctx) }]
       : []),
-    { title: S.method, blocks: methodSection(ctx, options.notes) },
     { title: S.coverage, blocks: coverageSection(ctx) },
+    { title: S.brief, blocks: methodBriefSection(ctx, options.notes, appendices) },
+    ...(appendices
+      ? [
+          { title: S.metrics, blocks: metricsSection(ctx), appendix: true },
+          { title: S.insights, blocks: insightsSection(ctx, options.notes), appendix: true },
+          { title: S.method, blocks: methodSection(ctx, options.notes), appendix: true },
+        ]
+      : []),
     { title: S.ethics, blocks: ethicsSection(ctx) },
   ];
   return {
     title: ctx.names.text(project.meta.title),
     subtitle: R.cover.subtitle,
     date: R.cover.date(date),
+    question,
+    audience: audienceCopy.cover(ctx.policy.level, ctx.policy.minGroupSize),
     cover,
     statementHeading: qualityCopy.exportHeading,
     statement: qualityStatement(computeQuality(project)),
-    contents: [S.map, ...sections.map((s) => s.title)],
-    mapIntro: ctx.policy.groupsOnly
-      ? R.map.groups(options.layerName)
-      : R.map.intro(options.layerName),
+    summary: reportSummary(ctx),
+    views,
     sections,
+    contents: [summaryCopy.heading, ...views.map((v) => v.title), ...sections.map((s) => s.title)],
   };
 }
 
@@ -565,12 +689,18 @@ export function reportText(model: ReportModel): string[] {
     model.title,
     model.subtitle,
     model.date,
+    ...(model.question ? [model.question] : []),
+    model.audience,
     ...model.cover,
     model.statementHeading,
     ...model.statement,
     ...model.contents,
-    model.mapIntro,
+    ...model.summary.intro,
+    ...model.summary.headlines.flatMap((h) => [h.title, h.saw, h.matters, ...h.questions]),
+    model.summary.closing,
   ];
+  for (const v of model.views)
+    out.push(v.title, ...(v.question ? [v.question] : []), v.caption, ...v.sentences, v.mapIntro);
   for (const s of model.sections) {
     out.push(s.title);
     for (const b of s.blocks) {

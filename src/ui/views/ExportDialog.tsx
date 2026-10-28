@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { Dialog } from '../components/Dialog';
 import { Switch } from '../components/Switch';
 import { exportCopy as E } from '../copy/export';
@@ -15,13 +15,16 @@ import {
   type Resolution,
   type TableKind,
 } from '../state/exportActions';
-import { setNamesHidden } from '../state/names';
+import { setNamesHidden, useMemberNames } from '../state/names';
 import { useAppStore } from '../state/store';
 import { allows, type ExportKind } from '../state/audience';
 import { audienceChoice } from '../state/audienceSettings';
 import { audienceCopy } from '../copy/audience';
 import { exportCardFile } from '../state/exportActions';
 import { AudienceSelect } from './AudienceSelect';
+import { SummaryEditor } from './SummaryEditor';
+import { summaryCopy } from '../copy/summary';
+import { useReadOnly } from '../state/layoutMode';
 
 // The export dialog (spec §11): the two settings every export follows at the
 // top (hide names, leave out signed and conflict layers), then the map, the
@@ -45,6 +48,14 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const id = useId();
+  const [editing, setEditing] = useState(false);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const readOnly = useReadOnly();
+  const report = useAppStore((s) => s.ui.report);
+  const setReportChoice = useAppStore((s) => s.setReportChoice);
+  const views = project?.saved_views ?? [];
+  const chosen = report.views ?? views.map((v) => v.id);
+  const names = useMemberNames();
 
   const excludeSigned = project?.settings.exclude_signed_from_exports ?? false;
   // Outputs the audience level offers (build plan session 9); the others are disabled with a reason.
@@ -241,6 +252,72 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           {E.report.heading}
         </h3>
         <p className="field__help">{E.report.help}</p>
+        {offered('report') && (
+          <>
+            <fieldset className="export__fieldset">
+              <legend className="field__label">{E.report.views}</legend>
+              {views.length === 0 ? (
+                <p className="field__help">{E.report.noViews}</p>
+              ) : (
+                <>
+                  <div className="radio-list">
+                    {views.map((v) => (
+                      <label key={v.id} className="radio-list__option">
+                        <input
+                          type="checkbox"
+                          checked={chosen.includes(v.id)}
+                          onChange={(e) => {
+                            const on = e.currentTarget.checked;
+                            const next = views
+                              .map((x) => x.id)
+                              .filter((x) => (x === v.id ? on : chosen.includes(x)));
+                            setReportChoice({
+                              views: next.length === views.length ? null : next,
+                            });
+                          }}
+                        />
+                        <span>{names.text(v.name)}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="field__help">
+                    {chosen.length === 0 ? E.report.noneChosen : E.report.viewsHelp}
+                  </p>
+                </>
+              )}
+            </fieldset>
+            <label className="radio-list__option">
+              <input
+                type="checkbox"
+                checked={report.appendices}
+                onChange={(e) => {
+                  setReportChoice({ appendices: e.currentTarget.checked });
+                }}
+              />
+              <span>{E.report.appendices}</span>
+            </label>
+            <p className="field__help">{E.report.appendicesHelp}</p>
+            {!readOnly && (
+              <div className="export__item">
+                <button
+                  ref={editButton}
+                  type="button"
+                  className="button button--secondary"
+                  disabled={!ready || busy !== null}
+                  aria-describedby={`${id}-summary-help`}
+                  onClick={() => {
+                    setEditing(true);
+                  }}
+                >
+                  {summaryCopy.editor.open}
+                </button>
+                <p id={`${id}-summary-help`} className="field__help">
+                  {summaryCopy.editor.openHelp}
+                </p>
+              </div>
+            )}
+          </>
+        )}
         <button
           type="button"
           className="button button--primary"
@@ -281,6 +358,18 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       <p className="export__status" role="status">
         {message}
       </p>
+      {editing && (
+        <SummaryEditor
+          open
+          onClose={() => {
+            setEditing(false);
+            // The editor is removed once closed, so focus returns to the button that opened it.
+            setTimeout(() => {
+              editButton.current?.focus();
+            });
+          }}
+        />
+      )}
     </Dialog>
   );
 }

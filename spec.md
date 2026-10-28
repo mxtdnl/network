@@ -347,14 +347,16 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
 
 - PNG and SVG of the current map view, including the legend and caption.
 - CSV of node metrics and network metrics.
-- A PDF summary report generated client-side, containing:
-  - the data-quality statement (section 6) on its cover;
-  - the map;
-  - key metrics, with ties within and between groups by the grouping chosen in the Groups view (team by default);
-  - insights;
-  - method notes;
-  - data coverage.
-- Every export respects the anonymisation and signed-layer exclusion settings, and the audience level (section 8). At board and leadership level the map export is the group map and the report's map page shows groups; member metrics, the formal–informal pairs and the metrics table are not offered; group rows below the minimum size are pooled or left out; the report lists group-level insights only and, for a leadership team, the roles between groups. A team workshop's exports hold its team only. A one-to-one offers the member's personal network card as a PDF and nothing else.
+- A PDF report generated client-side, built as a storyline for its audience:
+  - a cover with the question the report answers, the audience level and the data-quality statement (section 6);
+  - an executive summary of about two pages: three to five group-level headlines, each with "What we saw", "Why it may matter" and "Questions for discussion", drafted from the structured observations by fixed templates (no language model, so no data leaves the browser) and edited by the analyst before export; the edit is saved with the project, one per audience level;
+  - one page per saved view chosen, in presentation order, with its map, caption and the sentences that read out its figures (the map on screen when no view is chosen);
+  - data quality (coverage, ratings by source, survey response rates);
+  - the method in brief: one or two plain sentences per measure, from the method notes' notes for readers;
+  - optional appendices: key metrics (with ties within and between groups by the grouping chosen in the Groups view, team by default), the insight rules with every observation, and the technical notes;
+  - an ethics statement.
+  The Export dialog chooses the views, the audience level and whether to include the appendices.
+- Every export respects the anonymisation and signed-layer exclusion settings, and the audience level (section 8). At board and leadership level the map export is the group map and the report's map page shows groups; member metrics, the formal–informal pairs and the metrics table are not offered; group rows below the minimum size are pooled or left out; the report lists group-level insights only, its summary is drafted from them, its view pages show groups, and for a leadership team it lists the roles between groups. A team workshop's exports hold its team only. A one-to-one offers the member's personal network card as a PDF and nothing else.
 - Survey administration files (the mail-merge list of links, the non-responder list and the key backup, section 15) are not analysis exports. They identify people by design, so anonymisation does not apply to them; each is labelled as containing personal data when saved.
 
 ## 12. Design language

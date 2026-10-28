@@ -342,6 +342,33 @@ export function checkProject(file: Obj): string[] {
         `settings.audience must give a level (${AUDIENCE_LEVELS.join(', ')}), a whole minimum group size of at least ${String(MIN_GROUP_SIZE_FLOOR)}, named_teams and named_members.`,
       );
     }
+    // Edited executive summaries (build plan session 10), one per audience level.
+    if (s.summaries !== undefined) {
+      const sums = s.summaries;
+      const headline = (h: unknown) =>
+        isObj(h) &&
+        isStr(h.id) &&
+        h.id !== '' &&
+        isStr(h.title) &&
+        isStr(h.saw) &&
+        isStr(h.matters) &&
+        Array.isArray(h.questions) &&
+        h.questions.every(isStr) &&
+        isBool(h.include);
+      need(
+        isObj(sums) &&
+          Object.entries(sums).every(
+            ([level, x]) =>
+              (AUDIENCE_LEVELS as readonly string[]).includes(level) &&
+              isObj(x) &&
+              isStr(x.intro) &&
+              isStr(x.closing) &&
+              Array.isArray(x.headlines) &&
+              x.headlines.every(headline),
+          ),
+        `settings.summaries must give, for an audience level (${AUDIENCE_LEVELS.join(', ')}), an intro, a closing and headlines with an id, title, saw, matters, questions and include.`,
+      );
+    }
   }
 
   return problems;

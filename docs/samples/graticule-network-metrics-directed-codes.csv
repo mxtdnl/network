@@ -20,6 +20,28 @@ Composite of all layers,Centralisation of connections out,,,,0.26627218934911245
 Composite of all layers,Centralisation of bridging,,,,0.16961529017985114
 Composite of all layers,Communities (Louvain),,,,4
 Composite of all layers,Modularity,,,,0.4568236068608872
+Composite of all layers,Bridge ties (local bridges: no contact in common),,,,1
+Composite of all layers,Bridge ties with no other route between their members,,,,0
+Composite of all layers,Cut points (members who are the only route for others),,,,0
+Composite of all layers,Ties received (from the directed ratings),,,,715
+Composite of all layers,Share of ties received by the top 10 % of members,,,,0.13706293706293707
+Composite of all layers,Share of ties received by the top 10 % of members,Team or function,Finance,,0.13559322033898305
+Composite of all layers,Share of ties received by the top 10 % of members,Team or function,Operations,,0.152317880794702
+Composite of all layers,Share of ties received by the top 10 % of members,Team or function,Product,,0.13333333333333333
+Composite of all layers,Share of ties received by the top 10 % of members,Team or function,Sales,,0.13513513513513514
+Composite of all layers,Share of ties received by the top 10 % of members,Team or function,People,,0.15
+Composite of all layers,Share of ties received by the top 10 % of members,Level,L1,,0.43902439024390244
+Composite of all layers,Share of ties received by the top 10 % of members,Level,L2,,0.15015015015015015
+Composite of all layers,Share of ties received by the top 10 % of members,Level,L3,,0.18930041152263374
+Composite of all layers,Share of ties received by the top 10 % of members,Level,L4,,0.32
+Composite of all layers,Share of ties received by the top 10 % of members,Level,L5,,1
+Composite of all layers,Share of ties received by the top 10 % of members,Location,Bristol,,0.19455252918287938
+Composite of all layers,Share of ties received by the top 10 % of members,Location,Glasgow,,0.2054794520547945
+Composite of all layers,Share of ties received by the top 10 % of members,Location,Leeds,,0.200836820083682
+Composite of all layers,Share of ties received by the top 10 % of members,Tenure band,Under 1 year,,0.17557251908396945
+Composite of all layers,Share of ties received by the top 10 % of members,Tenure band,1 to 3 years,,0.21495327102803738
+Composite of all layers,Share of ties received by the top 10 % of members,Tenure band,3 to 5 years,,0.24731182795698925
+Composite of all layers,Share of ties received by the top 10 % of members,Tenure band,Over 5 years,,0.18050541516245489
 Composite of all layers,E-I index,Team or function,,,0.21958041958041957
 Composite of all layers,"Members without a value, left out of the E-I index",Team or function,,,0
 Composite of all layers,Group size,Team or function,Finance,,8
@@ -188,6 +210,28 @@ Connection strength,Centralisation of connections out,,,,0.16699539776462854
 Connection strength,Centralisation of bridging,,,,0.3273345962279835
 Connection strength,Communities (Louvain),,,,5
 Connection strength,Modularity,,,,0.45993943501889817
+Connection strength,Bridge ties (local bridges: no contact in common),,,,0
+Connection strength,Bridge ties with no other route between their members,,,,0
+Connection strength,Cut points (members who are the only route for others),,,,1
+Connection strength,Ties received (from the directed ratings),,,,546
+Connection strength,Share of ties received by the top 10 % of members,,,,0.1336996336996337
+Connection strength,Share of ties received by the top 10 % of members,Team or function,Finance,,0.14814814814814814
+Connection strength,Share of ties received by the top 10 % of members,Team or function,Operations,,0.14615384615384616
+Connection strength,Share of ties received by the top 10 % of members,Team or function,Product,,0.13934426229508196
+Connection strength,Share of ties received by the top 10 % of members,Team or function,Sales,,0.14516129032258066
+Connection strength,Share of ties received by the top 10 % of members,Team or function,People,,0.15517241379310345
+Connection strength,Share of ties received by the top 10 % of members,Level,L1,,0.4358974358974359
+Connection strength,Share of ties received by the top 10 % of members,Level,L2,,0.14344262295081966
+Connection strength,Share of ties received by the top 10 % of members,Level,L3,,0.1875
+Connection strength,Share of ties received by the top 10 % of members,Level,L4,,0.34615384615384615
+Connection strength,Share of ties received by the top 10 % of members,Level,L5,,1
+Connection strength,Share of ties received by the top 10 % of members,Location,Bristol,,0.19672131147540983
+Connection strength,Share of ties received by the top 10 % of members,Location,Glasgow,,0.19444444444444445
+Connection strength,Share of ties received by the top 10 % of members,Location,Leeds,,0.20218579234972678
+Connection strength,Share of ties received by the top 10 % of members,Tenure band,Under 1 year,,0.18181818181818182
+Connection strength,Share of ties received by the top 10 % of members,Tenure band,1 to 3 years,,0.2147239263803681
+Connection strength,Share of ties received by the top 10 % of members,Tenure band,3 to 5 years,,0.25757575757575757
+Connection strength,Share of ties received by the top 10 % of members,Tenure band,Over 5 years,,0.16972477064220184
 Connection strength,E-I index,Team or function,,,0.018315018315018316
 Connection strength,"Members without a value, left out of the E-I index",Team or function,,,0
 Connection strength,Group size,Team or function,Finance,,8
@@ -356,6 +400,28 @@ Connection strength,Tie density between groups,Tenure band,Over 5 years,Over 5 y
 "Valence, positive ratings",Centralisation of bridging,,,,0.01212450267780902
 "Valence, positive ratings",Communities (Louvain),,,,5
 "Valence, positive ratings",Modularity,,,,0.3782139577594125
+"Valence, positive ratings",Bridge ties (local bridges: no contact in common),,,,0
+"Valence, positive ratings",Bridge ties with no other route between their members,,,,0
+"Valence, positive ratings",Cut points (members who are the only route for others),,,,0
+"Valence, positive ratings",Ties received (from the directed ratings),,,,597
+"Valence, positive ratings",Share of ties received by the top 10 % of members,,,,0.1306532663316583
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Team or function,Finance,,0.1574074074074074
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Team or function,Operations,,0.14285714285714285
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Team or function,Product,,0.15625
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Team or function,Sales,,0.16666666666666666
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Team or function,People,,0.1557377049180328
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Level,L1,,0.40540540540540543
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Level,L2,,0.14606741573033707
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Level,L3,,0.1650943396226415
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Level,L4,,0.29411764705882354
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Level,L5,,1
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Location,Bristol,,0.17647058823529413
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Location,Glasgow,,0.19270833333333334
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Location,Leeds,,0.17889908256880735
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Tenure band,Under 1 year,,0.17346938775510204
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Tenure band,1 to 3 years,,0.2247191011235955
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Tenure band,3 to 5 years,,0.2073170731707317
+"Valence, positive ratings",Share of ties received by the top 10 % of members,Tenure band,Over 5 years,,0.15481171548117154
 "Valence, positive ratings",E-I index,Team or function,,,0.1390284757118928
 "Valence, positive ratings","Members without a value, left out of the E-I index",Team or function,,,0
 "Valence, positive ratings",Group size,Team or function,Finance,,8
@@ -691,6 +757,28 @@ Informal collaboration,Centralisation of connections out,,,,0.1952662721893491
 Informal collaboration,Centralisation of bridging,,,,0.32317305326752016
 Informal collaboration,Communities (Louvain),,,,4
 Informal collaboration,Modularity,,,,0.4141578202889835
+Informal collaboration,Bridge ties (local bridges: no contact in common),,,,0
+Informal collaboration,Bridge ties with no other route between their members,,,,0
+Informal collaboration,Cut points (members who are the only route for others),,,,1
+Informal collaboration,Ties received (from the directed ratings),,,,543
+Informal collaboration,Share of ties received by the top 10 % of members,,,,0.13259668508287292
+Informal collaboration,Share of ties received by the top 10 % of members,Team or function,Finance,,0.14285714285714285
+Informal collaboration,Share of ties received by the top 10 % of members,Team or function,Operations,,0.13709677419354838
+Informal collaboration,Share of ties received by the top 10 % of members,Team or function,Product,,0.136
+Informal collaboration,Share of ties received by the top 10 % of members,Team or function,Sales,,0.15517241379310345
+Informal collaboration,Share of ties received by the top 10 % of members,Team or function,People,,0.1557377049180328
+Informal collaboration,Share of ties received by the top 10 % of members,Level,L1,,0.43243243243243246
+Informal collaboration,Share of ties received by the top 10 % of members,Level,L2,,0.14522821576763487
+Informal collaboration,Share of ties received by the top 10 % of members,Level,L3,,0.17894736842105263
+Informal collaboration,Share of ties received by the top 10 % of members,Level,L4,,0.3275862068965517
+Informal collaboration,Share of ties received by the top 10 % of members,Level,L5,,1
+Informal collaboration,Share of ties received by the top 10 % of members,Location,Bristol,,0.192090395480226
+Informal collaboration,Share of ties received by the top 10 % of members,Location,Glasgow,,0.2
+Informal collaboration,Share of ties received by the top 10 % of members,Location,Leeds,,0.193717277486911
+Informal collaboration,Share of ties received by the top 10 % of members,Tenure band,Under 1 year,,0.16326530612244897
+Informal collaboration,Share of ties received by the top 10 % of members,Tenure band,1 to 3 years,,0.2215568862275449
+Informal collaboration,Share of ties received by the top 10 % of members,Tenure band,3 to 5 years,,0.25757575757575757
+Informal collaboration,Share of ties received by the top 10 % of members,Tenure band,Over 5 years,,0.16037735849056603
 Informal collaboration,E-I index,Team or function,,,0.001841620626151013
 Informal collaboration,"Members without a value, left out of the E-I index",Team or function,,,0
 Informal collaboration,Group size,Team or function,Finance,,8
@@ -859,6 +947,28 @@ Formal collaboration,Centralisation of connections out,,,,0.20052596975673898
 Formal collaboration,Centralisation of bridging,,,,0.20155698216765672
 Formal collaboration,Communities (Louvain),,,,4
 Formal collaboration,Modularity,,,,0.4971298488435645
+Formal collaboration,Bridge ties (local bridges: no contact in common),,,,1
+Formal collaboration,Bridge ties with no other route between their members,,,,0
+Formal collaboration,Cut points (members who are the only route for others),,,,0
+Formal collaboration,Ties received (from the directed ratings),,,,535
+Formal collaboration,Share of ties received by the top 10 % of members,,,,0.14766355140186915
+Formal collaboration,Share of ties received by the top 10 % of members,Team or function,Finance,,0.13793103448275862
+Formal collaboration,Share of ties received by the top 10 % of members,Team or function,Operations,,0.16161616161616163
+Formal collaboration,Share of ties received by the top 10 % of members,Team or function,Product,,0.1357142857142857
+Formal collaboration,Share of ties received by the top 10 % of members,Team or function,Sales,,0.14965986394557823
+Formal collaboration,Share of ties received by the top 10 % of members,Team or function,People,,0.18681318681318682
+Formal collaboration,Share of ties received by the top 10 % of members,Level,L1,,0.4827586206896552
+Formal collaboration,Share of ties received by the top 10 % of members,Level,L2,,0.15139442231075698
+Formal collaboration,Share of ties received by the top 10 % of members,Level,L3,,0.21264367816091953
+Formal collaboration,Share of ties received by the top 10 % of members,Level,L4,,0.3384615384615385
+Formal collaboration,Share of ties received by the top 10 % of members,Level,L5,,1
+Formal collaboration,Share of ties received by the top 10 % of members,Location,Bristol,,0.19791666666666666
+Formal collaboration,Share of ties received by the top 10 % of members,Location,Glasgow,,0.2331288343558282
+Formal collaboration,Share of ties received by the top 10 % of members,Location,Leeds,,0.2222222222222222
+Formal collaboration,Share of ties received by the top 10 % of members,Tenure band,Under 1 year,,0.1836734693877551
+Formal collaboration,Share of ties received by the top 10 % of members,Tenure band,1 to 3 years,,0.24550898203592814
+Formal collaboration,Share of ties received by the top 10 % of members,Tenure band,3 to 5 years,,0.24358974358974358
+Formal collaboration,Share of ties received by the top 10 % of members,Tenure band,Over 5 years,,0.19791666666666666
 Formal collaboration,E-I index,Team or function,,,0.001869158878504673
 Formal collaboration,"Members without a value, left out of the E-I index",Team or function,,,0
 Formal collaboration,Group size,Team or function,Finance,,8
