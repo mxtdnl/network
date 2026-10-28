@@ -5,7 +5,8 @@ import { Icon } from '../components/Icon';
 import { savedViewsCopy as V } from '../copy/savedViews';
 import { useReadOnly } from '../state/layoutMode';
 import { useMemberNames } from '../state/names';
-import { startPresentation } from '../state/presentation';
+import { canPresent, startPresentation } from '../state/presentation';
+import { AudienceSelect } from './AudienceSelect';
 import {
   deleteView,
   moveView,
@@ -77,7 +78,7 @@ export function SavedViewsPanel() {
         <button
           type="button"
           className="button button--text"
-          disabled={views.length === 0}
+          disabled={!canPresent(project)}
           onClick={() => {
             startPresentation();
           }}
@@ -85,6 +86,8 @@ export function SavedViewsPanel() {
           {V.present}
         </button>
       </div>
+      {/* Who the presentation is for (build plan session 9), the same setting as the Export dialog's. */}
+      <AudienceSelect />
       {views.length > 0 && (
         <p id={helpId} className="field__help views__help">
           {names.anonymised ? V.captionHidden : V.captionHelp}

@@ -7,11 +7,17 @@ import type { Project } from '../../data/schema';
 import type { AnalysisInput, AnalysisResult } from '../engineClient';
 import { buildAnalysisInput } from '../engineClient';
 import { effectiveSettings } from '../map/useMapModel';
-import { memberNames, type MemberNames } from '../state/names';
+import type { MemberNames } from '../state/names';
 import { effectiveWeights, type WeightState } from '../state/presets';
 import type { Grouping, MapSettings } from '../state/store';
 import { exclusionApplies, exportProject } from './scope';
 import { analysisOptions } from '../state/remedies';
+import {
+  audiencePolicy,
+  workshopMap,
+  type AudienceChoice,
+  type AudiencePolicy,
+} from '../state/audience';
 
 /** Runs one analysis; the browser uses a worker of its own, tests call the engine directly. */
 export type Analyse = (input: AnalysisInput) => Promise<AnalysisResult>;
@@ -27,6 +33,8 @@ export interface ExportRequest {
   excludeSigned: boolean;
   /** The Groups view's grouping, which the report's mixing table follows (D154); absent follows the default. */
   grouping?: Grouping | null;
+  /** Who the export is for (build plan session 9); absent means the analyst, unrestricted. */
+  audience?: AudienceChoice;
 }
 
 export interface ExportContext {
@@ -37,8 +45,12 @@ export interface ExportContext {
   result: AnalysisResult;
   /** Map settings corrected for the export's analysis. */
   settings: MapSettings;
+  /** Names under the audience policy: anyone the audience may not see is "a colleague". */
   names: MemberNames;
+  /** Members appear as codes (Hide names, or a workshop whose team has not agreed to be named). */
   anonymised: boolean;
+  /** The audience level's policy (build plan session 9). */
+  policy: AudiencePolicy;
   /** The exclusion is on (whether or not the project has layers it removes). */
   excludeSigned: boolean;
   /** The exclusion removed at least one enabled layer, so the analysis was run again. */
@@ -84,14 +96,21 @@ export async function exportContext(
     // clusters), so the members it names could reveal signed ratings.
     map = { ...map, highlight: [] };
   }
+  // Codes and names depend only on the members, which the exclusion keeps.
+  const policy = audiencePolicy(
+    source,
+    request.audience ?? { level: 'analyst', team: null, member: null },
+    anonymise,
+  );
   return {
     source,
     project,
     result,
-    settings: effectiveSettings(project, result, map),
-    // Codes and names depend only on the members, which the exclusion keeps.
-    names: memberNames(source, anonymise),
-    anonymised: anonymise,
+    // A team workshop shows the team only, without signed layers (build plan session 9).
+    settings: workshopMap(effectiveSettings(project, result, map), policy),
+    names: policy.names,
+    anonymised: policy.codes,
+    policy,
     excludeSigned,
     reanalysed,
     colourExcluded,

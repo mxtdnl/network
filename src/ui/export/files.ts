@@ -7,6 +7,9 @@ import type { ExportContext } from './context';
 import { composeMap, type MapDocument, type Measure } from './document';
 import type { FontLoader, Inflate } from './fonts';
 import { exportMap, type ExportMap, type MapState } from './mapScene';
+import { groupMapExport } from './groupDocument';
+import { assertAllowed } from '../state/audience';
+import { buildCard, type CardModel } from '../state/card';
 import { buildReport, type ReportModel } from './report';
 import { documentToSvg } from './svg';
 import { viewSlug } from './tables';
@@ -36,6 +39,9 @@ export function mapExport(
   caption: string,
   fitTo: { width: number; height: number } | null = null,
 ): MapExport {
+  // The member map: for a board or leadership team, the picture is the group map (pictureExport).
+  assertAllowed(ctx.policy, 'map');
+  if (ctx.policy.groupsOnly) throw new Error(exportCopy.groupsOnly);
   const theme = readExportTheme(deps.tokens);
   const map = exportMap(
     ctx,
@@ -56,6 +62,33 @@ export function mapExport(
   return { doc, map, theme };
 }
 
+export interface PictureExport {
+  doc: MapDocument;
+  theme: ExportTheme;
+  layerName: string;
+}
+
+/**
+ * The picture an audience may see (build plan session 9): the group map for a
+ * board or a leadership team, otherwise the member map (a workshop's filtered
+ * to its team by the export context).
+ */
+export function pictureExport(
+  ctx: ExportContext,
+  state: MapState,
+  deps: Pick<ExportDeps, 'tokens' | 'measure'>,
+  caption: string,
+  fitTo: { width: number; height: number } | null = null,
+): PictureExport {
+  assertAllowed(ctx.policy, 'map');
+  if (ctx.policy.groupsOnly) {
+    const { doc, theme, layerName } = groupMapExport(ctx, deps, caption, fitTo);
+    return { doc, theme, layerName };
+  }
+  const { doc, theme, map } = mapExport(ctx, state, deps, caption, fitTo);
+  return { doc, theme, layerName: map.layerName };
+}
+
 export function mapFileName(ctx: ExportContext, ext: 'png' | 'svg'): string {
   return exportCopy.files.map(viewSlug(ctx), ext);
 }
@@ -66,8 +99,8 @@ export async function svgExport(
   deps: ExportDeps,
   caption: string,
 ): Promise<{ fileName: string; text: string; doc: MapDocument }> {
-  const { doc, map, theme } = mapExport(ctx, state, deps, caption);
-  const description = [reportCopy.map.intro(map.layerName), ctx.names.text(caption)]
+  const { doc, theme, layerName } = pictureExport(ctx, state, deps, caption);
+  const description = [reportCopy.map.intro(layerName), ctx.names.text(caption)]
     .filter((s) => s.trim() !== '')
     .join(' ');
   const text = await documentToSvg(doc, theme, deps.loadFont, description);
@@ -107,8 +140,9 @@ export async function pdfExport(
     width: pageW - ex.padding * 2 - ex.gap - ex.legendWidth,
     height: pageH - ex.padding * 2 - captionH,
   };
-  const { doc, map, theme } = mapExport(ctx, state, deps, caption, fitTo);
-  const report = buildReport(ctx, { notes: deps.notes, now: deps.now, layerName: map.layerName });
+  assertAllowed(ctx.policy, 'report');
+  const { doc, theme, layerName } = pictureExport(ctx, state, deps, caption, fitTo);
+  const report = buildReport(ctx, { notes: deps.notes, now: deps.now, layerName });
   const { reportPdf } = await import('./pdf');
   const out = await reportPdf({
     report,
@@ -122,11 +156,47 @@ export async function pdfExport(
   const date = deps.now.toISOString().slice(0, 10);
   return {
     fileName: exportCopy.files.report(
-      `${date}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed)}`,
+      `${date}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level)}`,
     ),
     bytes: out.bytes,
     report,
     doc,
+    pages: out.pages,
+    substituted: out.substituted,
+  };
+}
+
+export interface CardExport {
+  fileName: string;
+  bytes: Uint8Array;
+  card: CardModel;
+  pages: number;
+  substituted: string[];
+}
+
+/** The personal network card of a one-to-one (build plan session 9), as a PDF. */
+export async function cardExport(
+  ctx: ExportContext,
+  deps: Pick<ExportDeps, 'tokens' | 'loadFont' | 'inflate' | 'now'>,
+): Promise<CardExport> {
+  assertAllowed(ctx.policy, 'card');
+  const card = buildCard(ctx.project, ctx.result, ctx.settings, ctx.policy);
+  if (!card) throw new Error(exportCopy.noMember);
+  const { cardPdf } = await import('./pdf');
+  const out = await cardPdf({
+    card,
+    print: readPrintTheme(deps.tokens),
+    loadFont: deps.loadFont,
+    inflate: deps.inflate,
+    now: deps.now,
+  });
+  const date = deps.now.toISOString().slice(0, 10);
+  return {
+    fileName: exportCopy.files.card(
+      `${date}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level)}`,
+    ),
+    bytes: out.bytes,
+    card,
     pages: out.pages,
     substituted: out.substituted,
   };

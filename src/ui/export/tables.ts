@@ -17,6 +17,7 @@ import { groupAttributes } from '../map/model';
 import { tableCopy as exportTableCopy } from '../copy/table';
 import { toCsv } from '../views/csv';
 import type { ExportContext } from './context';
+import { assertAllowed, groupSizes, poolMixing, shownIndices } from '../state/audience';
 
 const C = exportCopy.csv;
 
@@ -30,7 +31,7 @@ const cell = (v: number) => (Number.isFinite(v) ? String(v) : '');
 /** File-name part for the view: `directed`, or `mutual-mean` and so on. */
 export function viewSlug(ctx: ExportContext): string {
   const base = ctx.result.view === 'directed' ? 'directed' : `mutual-${ctx.result.symmetrise}`;
-  return `${base}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed)}`;
+  return `${base}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level)}`;
 }
 
 /** Plain label of a layer reference in the export's project. */
@@ -70,7 +71,10 @@ function viewText(ctx: ExportContext): string {
 
 /** One row per member and layer: every node metric of the view, plus received signed ratings. */
 export function memberMetricsCsv(ctx: ExportContext): ExportFile {
+  assertAllowed(ctx.policy, 'members');
   const { project, result, names } = ctx;
+  // A team workshop lists the team only (build plan session 9).
+  const shown = new Set(shownIndices(project, ctx.policy));
   const metrics: NodeMetricKey[] = [
     ...(result.view === 'directed' ? DIRECTED_METRICS : SYMMETRISED_METRICS),
   ];
@@ -100,6 +104,7 @@ export function memberMetricsCsv(ctx: ExportContext): ExportFile {
     if (!r) continue;
     const signed = r.layer ? result.signed[r.layer] : undefined;
     project.members.forEach((m, i) => {
+      if (!shown.has(i)) return;
       const reasons = new Set<string>();
       for (const k of metrics) {
         const flag = r.node.flags[k]?.[i];
@@ -141,7 +146,11 @@ export function memberMetricsCsv(ctx: ExportContext): ExportFile {
 
 /** Long format: one row per layer and measure, with the group columns for mixing. */
 export function networkMetricsCsv(ctx: ExportContext): ExportFile {
-  const { project, result } = ctx;
+  assertAllowed(ctx.policy, 'network');
+  const { project, result, policy } = ctx;
+  // For an audience, groups below the minimum size are pooled or left out (build plan session 9).
+  const restricted = policy.level !== 'analyst';
+
   const M = C.measures;
   const rows: string[][] = [[C.layer, C.measure, C.attribute, C.group, C.otherGroup, C.value]];
   const add = (layer: string, measure: string, value: string, attr = '', g = '', other = '') => {
@@ -205,10 +214,18 @@ export function networkMetricsCsv(ctx: ExportContext): ExportFile {
     if (r.load) {
       add(name, M.tiesReceived, cell(r.load.overall.received));
       add(name, M.topShare, cell(r.load.overall.share));
-      for (const [key, groups] of Object.entries(r.load.byGroup))
-        for (const g of groups) add(name, M.topShare, cell(g.share), attrLabel(key), g.group);
+      for (const [key, groups] of Object.entries(r.load.byGroup)) {
+        const size = groupSizes(project, key);
+        for (const g of groups) {
+          if (restricted && (size.get(g.group) ?? 0) < policy.minGroupSize) continue;
+          add(name, M.topShare, cell(g.share), attrLabel(key), g.group);
+        }
+      }
     }
-    for (const [key, mix] of Object.entries(n.mixing)) {
+    for (const [key, raw] of Object.entries(n.mixing)) {
+      const mix = restricted
+        ? poolMixing(raw, policy.minGroupSize, result.view === 'directed')
+        : raw;
       const a = attrLabel(key);
       add(name, M.ei, cell(mix.ei), a);
       add(name, M.eiExcluded, cell(mix.excluded), a);
@@ -288,9 +305,11 @@ export function hasFormalInformal(ctx: ExportContext): boolean {
 
 /** Every classified pair: ordered (rater first) in the directed view, unordered when mutual. */
 export function formalInformalCsv(ctx: ExportContext): ExportFile | null {
+  assertAllowed(ctx.policy, 'formalInformal');
   const fi = ctx.result.multiplex?.formalInformal;
   if (!fi) return null;
   const { project, names } = ctx;
+  const shown = new Set(shownIndices(project, ctx.policy));
   const n = project.members.length;
   const directed = ctx.result.view === 'directed';
   const team = groupAttributes(project).find((a) => a.key === 'team');
@@ -304,7 +323,7 @@ export function formalInformalCsv(ctx: ExportContext): ExportFile | null {
   ];
   for (let i = 0; i < n; i++) {
     for (let j = directed ? 0 : i + 1; j < n; j++) {
-      if (i === j) continue;
+      if (i === j || !shown.has(i) || !shown.has(j)) continue;
       const text = CLASS_TEXT[fi.classes[i * n + j] ?? FI_CLASS.none];
       if (!text) continue;
       const a = project.members[i];
@@ -345,8 +364,10 @@ type NodeMetricKey = SizeMetric | 'betweennessBinary';
  * with those layers.
  */
 export function metricsTableCsv(ctx: ExportContext, spec: TableSpec): ExportFile {
+  assertAllowed(ctx.policy, 'table');
   const T = exportTableCopy;
   const { project, result, settings, names } = ctx;
+  const shown = new Set(shownIndices(project, ctx.policy));
   const ref = result.refs[settings.layer];
   const index = new Map(project.members.map((m, i) => [m.id, i]));
   const fillAttr = project.attribute_definitions.find((a) => a.key === spec.fillKey);
@@ -365,7 +386,7 @@ export function metricsTableCsv(ctx: ExportContext, spec: TableSpec): ExportFile
   for (const id of spec.order) {
     const i = index.get(id);
     const m = i === undefined ? undefined : project.members[i];
-    if (i === undefined || !m) continue;
+    if (i === undefined || !m || !shown.has(i)) continue;
     rows.push([
       names.of(id),
       ...(fillAttr ? [m.attributes[fillAttr.key] ?? ''] : []),
@@ -385,6 +406,7 @@ export function metricsTableCsv(ctx: ExportContext, spec: TableSpec): ExportFile
   const fileName = `graticule-metrics-${settings.layer}-${result.view}${exportCopy.suffix(
     ctx.anonymised,
     ctx.reanalysed,
+    ctx.policy.level,
   )}.csv`;
   return { fileName, text: toCsv(rows) };
 }

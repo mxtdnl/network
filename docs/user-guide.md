@@ -397,6 +397,24 @@ Choose Present (top bar or Views tab) to show the views full screen, with the ti
 
 **Hide names** (top bar, presentation controls and Export dialog) replaces every name with a code made from the team, level and a number, for example FIN-L3-02, in every view and export. Codes of small teams can still identify someone; Graticule says how many codes belong to a team and level with fewer than three members.
 
+### Who the output is for
+
+**Prepared for** (in the Views tab, on the presentation's control bar and at the top of the Export dialog) sets how fine-grained a presentation and every export are. The choice is saved with the project as its default. Your workspace is never restricted; only what you show or export changes.
+
+| Level | What the audience sees |
+|---|---|
+| Analyst (no restriction) | Everything, under Hide names and the signed-layer setting |
+| Board | Groups and the whole network only. Each saved view is shown as its group map, grouped by the view's node fill (team, level or another attribute). No member appears, by name or code, and a group smaller than the **smallest group shown** (5 unless you raise it) is pooled with other small groups as "Other groups", or left out when even together they are too few. Insights are the group-level ones; member metrics and the pairs file are not offered |
+| Leadership team | As a board, plus "Members in roles between groups": those who hold a group's ties with other groups, cut points and potential brokers. Tick the members who agreed to be named; the others read "A member of Finance" |
+| Team workshop | One team's own map, its ties with other groups as counts, and insights about the team. Members are shown as codes unless you tick that the team agreed to be named. Nobody from another team appears, and valence and energy are not drawn |
+| One-to-one | One member's personal network card: their ties by group (ties received only as counts), ties given against received on each layer, the colleagues they rated with their own ratings, and where they sit in the network. Choose the member under the level |
+
+Captions and view names follow the level: anyone the audience may not see becomes "a colleague". Agree in advance with the people concerned what each audience will see; the levels enforce that agreement but do not replace it. Method notes §18 explains the pooling and its limits.
+
+![Presentation for a board: a saved view as its group map, small groups pooled](user-guide/presentation-board.jpg)
+
+![A personal network card in a one-to-one presentation](user-guide/network-card.jpg)
+
 ## Exports
 
 Export (top bar) opens the export dialog. Under its settings it shows the data-quality statement as the exports carry it; the report prints it on its cover. Every export follows its two settings:
@@ -415,7 +433,9 @@ Export (top bar) opens the export dialog. Under its settings it shows the data-q
 | Table (CSV, from the Table tab) | The rows and columns shown, in their order |
 | Report (PDF) | The data-quality statement on the cover, the map, key network metrics, insights, method notes, data coverage with survey response rates, and an ethics statement. For a signed layer's negative ratings, the metrics table gives ties, density and reciprocity, but not separate parts, communities, modularity or the centralisation of bridging, which describe how a network holds together |
 
-In CSV files an empty cell means not defined or not rated. File names end in `-codes` when names are hidden and `-no-signed` when those layers were left out. Exports are ordinary files: store and share them as personal data unless names are hidden and you are sure no code identifies anyone.
+The dialog follows **Prepared for** (above): at board or leadership level the map export is the group map and the report shows groups, with roles for a leadership team; a team workshop's files hold its team only; a one-to-one offers **Export network card** (PDF) and nothing else. Exports a level does not offer are disabled with the reason.
+
+In CSV files an empty cell means not defined or not rated. File names end in `-board`, `-leadership`, `-workshop` or `-one-to-one` for an audience, `-codes` when names are hidden and `-no-signed` when those layers were left out. Exports are ordinary files: store and share them as personal data unless names are hidden and you are sure no code identifies anyone.
 
 ## Ethics and consent
 

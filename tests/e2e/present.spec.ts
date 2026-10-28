@@ -529,6 +529,18 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await check('presentation');
   await page.keyboard.press('Escape');
 
+  // Audience levels (build plan session 9): the selector at each level, and the one-to-one card.
+  await rightTab(page, 'Views').click();
+  for (const level of ['Leadership team', 'Team workshop', 'One-to-one']) {
+    await right(page).getByLabel('Prepared for').selectOption({ label: level });
+    await check(`audience ${level}`);
+  }
+  await page.getByRole('banner').getByRole('button', { name: 'Present' }).click();
+  await expect(page.getByTestId('network-card')).toBeVisible();
+  await check('presentation one-to-one card');
+  await page.keyboard.press('Escape');
+  await right(page).getByLabel('Prepared for').selectOption({ label: 'Analyst (no restriction)' });
+
   expect(failures).toEqual([]);
 
   // Turning names back on shows them again (the layer is live, not a copy).

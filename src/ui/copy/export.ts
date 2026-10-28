@@ -2,6 +2,8 @@
 // export and the PDF report. Sentence case; a button's verb and its
 // confirmation match ("Export map" → "Map exported", spec §12).
 
+import type { AudienceLevel } from '../../data/schema';
+
 const num = (value: number) => value.toLocaleString('en-GB');
 const count = (value: number, one: string, many: string) =>
   `${num(value)} ${value === 1 ? one : many}`;
@@ -181,10 +183,21 @@ export const exportCopy = {
     network: (view: string) => `graticule-network-metrics-${view}.csv`,
     formalInformal: (view: string) => `graticule-formal-informal-${view}.csv`,
     report: (date: string) => `graticule-report-${date}.pdf`,
+    card: (date: string) => `graticule-network-card-${date}.pdf`,
   },
+  noMember: 'Choose the member the card is for.',
+  groupsOnly: 'For a board or leadership team the map shows groups, not members.',
   /** File-name suffix naming the export's settings, so files made under different settings differ. */
-  suffix: (anonymised: boolean, excluded: boolean) =>
-    `${anonymised ? '-codes' : ''}${excluded ? '-no-signed' : ''}`,
+  suffix: (anonymised: boolean, excluded: boolean, level: AudienceLevel = 'analyst') =>
+    `${LEVEL_SLUG[level]}${anonymised ? '-codes' : ''}${excluded ? '-no-signed' : ''}`,
+};
+
+const LEVEL_SLUG: Record<AudienceLevel, string> = {
+  analyst: '',
+  board: '-board',
+  leadership: '-leadership',
+  workshop: '-workshop',
+  oneToOne: '-one-to-one',
 };
 
 // ------------------------------------------------------------------ report
@@ -231,6 +244,16 @@ export const reportCopy = {
   },
   map: {
     intro: (layer: string) => `Ties drawn from ${layer}. The legend explains every encoding.`,
+    groups: (layer: string) =>
+      `Groups, not members: ties drawn from ${layer}, within and between groups. The legend explains the picture.`,
+  },
+  roles: {
+    intro:
+      'Members whose position links groups, from the insight rules as they ran. A member is named only if they agreed; the others are described by their group.',
+  },
+  team: {
+    intro: (layer: string) =>
+      `The team’s ties on ${layer}: within the team, and with every other member (counted, never named).`,
   },
   metrics: {
     intro:

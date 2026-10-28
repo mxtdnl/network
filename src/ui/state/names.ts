@@ -10,7 +10,8 @@ import { useMemo } from 'react';
 import { memberCodes, replaceNames, type MemberCodes } from '../../data/anonymise';
 import type { MemberId, Project } from '../../data/schema';
 import { namesCopy } from '../copy/names';
-import { useAppStore } from './store';
+import { audienceChoice, forcesCodes } from './audienceSettings';
+import { useAppStore, type AppState } from './store';
 
 export interface MemberNames {
   anonymised: boolean;
@@ -71,17 +72,72 @@ export function memberNames(project: Project | null, anonymise: boolean): Member
   return entry[key];
 }
 
+/**
+ * Names stand for members whom an audience may see (build plan session 9):
+ * `allowed` members keep their name or code; everyone else becomes
+ * `placeholder` ("a colleague"), in `of`, `byIndex` and in free text, so a
+ * caption that names someone outside the audience's view does not reveal them.
+ */
+export function restrictNames(
+  project: Project,
+  anonymise: boolean,
+  allowed: (id: MemberId) => boolean,
+  placeholder: string,
+): MemberNames {
+  const base = memberNames(project, anonymise);
+  const real = project.members.map((m) => m.display_name);
+  const byIndex = project.members.map((m, i) =>
+    allowed(m.id) ? (base.byIndex[i] ?? m.id) : placeholder,
+  );
+  const byId = new Map(project.members.map((m, i) => [m.id, byIndex[i] ?? placeholder]));
+  // A code typed into a caption is replaced too, when its member is not allowed.
+  const codes = memberCodes(project.members).codes;
+  const codeOrPlaceholder = project.members.map((m, i) =>
+    allowed(m.id) ? (codes[i] ?? placeholder) : placeholder,
+  );
+  const textCache = new Map<string, string>();
+  return {
+    anonymised: base.anonymised,
+    byIndex,
+    of: (id) => byId.get(id) ?? placeholder,
+    text: (s) => {
+      let out = textCache.get(s);
+      if (out === undefined) {
+        out = replaceNames(
+          replaceNames(s, real, byIndex, namesCopy.sharedName),
+          codes,
+          codeOrPlaceholder,
+          placeholder,
+        );
+        textCache.set(s, out);
+      }
+      return out;
+    },
+    smallGroups: base.smallGroups,
+  };
+}
+
+/**
+ * Presentation mode for a team workshop whose team has not agreed to be named
+ * shows codes, whatever Hide names says (build plan session 9).
+ */
+function codesForced(s: AppState): boolean {
+  const project = s.data.project;
+  if (!project || s.ui.presentation === null) return false;
+  return forcesCodes(project, audienceChoice(project, s.ui.audience));
+}
+
 /** Names for the open project under the current anonymisation setting. */
 export function useMemberNames(): MemberNames {
   const project = useAppStore((s) => s.data.project);
-  const anonymise = useAppStore((s) => s.ui.anonymise);
+  const anonymise = useAppStore((s) => s.ui.anonymise || codesForced(s));
   return useMemo(() => memberNames(project, anonymise), [project, anonymise]);
 }
 
 /** The same, outside React (actions and status messages). */
 export function currentNames(): MemberNames {
   const s = useAppStore.getState();
-  return memberNames(s.data.project, s.ui.anonymise);
+  return memberNames(s.data.project, s.ui.anonymise || codesForced(s));
 }
 
 /**

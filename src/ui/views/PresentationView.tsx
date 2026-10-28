@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { Switch } from '../components/Switch';
 import { coveragePercent, percent } from '../copy/data';
@@ -8,8 +8,15 @@ import { shellCopy } from '../copy/shell';
 import { durationToken } from '../durations';
 import { readMapTheme, type MapTheme } from '../map/theme';
 import { useMapData } from '../map/useMapModel';
-import { setNamesHidden, useMemberNames } from '../state/names';
-import { OPENING, goTo, step, stopPresentation } from '../state/presentation';
+import { setNamesHidden } from '../state/names';
+import { OPENING, goTo, refreshStep, step, stopPresentation } from '../state/presentation';
+import { audiencePolicy } from '../state/audience';
+import { audienceChoice } from '../state/audienceSettings';
+import { buildCard } from '../state/card';
+import { audienceCopy } from '../copy/audience';
+import { AudienceSelect } from './AudienceSelect';
+import { GroupStep, WorkshopNotes } from './AudienceSteps';
+import { PersonalCard } from './PersonalCard';
 import { useAppStore } from '../state/store';
 import { qualityCopy } from '../copy/quality';
 import { QualityStatement, useQuality } from './DataCheckPanel';
@@ -32,7 +39,6 @@ export function PresentationView() {
   const anonymise = useAppStore((s) => s.ui.anonymise);
   const running = useAppStore((s) => s.results.status === 'running');
   const data = useMapData();
-  const names = useMemberNames();
   const quality = useQuality();
   const rootRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -43,6 +49,24 @@ export function PresentationView() {
   const titleId = useId();
 
   const views = project?.saved_views ?? [];
+  // Who the presentation is for (build plan session 9): the policy decides what each step shows.
+  const chosen = useAppStore((s) => s.ui.audience);
+  const choice = project ? audienceChoice(project, chosen) : null;
+  const policy = useMemo(
+    () => (project && choice ? audiencePolicy(project, choice, anonymise) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [project, choice?.level, choice?.team, choice?.member, anonymise],
+  );
+  const level = policy?.level ?? 'analyst';
+  // A change of level, team or member shows the current view again under the new policy.
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    refreshStep();
+  }, [level, choice?.team]);
   // The opening step (OPENING) shows the first view behind its statement.
   const view = views[Math.max(index, 0)];
 
@@ -80,6 +104,9 @@ export function PresentationView() {
         if (target?.closest('dialog')) return;
         e.preventDefault();
         stopPresentation();
+      } else if (target?.closest('.presentation__card')) {
+        // A one-to-one's card has no steps: the keys scroll it.
+        return;
       } else if (NEXT.has(e.key) && !(e.key === ' ' && onControl)) {
         e.preventDefault();
         step(1);
@@ -118,7 +145,8 @@ export function PresentationView() {
     };
   }, [wake]);
 
-  if (!project || !view) {
+  const oneToOne = level === 'oneToOne';
+  if (!project || !policy || (!view && !oneToOne)) {
     return (
       <div ref={rootRef} className="presentation" tabIndex={-1}>
         <p className="presentation__caption">{P.noViews}</p>
@@ -127,13 +155,22 @@ export function PresentationView() {
   }
 
   const coverage = data?.result.coverage;
-  const opening = index === OPENING;
+  // A one-to-one shows the member's card alone, without the opening statement or the views.
+  const opening = index === OPENING && !oneToOne;
+  const card = oneToOne && data ? buildCard(project, data.result, data.settings, policy) : null;
+  const text = policy.names.text;
+  const title = oneToOne
+    ? (card?.title ?? audienceCopy.card.title)
+    : opening
+      ? qualityCopy.presentationHeading
+      : text(view?.name ?? '');
   const controls = (
     <div className="presentation__controls" role="group" aria-label={P.controls}>
+      <AudienceSelect variant="presentation" />
       <button
         type="button"
         className="button button--text"
-        disabled={opening}
+        disabled={opening || oneToOne}
         onClick={() => {
           step(-1);
         }}
@@ -143,7 +180,7 @@ export function PresentationView() {
       <button
         type="button"
         className="button button--text"
-        disabled={index === views.length - 1}
+        disabled={oneToOne || index === views.length - 1}
         onClick={() => {
           step(1);
         }}
@@ -178,8 +215,20 @@ export function PresentationView() {
         {P.instructions}
       </p>
       <h1 id={titleId} className="presentation__title">
-        {opening ? qualityCopy.presentationHeading : names.text(view.name)}
+        {title}
       </h1>
+      {oneToOne && (
+        <div
+          className="presentation__card"
+          role="region"
+          aria-label={audienceCopy.card.title}
+          // The card scrolls, so it takes focus and the arrow keys scroll it.
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+          tabIndex={0}
+        >
+          {card ? <PersonalCard card={card} /> : <p role="status">{mapCopy.calculating}</p>}
+        </div>
+      )}
       {/* The opening step: the data-quality statement before the first view (session 4). */}
       {opening && quality && (
         <QualityStatement quality={quality} className="presentation__statement" />
@@ -189,7 +238,22 @@ export function PresentationView() {
           {P.opening(views.length)}
         </p>
       )}
-      {!opening && (
+      {!opening && !oneToOne && view && policy.groupsOnly && (
+        <>
+          {data ? (
+            <GroupStep data={data} policy={policy} />
+          ) : (
+            <p className="map__message" role="status">
+              {mapCopy.calculating}
+            </p>
+          )}
+          <p className="presentation__caption">{text(view.caption)}</p>
+          <p className="presentation__counter num" aria-live="polite">
+            {P.counter(index + 1, views.length)}
+          </p>
+        </>
+      )}
+      {!opening && !oneToOne && view && !policy.groupsOnly && (
         <>
           <div className="presentation__body">
             <div ref={mapRef} className="presentation__map">
@@ -206,7 +270,13 @@ export function PresentationView() {
                 </p>
               )}
             </div>
-            <aside className="presentation__legend" aria-label={mapCopy.legend.heading}>
+            <aside
+              className="presentation__legend"
+              aria-label={mapCopy.legend.heading}
+              // With a workshop's notes the column can scroll, so it can take focus (as D114).
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+              tabIndex={0}
+            >
               {data && theme && (
                 <MapLegend
                   model={data.mapModel}
@@ -214,6 +284,7 @@ export function PresentationView() {
                   extras={legendExtras(data, 0, false)}
                 />
               )}
+              {level === 'workshop' && data && <WorkshopNotes data={data} policy={policy} />}
               {coverage?.belowThreshold && (
                 <p className="presentation__coverage" role="note">
                   <Icon name="warning" />
@@ -225,7 +296,7 @@ export function PresentationView() {
               )}
             </aside>
           </div>
-          <p className="presentation__caption">{names.text(view.caption)}</p>
+          <p className="presentation__caption">{text(view.caption)}</p>
           <p className="presentation__counter num" aria-live="polite">
             {P.counter(index + 1, views.length)}
           </p>

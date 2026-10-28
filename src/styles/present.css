@@ -418,3 +418,136 @@
 .workspace__right .tabs__tab {
   white-space: nowrap;
 }
+
+/* Audience levels (build plan session 9). A board or leadership team sees
+   each view as its group picture, with the key beside it in the legend
+   column; a one-to-one sees the member's card in the body area. */
+.presentation__groups {
+  position: absolute;
+  inset: 0;
+}
+
+.presentation__group-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.presentation__key {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+  color: var(--graphite);
+}
+
+.presentation__key-heading {
+  color: var(--ink);
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+  font-weight: var(--weight-semibold);
+}
+
+.presentation__key-heading:not(:first-child) {
+  margin-top: var(--s-3);
+}
+
+.presentation__key-list {
+  list-style: none;
+  padding: 0;
+}
+
+.presentation__card {
+  grid-area: body;
+  min-height: 0;
+  overflow-y: auto;
+  max-width: var(--measure-wide);
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+}
+
+/* The audience select on the presentation's controls bar. */
+.audience {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.audience--presentation {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: 0;
+}
+
+.audience--presentation .field {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.audience__roles {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* The personal network card (PersonalCard.tsx): sections on one left edge, plain tables. */
+.card__subtitle,
+.card__note {
+  color: var(--graphite);
+}
+
+.card__subtitle {
+  margin-bottom: var(--s-5);
+}
+
+.card__section {
+  margin-bottom: var(--s-6);
+}
+
+.card__heading {
+  font-size: var(--t-2-size);
+  line-height: var(--t-2-line);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--s-3);
+}
+
+.card__note,
+.card__text {
+  margin-bottom: var(--s-3);
+  max-width: var(--measure);
+}
+
+.card__lead {
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.card__table-wrap {
+  overflow-x: auto;
+  margin-bottom: var(--s-3);
+}
+
+.card__table {
+  border-collapse: collapse;
+}
+
+.card__table th,
+.card__table td {
+  padding: var(--s-1) var(--s-4) var(--s-1) 0;
+  text-align: start;
+  font-weight: var(--weight-regular);
+}
+
+.card__table thead th {
+  font-weight: var(--weight-medium);
+  border-bottom: var(--line-width) solid var(--stone);
+}
+
+.card__table .numeric {
+  text-align: end;
+}

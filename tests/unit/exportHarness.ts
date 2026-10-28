@@ -19,6 +19,7 @@ import type { TokenSource } from '../../src/ui/export/theme';
 import { effectiveWeights, initialWeightState, type WeightState } from '../../src/ui/state/presets';
 import { initialMapSettings, type Grouping, type MapSettings } from '../../src/ui/state/store';
 import { draftFor } from '../fixtures/surveyProject';
+import type { AudienceChoice } from '../../src/ui/state/audienceSettings';
 
 /**
  * The map settings these tests were written against: ties from the composite, sized by
@@ -159,6 +160,7 @@ export async function contextFor(
     map?: Partial<MapSettings>;
     weights?: WeightState;
     grouping?: Grouping | null;
+    audience?: AudienceChoice;
   },
 ): Promise<ExportContext> {
   const map = { ...compositeMap(), ...options.map };
@@ -173,6 +175,7 @@ export async function contextFor(
       anonymise: options.anonymise,
       excludeSigned: options.excludeSigned,
       grouping: options.grouping ?? null,
+      ...(options.audience ? { audience: options.audience } : {}),
     },
     (input) => analyse(input),
   );

@@ -17,6 +17,11 @@ import {
 } from '../state/exportActions';
 import { setNamesHidden } from '../state/names';
 import { useAppStore } from '../state/store';
+import { allows, type ExportKind } from '../state/audience';
+import { audienceChoice } from '../state/audienceSettings';
+import { audienceCopy } from '../copy/audience';
+import { exportCardFile } from '../state/exportActions';
+import { AudienceSelect } from './AudienceSelect';
 
 // The export dialog (spec §11): the two settings every export follows at the
 // top (hide names, leave out signed and conflict layers), then the map, the
@@ -42,6 +47,12 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const id = useId();
 
   const excludeSigned = project?.settings.exclude_signed_from_exports ?? false;
+  // Outputs the audience level offers (build plan session 9); the others are disabled with a reason.
+  const audience = useAppStore((s) =>
+    s.data.project ? audienceChoice(s.data.project, s.ui.audience).level : 'analyst',
+  );
+  const offered = (kind: ExportKind) => allows({ level: audience }, kind);
+  const notOffered = audienceCopy.notOffered(audience);
   const anyExcludable = project ? exclusionApplies(project, true) : false;
   // The statement as the exports carry it: from the project they show (D105).
   const quality = useMemo(
@@ -62,7 +73,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       <button
         type="button"
         className="button button--secondary"
-        disabled={!ready || busy !== null || disabled}
+        disabled={!ready || busy !== null || disabled || !offered(kind)}
         aria-describedby={`${id}-${kind}-help`}
         onClick={() => {
           void run(kind, () => exportTableFile(kind));
@@ -71,7 +82,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         {label}
       </button>
       <p id={`${id}-${kind}-help`} className="field__help">
-        {help}
+        {offered(kind) ? help : notOffered}
       </p>
     </div>
   );
@@ -97,6 +108,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         <h3 id={`${id}-settings`} className="export__heading">
           {E.settings.heading}
         </h3>
+        <AudienceSelect />
         <div className="export__setting">
           <Switch label={E.settings.hideNames} checked={anonymise} onChange={setNamesHidden} />
           <p className="field__help">{E.settings.hideNamesHelp}</p>
@@ -191,13 +203,22 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         <button
           type="button"
           className="button button--primary"
-          disabled={!ready || busy !== null}
+          disabled={!ready || busy !== null || !offered('map')}
+          aria-describedby={offered('map') ? undefined : `${id}-map-level`}
           onClick={() => {
             void run('map', () => exportMapFile(format, resolution, caption));
           }}
         >
           {E.map.export}
         </button>
+        {!offered('map') && (
+          <p id={`${id}-map-level`} className="field__help">
+            {notOffered}
+          </p>
+        )}
+        {(audience === 'board' || audience === 'leadership') && (
+          <p className="field__help">{E.groupsOnly}</p>
+        )}
       </section>
 
       <section className="export__section" aria-labelledby={`${id}-tables`}>
@@ -223,14 +244,39 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         <button
           type="button"
           className="button button--primary"
-          disabled={!ready || busy !== null}
+          disabled={!ready || busy !== null || !offered('report')}
+          aria-describedby={offered('report') ? undefined : `${id}-report-level`}
           onClick={() => {
             void run('report', () => exportReportFile(caption));
           }}
         >
           {E.report.export}
         </button>
+        {!offered('report') && (
+          <p id={`${id}-report-level`} className="field__help">
+            {notOffered}
+          </p>
+        )}
       </section>
+
+      {offered('card') && (
+        <section className="export__section" aria-labelledby={`${id}-card`}>
+          <h3 id={`${id}-card`} className="export__heading">
+            {audienceCopy.card.title}
+          </h3>
+          <p className="field__help">{audienceCopy.exports.cardHelp}</p>
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={!ready || busy !== null}
+            onClick={() => {
+              void run('card', exportCardFile);
+            }}
+          >
+            {audienceCopy.exports.card}
+          </button>
+        </section>
+      )}
 
       <p className="export__status" role="status">
         {message}
