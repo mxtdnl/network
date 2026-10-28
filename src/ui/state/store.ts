@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { builtinLayer, defaultLayers } from '../../data/defaults';
 import { applyRatingChanges, type RatingChange } from '../../data/ratings';
+import { addRelation, defaultColourLayer, relationForRole } from '../../data/relations';
 import type {
   AttributeFilter,
   AttributeKey,
@@ -234,6 +235,8 @@ interface Actions {
   ) => void;
   deleteLayer: (key: LayerKey) => void;
   restoreLayer: (key: LayerKey) => void;
+  /** Adds a relation the analyst created (build plan session 11), enabled. */
+  addLayer: (layer: LayerDefinition) => void;
   applyRatings: (variable: LayerKey, changes: readonly RatingChange[]) => void;
   setCoverageThreshold: (threshold: number) => void;
   /** The attribute the group insight rules use (settings.insight_group). */
@@ -335,12 +338,27 @@ export function openingMapSettings(project: Project | null): MapSettings {
   const fill = project?.attribute_definitions.some((a) => a.key === 'team')
     ? map.fill
     : ({ kind: 'community' } as const);
-  const layer = project?.layers.find((l) => l.key === DEFAULT_LAYER);
+  if (!project) return { ...map, fill };
+  // Relations are read by role (build plan session 11): the connection layer, and the
+  // signed layer edge colour shows, need not be the built-in ones.
+  const colour = defaultColourLayer(project);
+  const edgeColour =
+    colour && colour.key !== 'valence'
+      ? { kind: 'signed' as const, layer: colour.key }
+      : map.edgeColour;
+  const layer = relationForRole(project, 'connection');
   const rated =
     layer?.enabled === true &&
-    project?.ties.some((t) => t.variable === DEFAULT_LAYER && typeof t.value === 'number') === true;
-  if (!project || rated) return { ...map, fill };
-  return { ...map, fill, layer: 'composite', sizeMetric: 'betweenness', question: null };
+    project.ties.some((t) => t.variable === layer.key && typeof t.value === 'number');
+  if (layer && rated) return { ...map, fill, edgeColour, layer: layer.key };
+  return {
+    ...map,
+    fill,
+    edgeColour,
+    layer: 'composite',
+    sizeMetric: 'betweenness',
+    question: null,
+  };
 }
 
 // The same metric in the other view: in- and out- columns become the single
@@ -561,6 +579,10 @@ export const useAppStore = create<AppState>()((set, get) => {
           ? p
           : { ...p, layers: [...p.layers, layer].sort((a, b) => rank(a.key) - rank(b.key)) },
       );
+    },
+    addLayer: (layer) => {
+      change((p) => addRelation(p, layer));
+      if (get().data.matrixLayer === null) setData({ matrixLayer: layer.key });
     },
     applyRatings: (variable, changes) => {
       change((p) => applyRatingChanges(p, variable, changes, now()));

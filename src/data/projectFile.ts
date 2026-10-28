@@ -6,11 +6,13 @@
 // repaired on load.
 
 import { migrate, ProjectFileError } from './migrations';
+import { relationScale, roleAllows } from './relations';
 import {
   AUDIENCE_LEVELS,
   CATEGORICAL_PALETTES,
   DIVERGING_PALETTES,
   isCategorical,
+  isLayerRole,
   MIN_GROUP_SIZE_FLOOR,
   PALETTE_HUES,
   PROJECT_FILE_EXTENSION,
@@ -168,10 +170,17 @@ export function checkProject(file: Obj): string[] {
         `${name} has invalid category_labels.`,
       );
       need(l.group === undefined || isStr(l.group), `${name} has an invalid group.`);
-      need(
-        l.role === undefined || l.role === 'formal' || l.role === 'informal',
-        `${name} has an invalid role.`,
-      );
+      need(l.role === undefined || isLayerRole(l.role), `${name} has an invalid role.`);
+      // A relation the analyst created declares its role, on a scale the role allows (session 11).
+      if (l.builtin === false) {
+        need(l.role !== undefined, `${name} was created in Graticule but has no role.`);
+        if (isLayerRole(l.role) && isStr(l.scale_type)) {
+          need(
+            roleAllows(l.role, relationScale(l as unknown as LayerDefinition)),
+            `${name} has a scale its role does not allow.`,
+          );
+        }
+      }
       need(
         l.mutual === undefined || typeof l.mutual === 'boolean',
         `${name} has an invalid mutual flag.`,

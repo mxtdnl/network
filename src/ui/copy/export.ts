@@ -28,10 +28,11 @@ export const exportCopy = {
     hideNames: 'Hide names',
     hideNamesHelp:
       'Members appear as team, level and number codes. The same switch as in the top bar.',
-    excludeSigned: 'Leave out valence, energy and conflict',
-    excludeSignedHelp:
-      'These layers hold negative ratings of named colleagues. When left out, exports are calculated again without them, so no figure depends on them. Saved with the project.',
-    excludeSignedNone: 'This project has no valence, energy or conflict layer enabled.',
+    excludeSigned: 'Leave out how people feel about each other and friction',
+    excludeSignedHelp: (labels: readonly string[]) =>
+      `Leaves out every signed layer and every layer whose role is affect or friction: here ${labels.join(', ')}. These hold judgements of named colleagues. When left out, exports are calculated again without them, so no figure depends on them. Saved with the project.`,
+    excludeSignedNone:
+      'This project has no signed layer, and no layer whose role is affect or friction, enabled.',
   },
 
   map: {
@@ -234,7 +235,7 @@ export const reportCopy = {
       'Names are hidden: members appear as team, level and number codes, and names in free text are replaced.',
     named: 'Members are named. Handle this report as personal data.',
     excluded:
-      'Signed layers (rated from negative to positive) and conflict layers are left out: every figure in this report was calculated without them.',
+      'Signed layers (rated from negative to positive) and layers recording how people feel about each other or friction, such as conflict, are left out: every figure in this report was calculated without them.',
     remedy: (text: string) => `Analysis option: ${text.charAt(0).toLowerCase()}${text.slice(1)}.`,
     excludedNone:
       'The signed-layer exclusion is on; this project has none of those layers enabled.',
@@ -359,7 +360,7 @@ export const reportCopy = {
     anonymised:
       'Names in this report are replaced by team, level and number codes. Codes of small teams can still identify someone, so treat the report as personal data.',
     excluded:
-      'Ratings on signed layers and on conflict layers are left out of this report and of every figure in it.',
+      'Ratings on signed layers, and on layers recording how people feel about each other or friction, are left out of this report and of every figure in it.',
   },
   pageOf: (page: number, pages: number) => `${num(page)} of ${num(pages)}`,
 };

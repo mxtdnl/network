@@ -59,7 +59,7 @@ for (const slug of ['demo', ...[...SCENARIOS, ...MERGED_SCENARIOS].map((s) => s.
         (x): x is RefResult =>
           x !== undefined &&
           x.kind === 'unsigned' &&
-          !input.layers.some((l) => l.key === x.layer && l.group === 'conflict'),
+          !input.layers.some((l) => l.key === x.layer && l.role === 'friction'),
       );
     if (composite && attr) {
       const column = input.attributes[attr];

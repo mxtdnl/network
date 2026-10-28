@@ -16,6 +16,7 @@
 //   outlines    → optional: the communities on the selected layer
 
 import { FI_CLASS, type AnalysisResult, type CompositeFormula } from '../engineClient';
+import { relationForRole } from '../../data/relations';
 import {
   isCategorical,
   type AttributeDefinition,
@@ -216,8 +217,10 @@ export function negativeRatings(project: Project): Uint8Array | null {
   return out;
 }
 
+/** The enabled layer standing for the formal or informal role (relationForRole). */
 export function roleLayer(project: Project, role: 'formal' | 'informal') {
-  return project.layers.find((l) => l.role === role && l.enabled && !l.signed);
+  const layer = relationForRole(project, role);
+  return layer?.enabled ? layer : undefined;
 }
 
 /**

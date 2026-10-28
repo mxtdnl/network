@@ -13,6 +13,8 @@ import { computeCoverage, type CoverageResult, type RaterCoverage } from './cove
 import {
   DEFAULT_WAVE,
   isCategorical,
+  layerRole,
+  NON_WORKING_ROLES,
   type AttributeDefinition,
   type AttributeKey,
   type LayerDefinition,
@@ -33,8 +35,8 @@ export const QUALITY_RULES = {
   denseMedian: 0.9,
   /** Groups smaller than this are not quoted for their coverage (as the silo rule's minGroupSize). */
   minGroupSize: 3,
-  /** Layer groups that do not count as working ties (as INSIGHT_RULES.excludedLayerGroups). */
-  excludedTieGroups: ['conflict'] as readonly string[],
+  /** Roles that do not count as working ties (as INSIGHT_RULES.excludedRoles). */
+  excludedTieRoles: NON_WORKING_ROLES,
 } as const;
 
 export type RatingFlag = 'gaveNoRatings' | 'gaveFewRatings';
@@ -142,9 +144,7 @@ function groupAttribute(project: Project): AttributeDefinition | null {
 }
 
 const isTieLayer = (l: LayerDefinition) =>
-  !l.signed &&
-  !isCategorical(l) &&
-  !(l.group !== undefined && QUALITY_RULES.excludedTieGroups.includes(l.group));
+  !l.signed && !isCategorical(l) && !QUALITY_RULES.excludedTieRoles.includes(layerRole(l));
 
 export function computeQuality(project: Project): QualityResult {
   const coverage = computeCoverage(project);

@@ -28,6 +28,8 @@ import {
   type RefResult,
 } from '../../src/engine/types';
 import { effectiveWeights, initialWeightState } from '../../src/ui/state/presets';
+import type { Project } from '../../src/data/schema';
+import { CUSTOM_KEYS, HUB, withCustomRelations } from '../fixtures/customRelations';
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `m${String(i)}`);
 const table = (columns: NodeMetricTable['columns']): NodeMetricTable => ({
@@ -446,5 +448,51 @@ describe('rules on realistic data (build plan session 3)', () => {
     const by = Object.fromEntries(results.map((o) => [o.rule, o]));
     expect(by.silo?.status).toBe('none');
     expect(by.peripheral?.status).toBe('none');
+  });
+});
+
+describe('relations the analyst created (build plan session 11)', () => {
+  const run = async (project: Project, view: 'directed' | 'symmetrised') => {
+    const weights = effectiveWeights(project, initialWeightState());
+    const result = await analyse(
+      buildAnalysisInput(project, { view, symmetrise: 'mean', ...weights }, view),
+    );
+    return Object.fromEntries(result.insights.map((o) => [o.rule, o]));
+  };
+
+  it('reads a created advice relation in the overload and demand rules, by its role', async () => {
+    const project = withCustomRelations();
+    for (const view of ['directed', 'symmetrised'] as const) {
+      const by = await run(project, view);
+      const overload = by.overload?.observations.find((o) => o.ref === CUSTOM_KEYS.advice);
+      expect(overload?.members, view).toContain(HUB);
+      const demand = by.concentratedDemand?.observations.find((o) => o.ref === CUSTOM_KEYS.advice);
+      expect(demand?.members, view).toContain(HUB);
+    }
+  });
+
+  it('leaves a created friction relation out of the silo, peripheral and only-routes rules', async () => {
+    const project = withCustomRelations();
+    // Weighted like any layer, so the friction relation would count if the rules read it.
+    for (const view of ['directed', 'symmetrised'] as const) {
+      const by = await run(project, view);
+      for (const rule of ['silo', 'onlyRoutes', 'overload', 'concentratedDemand'] as const) {
+        expect(
+          by[rule]?.observations.some((o) => o.ref === CUSTOM_KEYS.tension),
+          rule,
+        ).toBe(false);
+      }
+    }
+    expect(INSIGHT_RULES.excludedRoles).toEqual(['friction']);
+    expect(INSIGHT_RULES.overload.roles).toEqual(['advice', 'dependency']);
+  });
+
+  it('reads the keys it is given, and the built-in keys of the roles otherwise', () => {
+    const d = f64([1, 1, 2, 2, 2, 2, 2, 3, 5, 10]);
+    const layers = [{ ref: 'mine', layer: 'mine', node: table({ inDegree: d }) }];
+    expect(possibleOverload(ids(10), layers, true).status).toBe('unavailable');
+    expect(possibleOverload(ids(10), layers, true, ['mine']).observations[0]?.members).toEqual([
+      'm9',
+    ]);
   });
 });

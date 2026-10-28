@@ -1,11 +1,14 @@
 import { useId, useState } from 'react';
 import { defaultLayers } from '../../data/defaults';
-import { isCategorical, isMutualLayer, type LayerDefinition } from '../../data/schema';
+import { deletionImpact } from '../../data/relations';
+import { isCategorical, isMutualLayer, layerRole, type LayerDefinition } from '../../data/schema';
 import { ConfirmDialog, Dialog } from '../components/Dialog';
 import { Switch } from '../components/Switch';
 import { layerCopy } from '../copy/data';
+import { relationCopy, roleCopy } from '../copy/questionBank';
 import { remediesCopy } from '../copy/remedies';
 import { useAppStore } from '../state/store';
+import { RelationActions } from './LayerCreateDialog';
 
 export function scaleDescription(layer: LayerDefinition): string {
   if (layer.scale_type === 'categorical') {
@@ -17,8 +20,9 @@ export function scaleDescription(layer: LayerDefinition): string {
 }
 
 // Layer manager (left column): turn layers on and off, edit their label and
-// question wording, delete optional layers and add them back. Core layers can
-// be turned off but not deleted (spec §4.2).
+// question wording, delete optional layers and add them back, and create
+// relations of the analyst's own (build plan session 11). Core layers can be
+// turned off but not deleted (spec §4.2).
 export function LayerPanel() {
   const project = useAppStore((s) => s.data.project);
   const setLayerEnabled = useAppStore((s) => s.setLayerEnabled);
@@ -27,12 +31,14 @@ export function LayerPanel() {
   const [editing, setEditing] = useState<string | null>(null);
   const coreId = useId();
   const optionalId = useId();
+  const customId = useId();
   const addId = useId();
 
   if (!project) return <p className="placeholder">{layerCopy.noProject}</p>;
 
   const core = project.layers.filter((l) => l.core);
-  const optional = project.layers.filter((l) => !l.core);
+  const optional = project.layers.filter((l) => !l.core && l.builtin);
+  const custom = project.layers.filter((l) => !l.builtin);
   const present = new Set(project.layers.map((l) => l.key));
   const missing = defaultLayers().filter((l) => !present.has(l.key));
   const editingLayer = project.layers.find((l) => l.key === editing) ?? null;
@@ -78,6 +84,15 @@ export function LayerPanel() {
         </h3>
         {list(optional)}
       </section>
+      {custom.length > 0 && (
+        <section aria-labelledby={customId}>
+          <h3 id={customId} className="layers__group">
+            {relationCopy.customHeading}
+          </h3>
+          {list(custom)}
+        </section>
+      )}
+      <RelationActions />
       {missing.length > 0 && (
         <section aria-labelledby={addId}>
           <h3 id={addId} className="layers__group">
@@ -105,9 +120,7 @@ export function LayerPanel() {
       )}
       <LayerEditDialog
         layer={editingLayer}
-        ratingCount={
-          editingLayer ? project.ties.filter((t) => t.variable === editingLayer.key).length : 0
-        }
+        impact={editingLayer ? deletionImpact(project, editingLayer.key) : null}
         onClose={() => {
           setEditing(null);
         }}
@@ -116,29 +129,31 @@ export function LayerPanel() {
   );
 }
 
+type Impact = ReturnType<typeof deletionImpact>;
+
 function LayerEditDialog({
   layer,
-  ratingCount,
+  impact,
   onClose,
 }: {
   layer: LayerDefinition | null;
-  ratingCount: number;
+  impact: Impact | null;
   onClose: () => void;
 }) {
   return (
     <Dialog open={layer !== null} title={layerCopy.dialogTitle} onClose={onClose}>
-      {layer && <LayerForm layer={layer} ratingCount={ratingCount} onClose={onClose} />}
+      {layer && impact && <LayerForm layer={layer} impact={impact} onClose={onClose} />}
     </Dialog>
   );
 }
 
 function LayerForm({
   layer,
-  ratingCount,
+  impact,
   onClose,
 }: {
   layer: LayerDefinition;
-  ratingCount: number;
+  impact: Impact;
   onClose: () => void;
 }) {
   const updateLayer = useAppStore((s) => s.updateLayer);
@@ -218,6 +233,8 @@ function LayerForm({
       <dl className="definition-list">
         <dt>{layerCopy.scale}</dt>
         <dd className="num">{scaleDescription(layer)}</dd>
+        <dt>{relationCopy.roleField}</dt>
+        <dd>{roleCopy[layerRole(layer)].name}</dd>
         <dt>{layerCopy.key}</dt>
         <dd>{layer.key}</dd>
       </dl>
@@ -246,7 +263,9 @@ function LayerForm({
       <ConfirmDialog
         open={confirmDelete}
         title={layerCopy.deleteTitle(layer.label)}
-        body={layerCopy.deleteBody(ratingCount)}
+        body={
+          layer.builtin ? layerCopy.deleteBody(impact.ratings) : relationCopy.deleteBody(impact)
+        }
         confirm={layerCopy.deleteLayer}
         cancel={layerCopy.cancel}
         onCancel={() => {

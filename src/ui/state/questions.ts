@@ -9,7 +9,14 @@
 // question are built in ui/state/readouts.ts.
 
 import { builtinLayer } from '../../data/defaults';
-import { DEFAULT_WAVE, type LayerDefinition, type Project } from '../../data/schema';
+import { builtinForRole, relationForRole } from '../../data/relations';
+import {
+  DEFAULT_WAVE,
+  layerRole,
+  type LayerDefinition,
+  type LayerRole,
+  type Project,
+} from '../../data/schema';
 import type { AnalysisResult } from '../engineClient';
 import { questionsCopy } from '../copy/questions';
 import { hierarchyAvailable } from '../map/useMapModel';
@@ -54,13 +61,18 @@ export function isQuestionId(value: unknown): value is QuestionId {
   return typeof value === 'string' && (QUESTION_IDS as readonly string[]).includes(value);
 }
 
-/** Layer keys of the relations the catalogue reads. */
-export const QUESTION_LAYERS = {
-  connection: 'connection_strength',
+/**
+ * Roles of the relations the catalogue reads (build plan session 11): a
+ * question reads the layer that stands for its role (relationForRole), so a
+ * relation the analyst created with that role answers it too.
+ */
+export const QUESTION_ROLES = {
+  connection: 'connection',
   advice: 'advice',
-  dependency: 'workflow_dependency',
-  valence: 'valence',
-} as const;
+  dependency: 'dependency',
+  informal: 'informal',
+  formal: 'formal',
+} as const satisfies Record<string, LayerRole>;
 
 export type Availability =
   | { ok: true }
@@ -95,14 +107,21 @@ function layerState(project: Project, layer: LayerDefinition | undefined, key: s
 }
 
 const byKey = (project: Project, key: string) => project.layers.find((l) => l.key === key);
-const byRole = (project: Project, role: 'formal' | 'informal') =>
-  project.layers.find((l) => l.role === role && !l.signed);
 
-/** The signed layer the negative-ratings question colours by: valence first, then any other. */
+/** The key of the layer standing for a role, or the built-in key of that role when the project has none. */
+function roleKey(project: Project, role: LayerRole): string {
+  return relationForRole(project, role)?.key ?? builtinForRole(role)?.key ?? role;
+}
+
+/**
+ * The signed layer the negative-ratings question colours by: valence first,
+ * then a signed layer whose role is affect, then any other.
+ */
 export function questionSignedLayer(project: Project): LayerDefinition | undefined {
   const usable = (l: LayerDefinition) => l.signed && l.enabled && hasRatings(project, l.key);
   return (
-    project.layers.find((l) => l.key === QUESTION_LAYERS.valence && usable(l)) ??
+    project.layers.find((l) => l.key === 'valence' && usable(l)) ??
+    project.layers.find((l) => layerRole(l) === 'affect' && usable(l)) ??
     project.layers.find(usable)
   );
 }
@@ -111,14 +130,14 @@ export function questionSignedLayer(project: Project): LayerDefinition | undefin
 export function questionLayer(id: QuestionId, project: Project): string {
   switch (id) {
     case 'information':
-      return QUESTION_LAYERS.advice;
+      return roleKey(project, QUESTION_ROLES.advice);
     case 'depend':
-      return QUESTION_LAYERS.dependency;
+      return roleKey(project, QUESTION_ROLES.dependency);
     case 'brokers':
     case 'informal':
-      return byRole(project, 'informal')?.key ?? 'informal_collaboration';
+      return roleKey(project, QUESTION_ROLES.informal);
     default:
-      return QUESTION_LAYERS.connection;
+      return roleKey(project, QUESTION_ROLES.connection);
   }
 }
 
@@ -136,11 +155,10 @@ function groupCount(project: Project): number {
 
 export function questionAvailability(id: QuestionId, project: Project): Availability {
   const key = questionLayer(id, project);
-  const layer =
-    id === 'brokers' || id === 'informal' ? byRole(project, 'informal') : byKey(project, key);
+  const layer = byKey(project, key);
   const own = layerState(project, layer, key);
   if (id === 'informal') {
-    const formal = byRole(project, 'formal');
+    const formal = relationForRole(project, QUESTION_ROLES.formal);
     const ok =
       !own &&
       formal !== undefined &&
@@ -162,7 +180,7 @@ export function questionAvailability(id: QuestionId, project: Project): Availabi
   if (id === 'groups' && groupCount(project) < 2)
     return { ok: false, reason: 'noGroups', relation: '' };
   if (id === 'negative' && !questionSignedLayer(project)) {
-    const valence = byKey(project, QUESTION_LAYERS.valence);
+    const valence = byKey(project, 'valence');
     const anySigned = project.layers.filter((l) => l.signed);
     return {
       ok: false,
@@ -265,7 +283,7 @@ export function questionSettings(
       return {
         map: { ...base, sizeMetric: metric('inStrength') },
         centreView: 'table',
-        ui: { tableMode: 'incoming', incomingLayer: QUESTION_LAYERS.dependency },
+        ui: { tableMode: 'incoming', incomingLayer: layer },
       };
     case 'informal':
       return onMap({

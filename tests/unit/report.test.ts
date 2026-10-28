@@ -2,7 +2,7 @@
 // from the observations and edited per audience level, one page per saved
 // view, data quality, the method in brief, the appendices and the ethics
 // statement, at every audience level that has a report and under both export
-// settings (Hide names, and leaving out valence, energy and conflict).
+// settings (Hide names, and leaving out how people feel about each other and friction).
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

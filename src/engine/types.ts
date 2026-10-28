@@ -4,6 +4,7 @@
 //
 import type { CoverageResult } from '../data/coverage';
 import type { RatingFlag } from '../data/quality';
+import type { LayerRole } from '../data/schema';
 
 export type { CoverageResult, RatingFlag };
 
@@ -37,9 +38,9 @@ export interface EngineLayer {
   min: number;
   max: number;
   signed: boolean;
-  role?: 'formal' | 'informal';
-  /** The layer's group (plan §2); the insight rules leave out INSIGHT_RULES.excludedLayerGroups. */
-  group?: string;
+  /** The kind of relation (layerRole); the rules read roles, never keys (build plan session 11).
+   *  Absent means 'other'. */
+  role?: LayerRole;
   defaultWeight: number;
   /** The relation is mutual by nature, so a missing direction may be reconstructed (engine/remedies.ts). */
   mutual?: boolean;

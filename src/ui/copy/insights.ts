@@ -89,7 +89,7 @@ export const insightsCopy = {
     noComposite: 'Not applied: the composite is not defined. Give at least one layer a weight.',
     noLayers: 'Not applied: no enabled layer has ties.',
     layersNotEnabled:
-      'Not applied: this rule reads the advice and workflow dependency layers. Enable either layer and add its ratings.',
+      'Not applied: this rule reads the layers whose role is advice or dependency, such as advice and workflow dependency. Enable one and add its ratings.',
     noGroupAttribute: 'Not applied: members have no attribute to group them by, such as team.',
     tooFewGroups: `Not applied: fewer than ${String(R.silo.minGroups)} groups have at least ${String(R.silo.minGroupSize)} members, so almost every tie stays within one group.`,
     noSignedLayer: 'Not applied: no signed layer (valence or energy) is enabled.',
@@ -110,8 +110,15 @@ export const insightsCopy = {
     `${countOf(n, 'member this rule found is', 'members this rule found are')} part of a group listed under Silos, and named there.`,
 } as const;
 
-/** The excluded layer groups in words: "the conflict layers". */
-const excludedText = R.excludedLayerGroups.map((g) => `the ${g} layers`).join(' and ');
+/** The excluded roles in words: "the friction layers (such as conflict)". */
+const excludedText = R.excludedRoles
+  .map((role) =>
+    role === 'friction' ? 'the friction layers (such as conflict)' : `the ${role} layers`,
+  )
+  .join(' and ');
+/** The layers the overload and demand rules read, in words. */
+const demandText =
+  'every layer whose role is advice or dependency (advice and workflow dependency unless the analyst adds others)';
 
 /**
  * The rule as applied, with its thresholds. `group` is the plain label of the
@@ -127,11 +134,11 @@ export function ruleText(rule: InsightRuleId, directed: boolean, group = 'team')
     case 'peripheral':
       return `${received} at or below the ${ordinal(R.peripheral.quantile)} percentile of members and at least ${percent(R.peripheral.minBelowMedian)} below the median, on more than half of the layers considered: each unsigned layer except ${excludedText}, and the positive ratings of each signed layer, not the composite. A layer on which no one receives a tie is not considered. At most ${String(R.peripheral.maxMembers)} members are listed, furthest below the median first. Members who make up at least ${percent(R.overlap.minGroupShare)} of a silo group are named with that group instead.`;
     case 'overload':
-      return `On the advice and workflow dependency layers: ${lower(connectionsIn)} at or above the ${ordinal(R.overload.quantile)} percentile of members and at least ${String(R.overload.medianMultiple)} times the median. At most ${String(R.overload.maxMembers)} members per layer.`;
+      return `On ${demandText}: ${lower(connectionsIn)} at or above the ${ordinal(R.overload.quantile)} percentile of members and at least ${String(R.overload.medianMultiple)} times the median. At most ${String(R.overload.maxMembers)} members per layer.`;
     case 'onlyRoutes':
       return `Members are grouped by ${by}. On the composite and on each unsigned layer except ${excludedText}, with ties read without direction: a group of at least ${String(R.silo.minGroupSize)} members whose ties with every other group are held by at most ${String(R.onlyRoutes.maxGateways)} of its members, and by at most ${percent(R.onlyRoutes.maxGatewayShare)} of the group. The layer with the fewest such members is quoted. Also every member through whom alone at least ${String(R.onlyRoutes.minCutOff)} colleagues are linked to the rest of the network (a cut point).`;
     case 'concentratedDemand':
-      return `On the advice and workflow dependency layers, ties received are counted from the directed ratings in either view. Across the network: the ${percent(R.concentratedDemand.topShare)} of members who receive the most ties (at least one member) hold at least ${percent(R.concentratedDemand.minShare)} of at least ${String(R.concentratedDemand.minTies)} ties. Within each group by ${by} of at least ${String(R.concentratedDemand.groupMinSize)} members receiving at least ${String(R.concentratedDemand.groupMinTies)} ties: the group's own top ${percent(R.concentratedDemand.topShare)} hold at least ${String(R.concentratedDemand.groupMultiple)} times the share they would hold if ties were spread evenly.`;
+      return `On ${demandText}, ties received are counted from the directed ratings in either view. Across the network: the ${percent(R.concentratedDemand.topShare)} of members who receive the most ties (at least one member) hold at least ${percent(R.concentratedDemand.minShare)} of at least ${String(R.concentratedDemand.minTies)} ties. Within each group by ${by} of at least ${String(R.concentratedDemand.groupMinSize)} members receiving at least ${String(R.concentratedDemand.groupMinTies)} ties: the group's own top ${percent(R.concentratedDemand.topShare)} hold at least ${String(R.concentratedDemand.groupMultiple)} times the share they would hold if ties were spread evenly.`;
     case 'silo':
       return `Members are grouped by ${by}. A group of at least ${String(R.silo.minGroupSize)} members whose E-I index is ${signed2(R.silo.maxEi)} or lower on the composite or on any unsigned layer except ${excludedText}, which means at least three ties inside the group for every tie outside it, counting only layers with at least ${String(R.silo.minTies)} ties involving the group. The layer with the lowest index is quoted. Not applied when fewer than ${String(R.silo.minGroups)} groups have ${String(R.silo.minGroupSize)} members or more.`;
     case 'negativeCluster':

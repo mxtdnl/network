@@ -72,8 +72,14 @@ export interface LayerDefinition {
   category_labels?: Record<string, string>;
   /** Sub-layers of one question share a group, e.g. the two conflict layers. */
   group?: string;
-  /** Marks the pair used by the formal–informal comparison. */
-  role?: 'formal' | 'informal';
+  /**
+   * What kind of relation the layer records (build plan session 11). The
+   * rules, presets, composite defaults, question catalogue and export
+   * exclusion read the role, never the key. Required on layers the analyst
+   * creates; absent on a built-in layer means its role in BUILTIN_ROLES
+   * (layerRole). Added to schema 4 in place, before release.
+   */
+  role?: LayerRole;
   /**
    * The relation is mutual by nature, so a missing direction may be
    * reconstructed from the other (build plan session 5). Absent: true for
@@ -83,16 +89,68 @@ export interface LayerDefinition {
   mutual?: boolean;
 }
 
-/** Layers mutual by nature when `mutual` is not set: working together involves both people. */
-export const MUTUAL_LAYER_KEYS: readonly string[] = [
-  'connection_strength',
-  'formal_collaboration',
-  'informal_collaboration',
-];
+/** Kinds of relation (build plan session 11, spec §4.2). */
+export const LAYER_ROLES = [
+  'connection',
+  'formal',
+  'informal',
+  'information',
+  'advice',
+  'dependency',
+  'ideas',
+  'trust',
+  'influence',
+  'awareness',
+  'affect',
+  'friction',
+  'other',
+] as const;
+export type LayerRole = (typeof LAYER_ROLES)[number];
 
-export function isMutualLayer(layer: Pick<LayerDefinition, 'key' | 'mutual'>): boolean {
-  return layer.mutual ?? MUTUAL_LAYER_KEYS.includes(layer.key);
+export function isLayerRole(value: unknown): value is LayerRole {
+  return typeof value === 'string' && (LAYER_ROLES as readonly string[]).includes(value);
 }
+
+/** Roles of the built-in layers, used when a layer has no `role` of its own. */
+export const BUILTIN_ROLES: Readonly<Record<string, LayerRole>> = {
+  connection_strength: 'connection',
+  valence: 'affect',
+  informal_collaboration: 'informal',
+  formal_collaboration: 'formal',
+  advice: 'advice',
+  competence_trust: 'trust',
+  benevolence_trust: 'trust',
+  energy: 'affect',
+  decision_influence: 'influence',
+  workflow_dependency: 'dependency',
+  knowledge_awareness: 'awareness',
+  idea_sharing: 'ideas',
+  interpersonal_safety: 'trust',
+  conflict_task: 'friction',
+  conflict_personal: 'friction',
+  primary_channel: 'other',
+};
+
+/** The layer's role: its own, else the built-in role of its key, else 'other'. */
+export function layerRole(layer: Pick<LayerDefinition, 'key' | 'role'>): LayerRole {
+  return layer.role ?? BUILTIN_ROLES[layer.key] ?? 'other';
+}
+
+/** Roles whose relations are mutual by nature when `mutual` is not set: working together involves both people. */
+export const MUTUAL_ROLES: readonly LayerRole[] = ['connection', 'formal', 'informal'];
+
+export function isMutualLayer(layer: Pick<LayerDefinition, 'key' | 'mutual' | 'role'>): boolean {
+  return layer.mutual ?? MUTUAL_ROLES.includes(layerRole(layer));
+}
+
+/**
+ * Roles the export exclusion removes whatever their scale (spec §10, D105 as
+ * amended in build plan session 11), as well as every signed layer.
+ */
+export const EXCLUDED_ROLES: readonly LayerRole[] = ['affect', 'friction'];
+
+/** Roles that are not working ties: the rules and data-quality checks leave them out. */
+export const NON_WORKING_ROLES: readonly LayerRole[] = ['friction'];
 
 export interface Tie {
   rater_id: MemberId;

@@ -6,7 +6,13 @@
 // values apply, and a layer without one uses its default weight; a signed
 // layer without a chosen treatment is a multiplier on the composite.
 
-import { isCategorical, type LayerKey, type Project } from '../../data/schema';
+import {
+  isCategorical,
+  layerRole,
+  type LayerKey,
+  type LayerRole,
+  type Project,
+} from '../../data/schema';
 
 export type Preset = 'formal' | 'informal' | 'health' | 'custom';
 export type SignedTreatment = 'positive' | 'filterNegative' | 'multiplier';
@@ -19,38 +25,61 @@ export const PRESETS: readonly Preset[] = ['formal', 'informal', 'health', 'cust
 export const DEFAULT_SIGNED_TREATMENT: SignedTreatment = 'multiplier';
 
 interface PresetDefinition {
-  weights: Record<LayerKey, number>;
-  treatment: Record<LayerKey, SignedTreatment>;
+  /** Raw weight of every unsigned layer of each role; roles not named get 0. */
+  roles: Partial<Record<LayerRole, number>>;
+  /** Signed layers whose role is affect: the first in layer order, and every other. */
+  affect?: {
+    first: { weight: number; treatment: SignedTreatment };
+    others: { weight: number; treatment: SignedTreatment };
+  };
 }
 
-// One rule for every preset: the defining layer has twice the raw weight of
-// each supporting layer. Relationship health uses valence as a multiplier, so
-// negative ratings lower the composite rather than being ignored; its weight
-// only switches it on.
+// One rule for every preset: the defining role has twice the raw weight of
+// each supporting role. Presets read roles, not keys (build plan session 11),
+// so a relation the analyst created takes part through its role, and every
+// layer of a role gets the role's weight. Relationship health uses the first
+// signed affect layer (valence, when enabled) as a multiplier, so negative
+// ratings lower the composite rather than being ignored; its weight only
+// switches it on. Further signed affect layers (energy) count their positive
+// ratings.
 export const PRESET_DEFINITIONS: Record<Exclude<Preset, 'custom'>, PresetDefinition> = {
   // Ties required by role, process or reporting line.
-  formal: {
-    weights: { formal_collaboration: 0.4, workflow_dependency: 0.2 },
-    treatment: {},
-  },
+  formal: { roles: { formal: 0.4, dependency: 0.2 } },
   // Collaboration and help that happen outside formal channels.
-  informal: {
-    weights: { informal_collaboration: 0.4, advice: 0.2, idea_sharing: 0.2 },
-    treatment: {},
-  },
+  informal: { roles: { informal: 0.4, advice: 0.2, ideas: 0.2 } },
   // The quality of relationships: valence scales the composite, which sums
   // connection strength, positive energy and, where collected, trust and safety.
   health: {
-    weights: {
-      valence: 0.4,
-      connection_strength: 0.2,
-      benevolence_trust: 0.2,
-      interpersonal_safety: 0.2,
-      energy: 0.2,
+    roles: { connection: 0.2, trust: 0.2, affect: 0.2 },
+    affect: {
+      first: { weight: 0.4, treatment: 'multiplier' },
+      others: { weight: 0.2, treatment: 'positive' },
     },
-    treatment: { valence: 'multiplier', energy: 'positive' },
   },
 };
+
+/** A preset's raw weight and, for signed layers, treatment for each weighted layer. */
+export function presetWeights(
+  preset: Exclude<Preset, 'custom'>,
+  project: Project,
+): { weights: Record<LayerKey, number>; treatment: Record<LayerKey, SignedTreatment> } {
+  const def = PRESET_DEFINITIONS[preset];
+  const weights: Record<LayerKey, number> = {};
+  const treatment: Record<LayerKey, SignedTreatment> = {};
+  let firstAffect = true;
+  for (const layer of weightedLayers(project)) {
+    const role = layerRole(layer);
+    if (layer.signed) {
+      if (role === 'affect' && def.affect) {
+        const t = firstAffect ? def.affect.first : def.affect.others;
+        firstAffect = false;
+        weights[layer.key] = t.weight;
+        treatment[layer.key] = t.treatment;
+      } else weights[layer.key] = 0;
+    } else weights[layer.key] = def.roles[role] ?? 0;
+  }
+  return { weights, treatment };
+}
 
 export interface WeightState {
   preset: Preset;
@@ -75,7 +104,7 @@ export function effectiveWeights(
 ): { weights: Record<LayerKey, number>; signedTreatment: Record<LayerKey, SignedTreatment> } {
   const weights: Record<LayerKey, number> = {};
   const signedTreatment: Record<LayerKey, SignedTreatment> = {};
-  const preset = state.preset === 'custom' ? null : PRESET_DEFINITIONS[state.preset];
+  const preset = state.preset === 'custom' ? null : presetWeights(state.preset, project);
   for (const layer of weightedLayers(project)) {
     weights[layer.key] = preset
       ? (preset.weights[layer.key] ?? 0)

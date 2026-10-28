@@ -419,6 +419,58 @@ a {
   margin-top: var(--s-2);
 }
 
+/* Relations the analyst creates, and the question bank (build plan session 11) */
+.relation-form__scale {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.relation-form__scale input:disabled + span {
+  color: var(--graphite);
+}
+
+.relation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+
+.bank__heading {
+  font-size: var(--t-0-size);
+  line-height: var(--t-0-line);
+  font-weight: var(--weight-semibold);
+  margin: var(--s-5) 0 var(--s-2);
+}
+
+.bank__list {
+  list-style: none;
+}
+
+.bank__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-top: var(--line-width) solid var(--stone);
+}
+
+.bank__text {
+  flex: 1;
+  min-width: 0;
+  max-width: var(--measure);
+}
+
+.bank__item > .button {
+  flex: none;
+}
+
+.bank__status:empty {
+  display: none;
+}
+
 /* Coverage (right column) */
 .coverage .definition-list dd {
   display: flex;

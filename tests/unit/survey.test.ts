@@ -22,6 +22,7 @@ import {
   estimateSeconds,
   linksCsv,
   payloadFor,
+  surveyLayerFrom,
   surveyStatus,
   updateSurvey,
 } from '../../src/survey/model';
@@ -41,6 +42,7 @@ import {
   type ResponseBody,
 } from '../../src/survey/response';
 import { fileTransport } from '../../src/survey/transport';
+import { CUSTOM_KEYS, withCustomRelations } from '../fixtures/customRelations';
 import { demoProject, draftFor, namedProject } from '../fixtures/surveyProject';
 
 const BASE = 'https://username.github.io/network/';
@@ -649,5 +651,63 @@ describe('import', () => {
     expect(plan.rejected).toStrictEqual([
       { source: 'file 1', receipt: null, reason: 'unreadable' },
     ]);
+  });
+});
+
+describe('relations the analyst created (build plan session 11)', () => {
+  it('carries a created relation through links, packages, responses and import', async () => {
+    const base = withCustomRelations(demoProject());
+    // Ask about connection strength and the created advice relation only.
+    const ask = base.layers.filter(
+      (l) => l.key === 'connection_strength' || l.key === CUSTOM_KEYS.advice,
+    );
+    const { project, survey, privateKey } = await setup(base, {
+      entry: 'full',
+      layers: ask.map(surveyLayerFrom),
+    });
+    const version = currentVersion(survey);
+    expect(version.layers.map((l) => l.key)).toEqual(['connection_strength', CUSTOM_KEYS.advice]);
+
+    // Personal link.
+    const { links } = await buildLinks(
+      { ...survey, settings: { ...survey.settings, link_mode: 'auto' } },
+      project,
+      BASE,
+    );
+    const route = parseRespondHash(new URL(must(links[0]).url).hash);
+    if (route?.kind !== 'link') throw new Error('expected a personal link');
+    const read = await readLink(route.encoded);
+    const custom = read.payload.layers.find((l) => l.key === CUSTOM_KEYS.advice);
+    expect(custom).toMatchObject({
+      label: 'Advice about the rollout',
+      question_wording: 'How often do you go to this person for advice about the rollout?',
+      scale_type: 'frequency',
+      min: 0,
+      max: 5,
+    });
+    // Package.
+    const pkg = await buildLinks(
+      { ...survey, settings: { ...survey.settings, link_mode: 'package' } },
+      project,
+      BASE,
+    );
+    const pkgRoute = parseRespondHash(new URL(must(pkg.links[0]).url).hash);
+    if (pkgRoute?.kind !== 'package') throw new Error('expected a package link');
+    const fromPackage = await readPackage(must(pkg.packages.get(1)).text, pkgRoute);
+    expect(fromPackage.layers.find((l) => l.key === CUSTOM_KEYS.advice)).toStrictEqual(custom);
+
+    // A response, encrypted and imported, becomes self-report ties on the created relation.
+    const empty = { ...project, ties: [] };
+    const a = await envelopeText(
+      survey,
+      bodyFor(survey, 'FIN01', (layer, j) => (layer === CUSTOM_KEYS.advice ? (j % 5) + 1 : 2)),
+    );
+    const plan = await importTexts(empty, survey, privateKey, [a.text]);
+    expect(plan.rejected).toStrictEqual([]);
+    const next = applyImport(empty, plan, NOW);
+    const advice = next.ties.filter((t) => t.variable === CUSTOM_KEYS.advice);
+    expect(advice).toHaveLength(39);
+    expect(advice[0]).toMatchObject({ rater_id: 'FIN01', source: 'self_report', wave: 1 });
+    expect(parseProject(serialiseProject(next))).toStrictEqual(next);
   });
 });

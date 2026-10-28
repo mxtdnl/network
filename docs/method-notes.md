@@ -493,7 +493,31 @@ Estimated time = 60 s to read the introduction and agree + 5 s per rating + (wit
 
 ## 10. Relationship layers
 
-A layer is one relationship variable: every member rates every other member on it. Each layer has a key (used in ties files), a label, question wording, a scale, whether it is signed, a default weight and whether it is enabled. The question wording and labels can be edited in the Layers section; the key and scale cannot. Core layers are enabled by default and can be turned off but not deleted; optional layers are disabled by default.
+A layer is one relationship variable: every member rates every other member on it. Each layer has a key (used in ties files), a label, question wording, a scale, whether it is signed, a default weight, whether it is enabled, and a role. The question wording and labels can be edited in the Layers section; the key and scale cannot. Core layers are enabled by default and can be turned off but not deleted; optional layers are disabled by default.
+
+**Roles.** A layer's role is the kind of relation it records. The insight rules, presets, composite defaults, question catalogue, data-quality checks and the export exclusion read roles, never keys, so a relation the analyst creates is treated like a built-in layer of the same kind (build plan session 11). Each built-in layer has a fixed role; a project file stores a role only for relations the analyst created.
+
+| Role | Built-in layers | Scales allowed | Rules | Presets and composite | Other |
+|---|---|---|---|---|---|
+| Working connection | Connection strength | Frequency, agreement | Working tie (silos, peripheral members, only routes) | Relationship health 0.2 | The map and the first question open on it; mutual by nature |
+| Formal collaboration | Formal collaboration | Frequency, agreement | Working tie; formal–informal gaps | Formal structure 0.4 | Mutual by nature |
+| Informal collaboration | Informal collaboration | Frequency, agreement | Working tie; formal–informal gaps | Informal network 0.4 | Mutual by nature; the brokers and informal questions |
+| Information flow | none | Frequency, agreement | Working tie | none | May be worded in either direction |
+| Advice | Advice | Frequency, agreement | Working tie; possible overload; concentrated demand | Informal network 0.2 | "How information reaches people"; incoming ties |
+| Dependency | Workflow dependency | Frequency, agreement | Working tie; possible overload; concentrated demand | Formal structure 0.2 | "Whose time others depend on"; incoming ties |
+| Ideas | Idea sharing | Frequency, agreement | Working tie | Informal network 0.2 | |
+| Trust | Competence-based trust, benevolence-based trust, interpersonal safety | Agreement | Working tie | Relationship health 0.2 | |
+| Influence | Decision influence | Frequency, agreement | Working tie | none | |
+| Awareness | Knowledge awareness | Agreement | Working tie | none | |
+| How people feel about each other (affect) | Valence, energy | Signed, agreement | Signed: negative clusters, negative ratings not returned. Unsigned: working tie | Signed: a multiplier on the composite by default (section 6). Relationship health: the first signed one 0.4 as a multiplier, any other signed one 0.2 on its positive ratings, an unsigned one 0.2 | The default edge colour is valence, else the first signed affect layer. Left out by the export exclusion whatever its scale |
+| Friction | Conflict: task disagreement, conflict: personal friction | Frequency, agreement | Not a working tie: not read by the silo, peripheral, only-routes or data-quality tie measures | Default weight 0 | Left out by the export exclusion |
+| Other | Primary channel | Any; categories only here | Working tie when unsigned and scaled | Default weight 1 (categories 0) | |
+
+A preset weights every layer of a role it names, so a project with two advice layers gives each the advice weight. Possible overload and concentrated demand read every unsigned layer whose role is advice or dependency. Where one layer must stand for a role (the question catalogue, the map's opening layer, the formal–informal comparison), it is the built-in layer of that role when it is enabled and rated, else the first that is, else the first enabled. For advice and dependency, the person answering relies on the colleague they rate, so a colleague's incoming ties count the demand on them; an information question may be worded either way, and the question bank says when it is worded from the giver's side.
+
+Relationship health includes competence-based trust when that layer is enabled, because it has the trust role (before build plan session 11 the preset named benevolence-based trust and interpersonal safety only). No demo or scenario project enables it, so no measured result changed.
+
+**Relations the analyst creates.** "Create a relation" in the Layers section asks for a label, question wording, a role and a scale: frequency 0–5 ("Never" to "Daily"), agreement 0–5 ("Not at all" to "Completely"), signed −3 to +3 ("Very negative", "Neutral", "Very positive"), or two to eight categories. A role offers only the scales in the table. The key is generated from the label once: accents removed, lower case, every run of other characters an underscore, at most 40 characters, with `_2`, `_3` and so on added when the key is a built-in layer's (even one deleted, since it can be added back), `composite`, a layer's in the project, or a layer's a survey version asked about (so responses to a deleted relation are never read as a new one's). The key never changes when the label does, because ties, surveys, saved views and ties files name the layer by it. A created relation is enabled, has default weight 1 (0 for friction and categories), and is mutual by nature when its role is working connection or formal or informal collaboration, unless the analyst switches that off. Deleting one deletes its ratings; the confirmation says how many, how many saved views use it and how many surveys asked about it. A file whose created relation has no role, or a scale its role does not allow, is refused.
 
 Scale labels: frequency scales run 0 "Never", 1 "Less than monthly", 2 "Monthly", 3 "Weekly", 4 "Several times a week", 5 "Daily"; agreement scales run from 0 "Not at all" to 5 "Completely"; signed scales run from −3 to +3 with 0 "Neutral". Every rated layer has default weight 1, except the two conflict sub-layers, whose default weight is 0: friction is not a working tie, and as frequencies the composite could only add them, so more conflict would make a stronger composite tie (CLAUDE.md D143). An analyst who wants them in the composite raises their weight; a project saved by version 1.0.0 opens with them at 0, and a saved view that weighted them keeps its weight.
 
@@ -530,7 +554,7 @@ The scales the specification leaves open are conventions of this tool (CLAUDE.md
 **How layers enter the analysis.**
 
 - Signed layers (valence, energy) are split into positive and negative sub-layers (section 1.2) and never passed to path-based metrics with negative weights (section 1.4).
-- The conflict sub-layers are frequencies, not signed: they are analysed like other unsigned layers. Their default weight is 0 and the composite presets leave them out (section 6, "Presets"); the silo and peripheral insight rules do not read them (section 8).
+- The conflict sub-layers are frequencies, not signed: they are analysed like other unsigned layers. Their role is friction, so their default weight is 0 and the composite presets leave them out (section 6, "Presets"); the silo, peripheral and only-routes insight rules do not read them (section 8). The same holds for any relation the analyst creates with the friction role.
 - Primary channel is categorical: it is stored, entered and counted in coverage, but not analysed as a network, weighted, or included in multiplexity.
 - Layers that are turned off keep their ratings and are left out of every metric, the composite and coverage until turned on again.
 
@@ -602,7 +626,7 @@ A saved view captures the weights (preset, weights and signed treatments), the m
 
 ### Signed-layer exclusion
 
-"Leave out valence, energy and conflict" removes every signed layer and both conflict sub-layers, with all their ratings, from the project before any analysis export is made, and runs the analysis again. Every exported figure is therefore calculated as if those layers had never been collected: the composite (a Relationship health composite loses its valence multiplier), communities, insights, coverage and all metrics. The report leaves out the negative-clusters and negative-ratings-not-returned rules and the method-note sentences about those layers. The setting is saved with the project and applies to every analysis export; the analysis on screen is unchanged.
+"Leave out how people feel about each other and friction" (before build plan session 11, "Leave out valence, energy and conflict") removes every signed layer and every layer whose role is affect or friction, whatever its scale (valence, energy, both conflict sub-layers, and any such relation the analyst created), with all their ratings, from the project before any analysis export is made, and runs the analysis again. Every exported figure is therefore calculated as if those layers had never been collected: the composite (a Relationship health composite loses its valence multiplier), communities, insights, coverage and all metrics. The report leaves out the negative-clusters and negative-ratings-not-returned rules and the method-note sentences about those layers. The setting is saved with the project and applies to every analysis export; the analysis on screen is unchanged.
 
 ### Random seed
 
@@ -681,7 +705,7 @@ A tie i → j is reported when i rates j above the scale minimum on a tie layer.
 
 ### The data-quality statement
 
-A few sentences written from these results (`src/ui/copy/quality.ts`), naming no member: coverage against the threshold; how many gave no ratings (and where, by the grouping attribute, or by another attribute when the grouping attribute has one group) and how many gave few; that their results rest largely on other people's reports; the lowest group coverage when below the threshold; how many gave everyone the same answer; how many rate higher or lower than most; dense reporting; how many report many more ties than most; and the share of ties not reported back. It is shown in the Check the data tab, at the start of a presentation (an "About the data" step before the first view), in the Export dialog and on the PDF report's cover. Exports compute it from the project they show, so under "Leave out valence, energy and conflict" coverage and rating styles are counted over the remaining layers.
+A few sentences written from these results (`src/ui/copy/quality.ts`), naming no member: coverage against the threshold; how many gave no ratings (and where, by the grouping attribute, or by another attribute when the grouping attribute has one group) and how many gave few; that their results rest largely on other people's reports; the lowest group coverage when below the threshold; how many gave everyone the same answer; how many rate higher or lower than most; dense reporting; how many report many more ties than most; and the share of ties not reported back. It is shown in the Check the data tab, at the start of a presentation (an "About the data" step before the first view), in the Export dialog and on the PDF report's cover. Exports compute it from the project they show, so under "Leave out how people feel about each other and friction" coverage and rating styles are counted over the remaining layers.
 
 ### What the members named share
 
@@ -910,3 +934,46 @@ Each pattern in the report was found by a fixed rule, with stated thresholds, ap
 ### How complete the data is
 
 The share of possible ratings that were given. When coverage is below the threshold, figures about the whole network rest on incomplete data; people who gave few ratings are described largely by others' reports.
+
+## 20. Question bank
+
+"Add from the question bank" (in the Layers section and in survey setup) offers the questions below, grouped by purpose (build plan session 11). Adding one creates a relation (section 10) with the item's label, wording, scale and role, which the analyst can then edit like any other. `{topic}` is replaced by the topic the analyst enters, for example "the improvement programme"; adapt the rest of the wording to the client's issue too. The bank does not repeat the built-in layers, which stay available in the Layers section.
+
+The items are Graticule's own drafts, not validated scales. Sensitivity says how much the answers judge a colleague: **low** (who works with whom), **medium** (says something about a colleague's work), **high** (judges a colleague or a relationship: give a clear purpose, a confidentiality statement and a chance to consult first, and report by group). Every item marked "reversed" is worded from the giver's side, so the colleague rated is the one who receives.
+
+| Purpose | Wording | Scale | Role | Sensitivity |
+|---|---|---|---|---|
+| Information flow | How often do you get information about {topic} from this person? | Frequency | Information flow | Low |
+| Information flow | How often do you give information about {topic} to this person? | Frequency | Information flow | Low; reversed |
+| Information flow | How often do you hear about changes affecting {topic} first from this person? | Frequency | Information flow | Low |
+| Information flow | This person keeps me informed about {topic}. | Agreement | Information flow | Low |
+| Advice and problem-solving | How often do you go to this person for advice about {topic}? | Frequency | Advice | Low |
+| Advice and problem-solving | How often do you go to this person when you are stuck on a problem? | Frequency | Advice | Low |
+| Advice and problem-solving | This person helps me think through {topic} when I am unsure. | Agreement | Advice | Low |
+| Advice and problem-solving | I would ask this person to check my work on {topic}. | Agreement | Advice | Medium |
+| Work and dependency | How often do you need something from this person to finish your work on {topic}? | Frequency | Dependency | Low |
+| Work and dependency | My work on {topic} is delayed when this person is unavailable. | Agreement | Dependency | Medium |
+| Work and dependency | How often do you hand over work to this person? | Frequency | Dependency | Low; reversed |
+| Innovation and ideas | How often do you discuss new ideas about {topic} with this person? | Frequency | Ideas | Low |
+| Innovation and ideas | I would test an early idea about {topic} with this person. | Agreement | Ideas | Low |
+| Innovation and ideas | This person helps me turn ideas about {topic} into action. | Agreement | Ideas | Low |
+| Decisions | How often do you consult this person before deciding about {topic}? | Frequency | Influence | Low |
+| Decisions | This person’s view changes what I decide about {topic}. | Agreement | Influence | Medium |
+| Decisions | I need this person’s agreement before I act on {topic}. | Agreement | Dependency | Low |
+| Collaboration | How often do you work with this person on {topic}? | Frequency | Working connection | Low |
+| Collaboration | How often does a process or plan require you to work with this person on {topic}? | Frequency | Formal collaboration | Low |
+| Collaboration | How often do you work with this person on {topic} without being asked to? | Frequency | Informal collaboration | Low |
+| Across a merger or matrix | How often do you work with this person across the former organisations? | Frequency | Working connection | Medium |
+| Across a merger or matrix | How often do you need to agree priorities with this person because you report to different managers? | Frequency | Formal collaboration | Low |
+| Across a merger or matrix | I know who to go to in this person’s part of the organisation. | Agreement | Awareness | Low |
+| Awareness and onboarding | I know what this person works on. | Agreement | Awareness | Low |
+| Awareness and onboarding | This person helped me find my way when I joined or changed role. | Agreement | Advice | Low |
+| Awareness and onboarding | How often does this person introduce you to people you did not know? | Frequency | Information flow | Low |
+| Inclusion and trust | This person includes me in discussions about {topic}. | Agreement | Information flow | High |
+| Inclusion and trust | I can disagree with this person about {topic} without it harming our relationship. | Agreement | Trust | High |
+| Inclusion and trust | I can count on this person to keep a commitment. | Agreement | Trust | High |
+| Energy and friction | How does working with this person on {topic} usually leave you? | Signed, "Very drained" to "Very energised" | How people feel about each other | High |
+| Energy and friction | How often do you disagree with this person about priorities for {topic}? | Frequency | Friction | High |
+| Energy and friction | How often is work with this person slowed by tension between you? | Frequency | Friction | High |
+
+Created relations travel like built-in layers: in project files (with their role), survey links and packages (with their label, wording and scale; a respondent never sees the role), responses and imports (by key), ties files (by key), and every export (by label), where the exclusion removes those whose role is affect or friction.

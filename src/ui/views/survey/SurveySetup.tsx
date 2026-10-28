@@ -34,6 +34,7 @@ import { surveyCopy } from '../../copy/survey';
 import { setUnlockedKey } from '../../state/surveyKeys';
 import { useMemberNames } from '../../state/names';
 import { useAppStore } from '../../state/store';
+import { RelationActions } from '../LayerCreateDialog';
 import { downloadText } from './download';
 
 const S = surveyCopy.setup;
@@ -195,6 +196,11 @@ export function SurveySetup({ project, survey, onDone, onCancel }: Props) {
             </div>
           );
         })}
+        <RelationActions
+          onAdded={(layer) => {
+            setDraft((d) => ({ ...d, layers: [...d.layers, surveyLayerFrom(layer)] }));
+          }}
+        />
       </fieldset>
 
       <fieldset className="survey-setup__group">

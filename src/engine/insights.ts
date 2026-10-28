@@ -8,6 +8,7 @@
 // Quantiles use linear interpolation between order statistics (NumPy's
 // default), over the members whose value is defined.
 
+import { BUILTIN_ROLES, type LayerRole } from '../data/schema';
 import { articulationPoints, neighboursOf, partsWithout } from './metrics/cutpoints';
 import { percentile } from './metrics/percentile';
 import {
@@ -54,8 +55,8 @@ export const INSIGHT_RULES = {
     maxMembers: 5,
   },
   overload: {
-    /** Layers the rule reads, by key. */
-    layers: ['advice', 'workflow_dependency'] as readonly string[],
+    /** Layers the rule reads, by role (build plan session 11): every unsigned layer of these roles. */
+    roles: ['advice', 'dependency'] as readonly LayerRole[],
     /** In-degree (degree when symmetrised) at or above this quantile… */
     quantile: 0.9,
     /** …and at least this multiple of the median in-degree. */
@@ -90,8 +91,8 @@ export const INSIGHT_RULES = {
     minCutOff: 3,
   },
   concentratedDemand: {
-    /** Layers the rule reads, by key, as the overload rule. */
-    layers: ['advice', 'workflow_dependency'] as readonly string[],
+    /** Layers the rule reads, by role, as the overload rule. */
+    roles: ['advice', 'dependency'] as readonly LayerRole[],
     /** The members receiving most ties: this share of members, at least one. */
     topShare: 0.1,
     /** Across the network: the top members hold at least this share of incoming ties… */
@@ -132,11 +133,11 @@ export const INSIGHT_RULES = {
     maxAttributes: 2,
   },
   /**
-   * Layer groups the silo and peripheral rules leave out: conflict is not a
-   * working tie, and conflict between people who work together stays inside
-   * their group by nature (build plan session 3).
+   * Roles the silo, peripheral and only-routes rules leave out: friction is
+   * not a working tie, and friction between people who work together stays
+   * inside their group by nature (build plan sessions 3 and 11).
    */
-  excludedLayerGroups: ['conflict'] as readonly string[],
+  excludedRoles: ['friction'] as readonly LayerRole[],
   formalInformal: {
     /**
      * Groups (the first attribute of silo.attributes present) are compared in
@@ -269,8 +270,8 @@ export interface PeripheralRanking {
  * at or below the INSIGHT_RULES.peripheral.quantile of members, and at least
  * minBelowMedian below the layer's median, on more than half of the layers
  * considered: every unsigned layer and the positive part of each signed
- * layer, not the composite, not negative ratings and not the layer groups in
- * INSIGHT_RULES.excludedLayerGroups. A layer on which nobody receives any tie
+ * layer, not the composite, not negative ratings and not the roles in
+ * INSIGHT_RULES.excludedRoles. A layer on which nobody receives any tie
  * is not considered, and a member at the layer's highest value is never
  * counted low. Members are ranked by the number of layers on which they are
  * low, then by their mean value as a share of the median, lowest first. Null
@@ -374,8 +375,15 @@ export function peripheralMembers(
 
 // ----------------------------------------------------------------- overload
 
+/** Built-in layer keys of the roles, for callers that do not pass the project's own (tests). */
+function keysWithRoles(roles: readonly LayerRole[]): LayerKey[] {
+  return Object.entries(BUILTIN_ROLES)
+    .filter(([, role]) => roles.includes(role))
+    .map(([key]) => key);
+}
+
 /**
- * Possible overload: on the advice and workflow dependency layers, members
+ * Possible overload: on the layers whose role is advice or dependency, members
  * whose in-degree (degree when symmetrised) is at or above the
  * INSIGHT_RULES.overload.quantile of members and at least medianMultiple times
  * the median in-degree, and above 0; at most maxMembers per layer, highest
@@ -385,10 +393,11 @@ export function possibleOverload(
   ids: readonly MemberId[],
   layers: readonly (LayerNodeTable & { layer: LayerKey })[],
   directed: boolean,
+  keys: readonly LayerKey[] = keysWithRoles(INSIGHT_RULES.overload.roles),
 ): InsightOutcome {
   const T = INSIGHT_RULES.overload;
   const metric: NodeMetricKey = directed ? 'inDegree' : 'degree';
-  const read = layers.filter((l) => T.layers.includes(l.layer));
+  const read = layers.filter((l) => keys.includes(l.layer));
   if (read.length === 0) return unavailable('overload', 'layersNotEnabled');
   const observations: Observation[] = [];
   for (const { ref, node } of read) {
@@ -450,7 +459,7 @@ export function groupAttribute(
  * Silos: groups of the grouping attribute (groupAttribute) of at least
  * minGroupSize members, whose E-I index is at or below maxEi on at least one
  * of the layers given (each unsigned layer outside
- * INSIGHT_RULES.excludedLayerGroups, and the composite) with at least minTies
+ * INSIGHT_RULES.excludedRoles, and the composite) with at least minTies
  * ties involving the group: most ties involving the group stay inside it. The
  * rule is not applied when fewer than minGroups groups have minGroupSize
  * members, because with one group E-I is −1 by construction; a group with no
@@ -624,7 +633,7 @@ export function groupRoutes(
 
 /**
  * Only routes between groups (build plan session 7), on the composite and each
- * working layer (unsigned, outside INSIGHT_RULES.excludedLayerGroups), ties
+ * working layer (unsigned, outside INSIGHT_RULES.excludedRoles), ties
  * read without direction:
  * - a group of at least silo.minGroupSize members, with members outside it,
  *   whose ties with every other group are held by at most
@@ -762,7 +771,7 @@ export function onlyRoutes(
 // ------------------------------------------------------- concentrated demand
 
 /**
- * Concentrated demand (build plan session 7), on the advice and workflow
+ * Concentrated demand (build plan session 7), on the advice and dependency roles (advice and workflow
  * dependency layers: ties received per member are read from the directed
  * ratings in either view (RefResult.load). An observation when the top
  * concentratedDemand.topShare of members (at least one) hold at least minShare
@@ -776,9 +785,10 @@ export function concentratedDemand(
   directed: boolean,
   attributes: Readonly<Record<AttributeKey, AttributeColumn>>,
   chosen?: AttributeKey,
+  keys: readonly LayerKey[] = keysWithRoles(INSIGHT_RULES.concentratedDemand.roles),
 ): InsightOutcome {
   const T = INSIGHT_RULES.concentratedDemand;
-  const read = layers.filter((l) => T.layers.includes(l.layer));
+  const read = layers.filter((l) => keys.includes(l.layer));
   if (read.length === 0) return unavailable('concentratedDemand', 'layersNotEnabled');
   const attribute = groupAttribute(attributes, chosen);
   const sizeMetric: NodeMetricKey = directed ? 'inDegree' : 'degree';
@@ -1104,8 +1114,11 @@ export interface InsightInput {
   multiplex: MultiplexResult | null;
   /** The project's grouping attribute for the group rules (settings.insight_group). */
   groupAttribute?: AttributeKey;
-  /** Layer keys the silo and peripheral rules leave out (INSIGHT_RULES.excludedLayerGroups). */
+  /** Layer keys the silo and peripheral rules leave out (INSIGHT_RULES.excludedRoles). */
   excludedLayers?: readonly LayerKey[];
+  /** Layer keys of the advice and dependency roles, which the overload and demand rules read;
+   *  absent means the built-in layers of those roles. */
+  demandLayers?: readonly LayerKey[];
   /** Per member, from coverage: gave no ratings or few (AnalysisResult.ratingFlags). */
   ratingFlags?: readonly (RatingFlag | null)[];
 }
@@ -1192,7 +1205,7 @@ export function observe(input: InsightInput): InsightOutcome[] {
       (r): r is RefResult => r !== undefined && (r.kind === 'unsigned' || r.kind === 'positive'),
     )
     .map((r) => ({ ref: r.ref, node: r.node, layer: r.layer ?? r.ref }));
-  // Conflict layers are not working ties (INSIGHT_RULES.excludedLayerGroups).
+  // Friction layers are not working ties (INSIGHT_RULES.excludedRoles).
   const ruleTables = layerTables.filter((l) => !excluded.has(l.layer));
   // Negative clusters are drawn over the composite, or the first unsigned layer without one.
   const drawLayer =
@@ -1237,12 +1250,14 @@ export function observe(input: InsightInput): InsightOutcome[] {
       directed,
       input.attributes,
       chosen,
+      ...(input.demandLayers ? [input.demandLayers] : []),
     ),
     peripheralOutcome(ids, ranking, directed, merged.inSilo),
     possibleOverload(
       ids,
       layerTables.filter((l) => refs[l.ref]?.kind === 'unsigned'),
       directed,
+      ...(input.demandLayers ? [input.demandLayers] : []),
     ),
     merged.silo,
     negativeClusters(ids, input.signed, drawLayer),

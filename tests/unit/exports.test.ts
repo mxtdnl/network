@@ -45,6 +45,7 @@ import {
   sensitiveProject,
   tokensCss,
 } from './exportHarness';
+import { CUSTOM_KEYS, withCustomRelations } from '../fixtures/customRelations';
 
 const project = sensitiveProject();
 const NAMES = project.members.map((m) => m.display_name);
@@ -926,5 +927,38 @@ describe('export files', () => {
     const width = Math.round(doc.width * pngScale('print', doc, theme));
     expect(width).toBe(Math.round((277 / 25.4) * 300));
     expect(pngScale('x2', doc, theme)).toBe(2);
+  });
+});
+
+describe('relations the analyst created (build plan session 11)', () => {
+  const custom = withCustomRelations(sensitiveProject());
+  const kept = custom.layers.find((l) => l.key === CUSTOM_KEYS.advice)?.label ?? '';
+  const removed = custom.layers
+    .filter((l) => l.key === CUSTOM_KEYS.tension || l.key === CUSTOM_KEYS.enjoy)
+    .map((l) => l.label);
+  // Exports that list every layer: the member and network CSVs and the report's metrics.
+  const LISTS_LAYERS: ExportType[] = ['members', 'network', 'pdf'];
+
+  describe.each(TYPES)('%s export', (type) => {
+    describe.each([
+      [true, true],
+      [true, false],
+      [false, true],
+      [false, false],
+    ])('names hidden %s, signed layers left out %s', (anonymise, excludeSigned) => {
+      it('keeps a created advice relation and leaves out created affect and friction ones', async () => {
+        const ctx = await contextFor(custom, { anonymise, excludeSigned });
+        const out = await produce(type, ctx);
+        if (anonymise) expect(NAMES.filter((n) => out.text.includes(n))).toEqual([]);
+        const found = [...removed, CUSTOM_KEYS.tension, CUSTOM_KEYS.enjoy].filter((w) =>
+          wordIn(out.text, w),
+        );
+        if (excludeSigned) expect(found).toEqual([]);
+        if (LISTS_LAYERS.includes(type)) {
+          expect(wordIn(out.text, kept)).toBe(true);
+          if (!excludeSigned) expect(found.length).toBeGreaterThan(0);
+        }
+      }, 30_000);
+    });
   });
 });

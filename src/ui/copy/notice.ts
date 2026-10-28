@@ -36,7 +36,7 @@ export const noticeCopy = {
       },
       {
         heading: 'Take particular care with negative ratings.',
-        body: 'Ratings of named colleagues on valence, energy or conflict are sensitive. Ask for them only with a clear purpose, and protect them accordingly.',
+        body: 'Ratings of named colleagues on valence, energy, conflict or any relation recording how people feel about each other or friction are sensitive. Ask for them only with a clear purpose, and protect them accordingly.',
       },
       {
         heading: 'Delete response files once imported.',

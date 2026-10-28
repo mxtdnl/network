@@ -156,8 +156,10 @@ test('insights: every rule with its rule text, questions, and a link to the view
   await expect(panel.getByText(/Members are grouped by team or function\./).first()).toBeVisible();
   // Each rule states its thresholds; one that cannot run says why.
   await expect(panel.getByText(/among the highest 10% of members/)).toBeVisible();
-  // Possible overload and concentrated demand both read advice and workflow dependency.
-  await expect(panel.getByText(/Not applied: this rule reads the advice/)).toHaveCount(2);
+  // Possible overload and concentrated demand both read the advice and dependency roles.
+  await expect(
+    panel.getByText(/Not applied: this rule reads the layers whose role is advice or dependency/),
+  ).toHaveCount(2);
   // Only routes between groups: Finance's two routes on connection strength, and OPE04.
   await expect(
     panel.getByText(
@@ -494,6 +496,14 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   // The roster editor (D124): codes, no ids or email addresses.
   await centreTab(page, 'Members').click();
   await check('members');
+  // Relations the analyst creates and the question bank (build plan session 11).
+  const layersColumn = page.getByRole('complementary', { name: 'Layers and filters' });
+  await layersColumn.getByRole('button', { name: 'Create a relation' }).click();
+  await check('create a relation');
+  await page.keyboard.press('Escape');
+  await layersColumn.getByRole('button', { name: 'Add from the question bank' }).click();
+  await check('question bank');
+  await page.keyboard.press('Escape');
   await centreTab(page, 'Map').click();
   for (const tab of ['Insights', 'Views', 'Check the data']) {
     await rightTab(page, tab).click();
