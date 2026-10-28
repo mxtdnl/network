@@ -23,6 +23,8 @@ import { documentToPng, fontFor, pngScale } from '../export/canvas';
 import { sharedLayout } from '../map/useMapModel';
 import { currentMapViewport } from '../map/viewport';
 import { useAppStore } from './store';
+import { audienceChoice } from './audienceSettings';
+import { audienceCopy } from '../copy/audience';
 
 export type MapFormat = 'png' | 'svg';
 export type Resolution = 'x1' | 'x2' | 'print';
@@ -49,6 +51,7 @@ function request(): ExportRequest | null {
     anonymise: s.ui.anonymise,
     excludeSigned: project.settings.exclude_signed_from_exports,
     grouping: s.ui.grouping,
+    audience: audienceChoice(project, s.ui.audience),
   };
 }
 
@@ -155,7 +158,7 @@ export async function exportMapFile(
       status(exportCopy.map.exported(out.fileName));
       return out.fileName;
     }
-    const { doc } = files.mapExport(ctx, mapState(), { tokens, measure }, caption);
+    const { doc } = files.pictureExport(ctx, mapState(), { tokens, measure }, caption);
     const blob = await documentToPng(doc, theme, pngScale(resolution, doc, theme));
     const fileName = files.mapFileName(ctx, 'png');
     download(fileName, blob);
@@ -220,6 +223,29 @@ export async function exportReportFile(caption: string): Promise<string | null> 
     return out.fileName;
   } catch (e) {
     status(exportCopy.report.failed(reason(e)), 'error');
+    return null;
+  }
+}
+
+/** The personal network card of a one-to-one (build plan session 9). */
+export async function exportCardFile(): Promise<string | null> {
+  try {
+    const ctx = await context();
+    const { cardExport } = await import('../export/files');
+    const out = await cardExport(ctx, {
+      tokens: documentTokens(),
+      loadFont: fetchFont,
+      inflate: browserInflate,
+      now: new Date(),
+    });
+    download(
+      out.fileName,
+      new Blob([out.bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }),
+    );
+    status(audienceCopy.exports.cardExported(out.fileName));
+    return out.fileName;
+  } catch (e) {
+    status(audienceCopy.exports.cardFailed(reason(e)), 'error');
     return null;
   }
 }

@@ -369,6 +369,24 @@ describe('question and readout wording is neutral', () => {
       expect(findBanned(text, words), text).toEqual([]);
   });
 
+  it('uses no banned word in the audience levels’ wording or the leadership roles (session 9)', async () => {
+    const { audienceCopy } = await import('../../src/ui/copy/audience');
+    const { audiencePolicy, roleSentences } = await import('../../src/ui/state/audience');
+    for (const text of copyStrings(audienceCopy)) expect(findBanned(text, words), text).toEqual([]);
+    const demo = parseProject(readFileSync(join(root, 'src/demo/demo.ona.json'), 'utf8'));
+    const result = await analyse(
+      buildAnalysisInput(
+        demo,
+        { view: 'directed', symmetrise: 'mean', weights: {}, signedTreatment: {} },
+        'roles',
+      ),
+    );
+    const policy = audiencePolicy(demo, { level: 'leadership', team: null, member: null }, false);
+    const roles = roleSentences(demo, result.insights, policy, (ref) => ref);
+    expect(roles.length).toBeGreaterThan(0);
+    for (const text of roles) expect(findBanned(text, words), text).toEqual([]);
+  });
+
   it('uses no banned word in any readout on the demo or the scenario projects', async () => {
     const strings = await readoutStrings();
     expect(strings.length).toBeGreaterThan(500);

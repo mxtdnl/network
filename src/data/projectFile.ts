@@ -7,9 +7,11 @@
 
 import { migrate, ProjectFileError } from './migrations';
 import {
+  AUDIENCE_LEVELS,
   CATEGORICAL_PALETTES,
   DIVERGING_PALETTES,
   isCategorical,
+  MIN_GROUP_SIZE_FLOOR,
   PALETTE_HUES,
   PROJECT_FILE_EXTENSION,
   SCHEMA_VERSION,
@@ -323,6 +325,23 @@ export function checkProject(file: Obj): string[] {
         isStr(s.insight_group) && s.insight_group !== '',
         'settings.insight_group must name an attribute.',
       );
+    // Audience levels (build plan session 9). Member ids and team values no longer in the
+    // project are allowed: they simply match nobody.
+    if (s.audience !== undefined) {
+      const a = s.audience;
+      const strings = (v: unknown) => Array.isArray(v) && v.every(isStr);
+      need(
+        isObj(a) &&
+          (AUDIENCE_LEVELS as readonly unknown[]).includes(a.level) &&
+          isNum(a.min_group_size) &&
+          Number.isInteger(a.min_group_size) &&
+          a.min_group_size >= MIN_GROUP_SIZE_FLOOR &&
+          isObj(a.named_teams) &&
+          Object.values(a.named_teams).every(strings) &&
+          strings(a.named_members),
+        `settings.audience must give a level (${AUDIENCE_LEVELS.join(', ')}), a whole minimum group size of at least ${String(MIN_GROUP_SIZE_FLOOR)}, named_teams and named_members.`,
+      );
+    }
   }
 
   return problems;

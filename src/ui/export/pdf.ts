@@ -47,6 +47,7 @@ import { reportCopy } from '../copy/export';
 import type { FontRole, MapDocument, Primitive } from './document';
 import { ROLE_FACE, fontFile, woffToSfnt, type Face, type FontLoader, type Inflate } from './fonts';
 import type { Block, ReportModel } from './report';
+import type { CardModel } from '../state/card';
 import type { ExportTheme, PrintTheme } from './theme';
 
 /** PDF points per CSS pixel (72 pt and 96 px to the inch). */
@@ -623,7 +624,10 @@ function sectionTitle(w: Writer, text: string) {
 
 // -------------------------------------------------------------------- fonts
 
-async function loadFonts(doc: PDFDocument, input: PdfInput): Promise<Fonts> {
+async function loadFonts(
+  doc: PDFDocument,
+  input: Pick<PdfInput, 'loadFont' | 'inflate'>,
+): Promise<Fonts> {
   doc.registerFontkit(fontkit);
   const faces: Face[] = ['sans-400', 'sans-500', 'sans-600', 'condensed-500'];
   const out: Partial<Fonts> = {};
@@ -793,6 +797,84 @@ export async function reportPdf(input: PdfInput): Promise<PdfOutput> {
     );
   });
 
+  const bytes = await doc.save();
+  return { bytes, pages: doc.getPageCount(), substituted: [...w.substituted] };
+}
+
+// --------------------------------------------------------------------- card
+
+export interface CardPdfInput {
+  card: CardModel;
+  print: PrintTheme;
+  loadFont: FontLoader;
+  inflate: Inflate;
+  now: Date;
+}
+
+/**
+ * The personal network card (build plan session 9): A4 portrait, the member's
+ * name and the card's subtitle, then its sections run on, with the same type,
+ * tables and footer as the report.
+ */
+export async function cardPdf(input: CardPdfInput): Promise<PdfOutput> {
+  const { card, print: P } = input;
+  const doc = await PDFDocument.create();
+  doc.setTitle(card.title, { showInWindowTitleBar: true });
+  doc.setSubject(card.subtitle);
+  doc.setCreator(reportCopy.creator);
+  doc.setProducer(`${reportCopy.creator} ${APP_VERSION}`);
+  doc.setLanguage('en-GB');
+  doc.setCreationDate(input.now);
+  doc.setModificationDate(input.now);
+  doc.setAuthor('');
+  doc.setKeywords([]);
+  const fonts = await loadFonts(doc, input);
+  const w = new Writer(doc, fonts, P);
+  w.addPage();
+  for (const line of w.wrap(card.title, w.contentWidth, 'medium', P.title.size)) {
+    w.text(
+      line,
+      P.margin,
+      w.y + (P.title.line + P.title.size * 0.7) / 2,
+      'medium',
+      P.title.size,
+      P.colours.ink,
+    );
+    w.y += P.title.line;
+  }
+  w.text(
+    card.subtitle,
+    P.margin,
+    w.y + (P.subheading.line + P.subheading.size * 0.7) / 2,
+    'regular',
+    P.subheading.size,
+    P.colours.graphite,
+  );
+  w.y += P.subheading.line + (P.space[4] ?? 0);
+  for (const section of card.sections) {
+    heading(w, section.title);
+    for (const b of section.blocks) {
+      if (b.kind === 'heading') heading(w, b.text);
+      else if (b.kind === 'paragraph') paragraph(w, b);
+      else if (b.kind === 'warning') warning(w, b.text);
+      else table(w, b);
+    }
+  }
+  const pages = w.bodyPages.length;
+  w.bodyPages.forEach((page, k) => {
+    w.page = page;
+    const baseline = w.pageHeight - P.margin / 2;
+    w.text(card.title, P.margin, baseline, 'regular', P.small.size, P.colours.graphite);
+    w.text(
+      reportCopy.pageOf(k + 1, pages),
+      w.pageWidth - P.margin,
+      baseline,
+      'regular',
+      P.small.size,
+      P.colours.graphite,
+      'right',
+    );
+  });
   const bytes = await doc.save();
   return { bytes, pages: doc.getPageCount(), substituted: [...w.substituted] };
 }

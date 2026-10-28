@@ -29,6 +29,9 @@ import { groupsCopy } from '../copy/groups';
 import { effectiveGrouping, groupMixing } from '../map/groupModel';
 import { insightCaveats, reportNotes } from './methodNotes';
 import { exportRefs, refName } from './tables';
+import { audienceCopy } from '../copy/audience';
+import { audienceGroups, audienceInsights, roleSentences, shownIndices } from '../state/audience';
+import { subgroupDensity } from '../engineClient';
 
 export type Block =
   | { kind: 'heading'; text: string }
@@ -127,14 +130,23 @@ function metricsSection(ctx: ExportContext): Block[] {
   // view's grouping (D154): an attribute, or the layer's communities.
   const main = result.refs[refs[0] ?? ''];
   const grouping = effectiveGrouping(ctx.project, ctx.grouping);
-  const mix = groupMixing(main, grouping) ?? undefined;
+  // For an audience, groups below the minimum size are pooled or left out (build plan session 9).
+  const pooled =
+    ctx.policy.level === 'analyst'
+      ? null
+      : audienceGroups(ctx.project, main, result.view === 'directed', grouping, ctx.policy);
+  const mix = pooled?.mix ?? groupMixing(main, grouping) ?? undefined;
   const mixKey =
     grouping.kind === 'community'
       ? groupsCopy.community
       : (ctx.project.attribute_definitions.find((a) => a.key === grouping.key)?.label ??
         grouping.key);
   const groupName = (g: string) =>
-    grouping.kind === 'community' ? groupsCopy.communityName(g) : g;
+    pooled
+      ? (pooled.names[mix?.groups.indexOf(g) ?? -1] ?? g)
+      : grouping.kind === 'community'
+        ? groupsCopy.communityName(g)
+        : g;
   if (main && mix && mix.groups.length > 0) {
     const attr = mixKey;
     blocks.push({
@@ -168,6 +180,21 @@ function metricsSection(ctx: ExportContext): Block[] {
       ],
     });
     blocks.push({ kind: 'paragraph', text: R.metrics.mixingNote, tone: 'graphite', small: true });
+    const P = pooled?.mix;
+    if (P?.pooled)
+      blocks.push({
+        kind: 'paragraph',
+        text: audienceCopy.pooled(P.pooled.groups, P.pooled.members, ctx.policy.minGroupSize),
+        tone: 'graphite',
+        small: true,
+      });
+    if (P?.leftOut)
+      blocks.push({
+        kind: 'paragraph',
+        text: audienceCopy.leftOut(P.leftOut.groups, P.leftOut.members, ctx.policy.minGroupSize),
+        tone: 'graphite',
+        small: true,
+      });
   }
 
   for (const [key, s] of Object.entries(result.signed)) {
@@ -230,7 +257,11 @@ function insightsSection(ctx: ExportContext, notes: string): Block[] {
   }
   const directed = result.view === 'directed';
   const group = insightGroup(project)?.label ?? 'team';
-  for (const outcome of result.insights) {
+  // What the audience may see (build plan session 9): group-level observations for a board.
+  const outcomes = audienceInsights(ctx.source, result.insights, ctx.policy);
+  if (ctx.policy.groupsOnly)
+    blocks.push({ kind: 'paragraph', text: audienceCopy.memberRulesLeftOut, tone: 'graphite' });
+  for (const outcome of outcomes) {
     // These rules read only signed layers; with them left out the rule is not listed at all.
     if (
       (outcome.rule === 'negativeCluster' || outcome.rule === 'oneWayNegative') &&
@@ -254,16 +285,17 @@ function insightsSection(ctx: ExportContext, notes: string): Block[] {
       });
     for (const o of outcome.observations) {
       blocks.push({ kind: 'paragraph', text: questionText(o, insightCtx) });
-      blocks.push({
-        kind: 'paragraph',
-        lead: R.insights.members,
-        text: o.members
-          .map((id) =>
-            o.noRatings?.includes(id) ? `${names.of(id)} (${noRatingsMark})` : names.of(id),
-          )
-          .join(', '),
-        small: true,
-      });
+      if (o.members.length > 0)
+        blocks.push({
+          kind: 'paragraph',
+          lead: R.insights.members,
+          text: o.members
+            .map((id) =>
+              o.noRatings?.includes(id) ? `${names.of(id)} (${noRatingsMark})` : names.of(id),
+            )
+            .join(', '),
+          small: true,
+        });
       const about = membersText(o, insightCtx);
       if (about) blocks.push({ kind: 'paragraph', text: about, small: true });
       blocks.push({
@@ -274,6 +306,13 @@ function insightsSection(ctx: ExportContext, notes: string): Block[] {
         small: true,
       });
     }
+    if (outcome.suppressed > 0)
+      blocks.push({
+        kind: 'paragraph',
+        text: audienceCopy.suppressed(outcome.suppressed, ctx.policy.minGroupSize),
+        tone: 'graphite',
+        small: true,
+      });
   }
   if (ctx.excludeSigned)
     blocks.push({ kind: 'paragraph', text: R.insights.leftOut, tone: 'graphite' });
@@ -340,7 +379,8 @@ function coverageSection(ctx: ExportContext): Block[] {
       .filter((r) => Number.isFinite(r.rate) && r.rate < cov.threshold)
       .sort((a, b) => a.rate - b.rate || ctx.names.of(a.id).localeCompare(ctx.names.of(b.id)));
     blocks.push({ kind: 'paragraph', text: C.lowRaters(low.length, threshold) });
-    if (low.length > 0) {
+    // Raters are named only in the analyst's own report (build plan session 9).
+    if (low.length > 0 && ctx.policy.level === 'analyst') {
       blocks.push({
         kind: 'table',
         columns: [
@@ -407,6 +447,54 @@ function coverageSection(ctx: ExportContext): Block[] {
   return blocks;
 }
 
+/** A leadership team's roles between groups, named only where the member agreed. */
+function rolesSection(ctx: ExportContext): Block[] {
+  const roles = roleSentences(ctx.source, ctx.result.insights, ctx.policy, (ref) =>
+    refName(ctx, ref),
+  );
+  return [
+    { kind: 'paragraph', text: R.roles.intro, tone: 'graphite' },
+    ...(roles.length === 0
+      ? [{ kind: 'paragraph' as const, text: audienceCopy.noRoles }]
+      : roles.map((text): Block => ({ kind: 'paragraph', text }))),
+  ];
+}
+
+/** A workshop's team: its ties inside and with everyone else, on the layer the map draws. */
+function teamSection(ctx: ExportContext): Block[] {
+  const W = audienceCopy.workshop;
+  const ref = ctx.result.refs[ctx.settings.layer];
+  const team = shownIndices(ctx.source, ctx.policy);
+  const blocks: Block[] = [
+    { kind: 'paragraph', text: R.team.intro(refName(ctx, ctx.settings.layer)), tone: 'graphite' },
+    { kind: 'paragraph', text: ctx.policy.teamNamed ? W.named : W.codes },
+  ];
+  if (!ref) return blocks;
+  const d = subgroupDensity(
+    ref.weights,
+    ctx.project.members.length,
+    ctx.result.view === 'directed',
+    team,
+  );
+  const T = W.teamTiesRows;
+  blocks.push({
+    kind: 'table',
+    columns: [
+      { label: R.metrics.measure, numeric: false },
+      { label: exportCopy.csv.value, numeric: true },
+    ],
+    rows: [
+      [T.size, value(d.size)],
+      [T.internal, value(d.internalTies)],
+      [T.internalDensity, value(d.internal)],
+      [T.external, value(d.externalTies)],
+      [T.externalDensity, value(d.external)],
+      [T.ei, signed(d.ei)],
+    ],
+  });
+  return blocks;
+}
+
 function ethicsSection(ctx: ExportContext): Block[] {
   return [
     ...R.ethics.paragraphs.map((text): Block => ({ kind: 'paragraph', text })),
@@ -437,12 +525,21 @@ export function buildReport(
     ctx.anonymised ? R.cover.anonymised : R.cover.named,
     ...appliedRemedies(result).map((id) => R.cover.remedy(remediesCopy.applied[id])),
     ...(ctx.excludeSigned ? [ctx.reanalysed ? R.cover.excluded : R.cover.excludedNone] : []),
+    ...(ctx.policy.level === 'analyst'
+      ? []
+      : [audienceCopy.cover(ctx.policy.level, ctx.policy.minGroupSize)]),
     R.cover.descriptive,
   ];
   const S = R.sections;
   const sections: ReportSection[] = [
     { title: S.metrics, blocks: metricsSection(ctx) },
+    ...(ctx.policy.level === 'workshop'
+      ? [{ title: audienceCopy.workshop.teamTies, blocks: teamSection(ctx) }]
+      : []),
     { title: S.insights, blocks: insightsSection(ctx, options.notes) },
+    ...(ctx.policy.level === 'leadership'
+      ? [{ title: audienceCopy.rolesHeading, blocks: rolesSection(ctx) }]
+      : []),
     { title: S.method, blocks: methodSection(ctx, options.notes) },
     { title: S.coverage, blocks: coverageSection(ctx) },
     { title: S.ethics, blocks: ethicsSection(ctx) },
@@ -455,7 +552,9 @@ export function buildReport(
     statementHeading: qualityCopy.exportHeading,
     statement: qualityStatement(computeQuality(project)),
     contents: [S.map, ...sections.map((s) => s.title)],
-    mapIntro: R.map.intro(options.layerName),
+    mapIntro: ctx.policy.groupsOnly
+      ? R.map.groups(options.layerName)
+      : R.map.intro(options.layerName),
     sections,
   };
 }

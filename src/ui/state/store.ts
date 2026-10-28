@@ -60,6 +60,9 @@ export interface UiState {
   advancedOpen: boolean;
   /** The centre column's "About this network" readouts are shown (build plan session 8). */
   aboutOpen: boolean;
+  /** The team of a team workshop and the member of a one-to-one (build plan session 9); the level
+   *  itself is saved in the project. */
+  audience: { team: string | null; member: MemberId | null };
 }
 
 export type LegendMode = 'full' | 'condensed' | 'beside';
@@ -208,6 +211,7 @@ interface Actions {
   setIncomingLayer: (layer: string | null) => void;
   setAdvancedOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
+  setAudience: (patch: Partial<UiState['audience']>) => void;
   setAnonymise: (on: boolean) => void;
   openNotice: () => void;
   closeNotice: () => void;
@@ -375,6 +379,7 @@ export function initialUiState(noticeSeen: boolean): UiState {
     incomingLayer: null,
     advancedOpen: false,
     aboutOpen: false,
+    audience: { team: null, member: null },
   };
 }
 
@@ -452,6 +457,9 @@ export const useAppStore = create<AppState>()((set, get) => {
     },
     setAdvancedOpen: (advancedOpen) => {
       setUi({ advancedOpen });
+    },
+    setAudience: (patch) => {
+      setUi({ audience: { ...get().ui.audience, ...patch } });
     },
     setAboutOpen: (aboutOpen) => {
       setUi({ aboutOpen });

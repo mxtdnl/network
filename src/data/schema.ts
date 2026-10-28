@@ -239,6 +239,28 @@ export interface ProjectSettings {
   /** Attribute the silo, formal–informal and one-way negative rules group members by
    *  (build plan session 3); absent means team. */
   insight_group?: string;
+  /** Audience levels for presentation and exports (build plan session 9); absent means the
+   *  analyst's own, unrestricted outputs. Schema 4 in place. */
+  audience?: AudienceSettings;
+}
+
+/** Who an output is for (build plan session 9, spec §8 and §11). */
+export const AUDIENCE_LEVELS = ['analyst', 'board', 'leadership', 'workshop', 'oneToOne'] as const;
+export type AudienceLevel = (typeof AUDIENCE_LEVELS)[number];
+/** The smallest group shown at board and leadership level, unless the analyst raises it. */
+export const DEFAULT_MIN_GROUP_SIZE = 5;
+/** The minimum group size cannot be set below this. */
+export const MIN_GROUP_SIZE_FLOOR = 3;
+
+export interface AudienceSettings {
+  /** The default level of presentation mode and the exports. */
+  level: AudienceLevel;
+  /** Groups smaller than this are pooled or left out at board and leadership level (at least 3). */
+  min_group_size: number;
+  /** Groups that agreed to be named in a team workshop, by attribute key → values. */
+  named_teams: Record<AttributeKey, string[]>;
+  /** Members who agreed to be named in leadership outputs. */
+  named_members: MemberId[];
 }
 
 export interface ProjectMeta {

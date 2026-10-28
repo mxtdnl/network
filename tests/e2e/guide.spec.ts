@@ -308,6 +308,31 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await page.keyboard.press('Escape');
   await settled(page);
 
+  // Audience levels (build plan session 9): a board's group map, and a personal network card.
+  await rightTab(page, 'Views').click();
+  await right(page).getByLabel('Prepared for').selectOption({ label: 'Board' });
+  await page.getByRole('banner').getByRole('button', { name: 'Present' }).click();
+  await page.keyboard.press('ArrowRight');
+  await page.mouse.move(1435, 895);
+  await page.waitForTimeout(2600);
+  await expectNoNames(page);
+  await shot(page, 'presentation-board');
+  await page.keyboard.press('Escape');
+  await settled(page);
+  await rightTab(page, 'Views').click();
+  await right(page).getByLabel('Prepared for').selectOption({ label: 'One-to-one' });
+  await page.getByRole('banner').getByRole('button', { name: 'Present' }).click();
+  await expect(page.getByTestId('network-card')).toBeVisible();
+  await page.mouse.move(1435, 895);
+  await page.waitForTimeout(2600);
+  await expectNoNames(page);
+  await shot(page, 'network-card');
+  await page.keyboard.press('Escape');
+  await settled(page);
+  await rightTab(page, 'Views').click();
+  await right(page).getByLabel('Prepared for').selectOption({ label: 'Analyst (no restriction)' });
+  await settled(page);
+
   await centreTab(page, 'Matrix').click();
   await shot(page, 'adjacency-matrix');
   await page.getByRole('radio', { name: 'Enter ratings' }).check();

@@ -17,7 +17,7 @@ import { useAppStore } from '../state/store';
 import { useCoverage } from './DataCheckPanel';
 import { savedViewsCopy } from '../copy/savedViews';
 import { setNamesHidden, useMemberNames } from '../state/names';
-import { startPresentation } from '../state/presentation';
+import { canPresent, startPresentation } from '../state/presentation';
 import { exportCopy } from '../copy/export';
 import { ExportDialog } from './ExportDialog';
 import { helpCopy, type HelpDoc } from '../copy/help';
@@ -35,7 +35,7 @@ interface TopBarProps {
 
 export function TopBar({ status }: TopBarProps) {
   const anonymise = useAppStore((s) => s.ui.anonymise);
-  const views = useAppStore((s) => s.data.project?.saved_views.length ?? 0);
+  const presentable = useAppStore((s) => canPresent(s.data.project));
   const openNotice = useAppStore((s) => s.openNotice);
   const setImportOpen = useAppStore((s) => s.setImportOpen);
   const project = useAppStore((s) => s.data.project);
@@ -125,8 +125,8 @@ export function TopBar({ status }: TopBarProps) {
         <button
           type="button"
           className="button button--text"
-          disabled={views === 0}
-          title={views === 0 ? savedViewsCopy.presentHelp : undefined}
+          disabled={!presentable}
+          title={presentable ? undefined : savedViewsCopy.presentHelp}
           onClick={() => {
             startPresentation();
           }}

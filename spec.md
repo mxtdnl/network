@@ -285,7 +285,19 @@ The network map is an interactive node-link diagram of members and their weighte
 
 **Saved views.** A saved view captures weights, filters, layout, positions, selection and the question it answers. Views are named and can be restored.
 
-**Presentation mode.** Full screen with controls hidden. Opens with the data-quality statement (section 6), then steps through saved views, with a short caption for each.
+**Presentation mode.** Full screen with controls hidden. Opens with the data-quality statement (section 6), then steps through saved views, with a short caption for each. What each step shows follows the audience level (below).
+
+**Audience levels.** Presentation mode and every export are prepared for an audience, chosen in presentation mode and in the Export dialog, with a default saved in the project. The level is enforced in one policy layer, as anonymisation is; the analyst's workspace is never restricted.
+
+| Level | Shows | Never shows |
+|---|---|---|
+| Analyst (no restriction) | Everything the workspace shows, under the anonymisation and signed-layer settings | — |
+| Board | Groups and the whole network: each saved view as its group map (one node per group, sized by members, joined by the share of possible ties), group-level insights, network metrics, the data-quality statement | Any member, by name, code or id; any group below the minimum size (5 by default, never below 3), which is pooled as "Other groups" when the small groups together reach the minimum and otherwise left out; member-level exports |
+| Leadership team | As board, plus roles between groups (members who hold a group's ties with other groups, cut points, potential brokers), each named only if the member agreed; otherwise "A member of" their group, or "A member" when the group is below the minimum | Ratings given or received by individuals; detail of negative ratings beyond counts by pair of groups |
+| Team workshop | One team's own network: its members and the ties among them, its ties with other groups as counts, insights about the team; members named only if the team agreed in advance (a per-team setting), otherwise in codes | Members of other teams; signed layers |
+| One-to-one | One member's personal network card: their ties by group (ties received counted by group only, small groups pooled), ties given against received on each working layer, the colleagues they rated with their own ratings, and sentences on their position in the network. Change between waves is added once waves exist | Anyone else's ratings, except as counts |
+
+Free text (view names, captions, the project title) has every member the level may not show replaced by "a colleague", by name or by code.
 
 **Anonymisation.** A global toggle replaces names with role/team codes. It applies to every view and export.
 
@@ -328,6 +340,7 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
   Respondents never see the analyst's first-run notice; they see the welcome and consent screens of section 15.4.
 - **Signed-layer exclusion.** An option excludes signed layers (valence, energy, conflict) from all exports.
 - **Anonymisation.** Available in one click from any view.
+- **Audience levels (section 8).** Outputs for a board, a leadership team, a team workshop or a one-to-one show only what that audience may see: no individual and no group below a minimum size for a board; roles between groups named only with the member's agreement for a leadership team; one team's own network, named only with the team's agreement, for a workshop; one person's own card for a one-to-one. Who agreed is recorded in the project.
 - **Content Security Policy.** Set via a `<meta>` tag, because GitHub Pages cannot set headers. The policy restricts `connect-src` to `'self'`, so the claim that data stays in the browser is enforced rather than asserted.
 
 ## 11. Exports
@@ -341,7 +354,7 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
   - insights;
   - method notes;
   - data coverage.
-- Every export respects the anonymisation and signed-layer exclusion settings.
+- Every export respects the anonymisation and signed-layer exclusion settings, and the audience level (section 8). At board and leadership level the map export is the group map and the report's map page shows groups; member metrics, the formal–informal pairs and the metrics table are not offered; group rows below the minimum size are pooled or left out; the report lists group-level insights only and, for a leadership team, the roles between groups. A team workshop's exports hold its team only. A one-to-one offers the member's personal network card as a PDF and nothing else.
 - Survey administration files (the mail-merge list of links, the non-responder list and the key backup, section 15) are not analysis exports. They identify people by design, so anonymisation does not apply to them; each is labelled as containing personal data when saved.
 
 ## 12. Design language
