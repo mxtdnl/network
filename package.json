@@ -22,6 +22,7 @@
     "scenarios:measure": "tsx scripts/measure-scenarios.ts",
     "scenarios:remedies": "tsx scripts/measure-remedies.ts",
     "scenarios:bridges": "tsx scripts/measure-bridges.ts",
+    "scenarios:summary": "tsx scripts/measure-summary.ts",
     "templates": "tsx scripts/make-templates.ts",
     "fixtures": "python3 scripts/generate_fixtures.py",
     "notices": "node scripts/third-party-notices.mjs"
