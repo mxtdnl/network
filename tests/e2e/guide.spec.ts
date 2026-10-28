@@ -375,6 +375,12 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await page.getByRole('banner').getByRole('button', { name: 'Export' }).click();
   await expect(page.getByRole('dialog', { name: 'Export' })).toBeVisible();
   await shot(page, 'export-dialog', page.getByRole('dialog', { name: 'Export' }));
+  // The executive summary editor (build plan session 10).
+  await page.getByRole('button', { name: 'Edit summary' }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit the executive summary' });
+  await expect(editor.getByRole('button', { name: 'Add a headline' })).toBeVisible();
+  await shot(page, 'summary-editor', editor);
+  await editor.getByRole('button', { name: 'Done' }).click();
   await page.keyboard.press('Escape');
   await expectNoNames(page);
 

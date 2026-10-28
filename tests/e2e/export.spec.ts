@@ -130,7 +130,8 @@ test('every export downloads from the built site within the CSP, with names hidd
     expect(noNames(csv.bytes.toString('utf8'))).toEqual([]);
   }
 
-  const pdf = await download(page, 'Export report', true);
+  // The report samples come from report.spec.ts, which tells a storyline with saved views.
+  const pdf = await download(page, 'Export report');
   expect(pdf.file.suggestedFilename()).toMatch(/^graticule-report-\d{4}-\d{2}-\d{2}-codes\.pdf$/);
   expect(pdf.bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
   const text = await pdfText(pdf.bytes);
