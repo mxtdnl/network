@@ -343,3 +343,87 @@
   color: var(--graphite);
   margin-top: var(--s-4);
 }
+
+/* Question header (build plan session 8): the centre column's title, the
+   question the view answers, and a sentence for each number shown. */
+.question-header {
+  flex: none;
+  /* Opened in full, the readouts never take more than this share of the column from the view. */
+  max-height: 40%;
+  overflow-y: auto;
+  padding: var(--s-3) var(--s-5) var(--s-1);
+  border-bottom: var(--line-width) solid var(--stone);
+}
+
+.question-header__title {
+  font-size: var(--t-2-size);
+  line-height: var(--t-2-line);
+  font-weight: var(--weight-semibold);
+}
+
+.question-header__composite,
+.question-header__readouts,
+.question-header__list,
+.question-header__note {
+  max-width: var(--measure-wide);
+  margin-top: var(--s-1);
+}
+
+.question-header__list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: var(--s-2);
+}
+
+.question-header__list li + li {
+  margin-top: var(--s-1);
+}
+
+.question-header__composite,
+.question-header__note {
+  color: var(--graphite);
+}
+
+.question-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+}
+
+.question-header__toggle {
+  gap: var(--s-1);
+  padding-inline: 0;
+}
+
+/* The picker's note when the project cannot answer the question chosen. */
+.question-picker__note {
+  color: var(--ink);
+}
+
+/* "Advanced: combine layers", closed by default. */
+.workspace__advanced-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: var(--control-height);
+  cursor: pointer;
+  list-style: none;
+}
+
+.workspace__advanced-summary::-webkit-details-marker {
+  display: none;
+}
+
+.workspace__advanced-heading {
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+  font-weight: var(--weight-semibold);
+}
+
+.workspace__advanced[open] > .workspace__advanced-summary {
+  margin-bottom: var(--s-3);
+}
+
+.workspace__use-composite {
+  margin-block: var(--s-3);
+}

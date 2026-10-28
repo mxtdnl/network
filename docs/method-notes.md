@@ -790,3 +790,32 @@ Added in build plan session 7. Every measure here is computed in the engine for 
 The Table tab's "Incoming ties" mode lists the members the map shows, most ties received first, on a chosen layer (advice by default, then workflow dependency, then "Ties from"), with each member's share of all ties received and a bar relative to the longest. A rule marks the last of the top 10 % of all members. The list is a table, so it is also the alternative for screen readers. Filters and the ego view choose the members listed; shares are always of every tie received.
 
 The references cited here are listed in section 12.
+
+## 17. Questions and readouts
+
+Added in build plan session 8. The analysis starts from a question a client asks, and every number shown is read out in a sentence. Nothing here is a new measure: each sentence restates a figure from the sections above, computed on every tie of the layer the map draws ties from, whatever the map's range hides.
+
+### The question catalogue
+
+Each question is bound to the relation that answers it, and choosing it sets "Ties from", the node size, the layout and the encodings (spec §8 lists them). The map opens on "Who is connected to whom?", with ties from connection strength: the relation every survey asks and the one most directly meaning "these two members are connected". The composite (section 6) is a statement of priorities, so it is never chosen for the user: it sits under "Advanced: combine layers" and is used only when the user draws ties from it, in which case its weights are stated on the map and in the legend of every export. A question whose relation is missing, switched off or not rated says so and changes nothing; another relation is never put in its place, because a stand-in would answer a different question under the same title.
+
+The opening tie-strength range stays 0.30 to 1.00 (section 11, "Map display"). Measured on the demo with connection strength, the range draws 212 of the 780 pairs in the directed view (182 when mutual, by the average), against 241 for the composite under the default weights, and keeps 4 of the 6 pairs coloured by a negative valence rating.
+
+### Network readouts
+
+- **Density:** the ties present out of those possible, n(n − 1) in the directed view (each direction a tie) or n(n − 1)/2 pairs when mutual, with the share (section 4).
+- **Reciprocity:** the share of ties returned (`nx.overall_reciprocity`, section 4), always read from the directed ratings, so the mutual view says "in the ratings as given".
+- **Separate parts:** weak components in the directed view, connected components when mutual; members in a part of their own are named as members with no tie.
+- **Communities:** the number found and the modularity Q (section 4), with the guide that networks with clear clusters typically score between 0.3 and 0.7. This range is commonly attributed to Newman & Girvan (2004), but it was checked here only against secondary sources quoting that paper. A Q below 0.3 is reported as it is, without a verdict.
+- **Centralisation:** Freeman degree centralisation (section 4), in-degree in the directed view, with the largest and the median number of connections, so the figure is anchored in counts.
+- **E-I index:** ties within and between groups of the insight rules' attribute (section 4), with the share of all possible pairs that cross between groups. That share is what an even spread of ties would give, but no test against chance is made (planned in build plan session 18).
+
+Question readouts add, by question: members asked for advice and the most-asked and median counts (ties received, section 16); the pair of groups sharing the most ties between groups and the pairs sharing none (mixing counts, section 15); the member with the highest bridging; the top 10 % share of incoming ties (section 16); formal-only, informal-only and both shares of working ties (section 6), with the pair of groups whose working ties are most often informal only, among pairs with at least 5 such ties so that a share of one or two ties is not quoted; local bridges and the cut point that cuts off most members (section 16); and negative ratings given on the signed layer, with how many were returned in kind and the structural balance of its trios (section 5).
+
+### Member readouts
+
+Beside each rank, the member panel says how the member's value compares with their colleagues' values: "more … than k of their N colleagues", or "than any" when no colleague's value is equal or higher, with ties counted separately ("2 colleagues have the same value"). Colleagues whose value is not defined are left out and the sentence says so. Constraint reads the other way: a lower value is a more open network (contacts not tied to one another), so the comparison is of openness, and rank 1, the highest constraint, is read as the most closed network. The median of the member's group (the insight rules' attribute) is given beside it.
+
+**Caveats.** A comparison says where a value sits among colleagues, not whether it is high enough for any purpose; the caveats of each measure (section 3) apply unchanged. Readouts follow the insight wording rules: they describe positions and never evaluate a member (spec §2).
+
+The references cited here are listed in section 12.

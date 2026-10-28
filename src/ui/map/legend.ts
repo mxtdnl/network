@@ -5,6 +5,7 @@
 
 import { formatScale, formatValue, formatWeight, mapCopy } from '../copy/map';
 import { metricCopy } from '../copy/metrics';
+import { compositeStatement } from '../copy/questions';
 import { remediesCopy } from '../copy/remedies';
 import type { EdgeStyle, MapModel } from './model';
 
@@ -173,6 +174,8 @@ export function legendSections(
         ? { width: r.edgeMin, label: L.notRatedOn(width.layerLabel) }
         : null,
     notes: [
+      // Ties from the composite: its weights are stated on the map and in every export.
+      ...(model.composite ? [compositeStatement(model.composite)] : []),
       ...(width.kind === 'tiesFrom' ? [] : [L.tiesFrom(tiesFrom)]),
       ...(rangeNote ? [rangeNote] : []),
       ...(rangeNote && model.negativeOutsideRange ? [L.negativeOutside] : []),

@@ -167,6 +167,9 @@ export interface SavedMapSettings {
   negativeOutsideRange?: boolean;
   /** Bridge ties marked (build plan session 7); absent means false. Schema 4 in place. */
   markBridges?: boolean;
+  /** The question the view answers (build plan session 8), by catalogue id; absent or null means
+   *  the analyst's own settings. Schema 4 in place. An id the app no longer knows is ignored. */
+  question?: string | null;
   /** Members who gave no ratings: marked (absent) or left out (build plan session 5; schema 4 in place). */
   nonRespondents?: 'mark' | 'leaveOut';
   /** Reconstruct their ties on mutual layers from colleagues' ratings; absent means false. */

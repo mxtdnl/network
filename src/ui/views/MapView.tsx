@@ -262,6 +262,24 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
     };
   }, [legendMode]);
 
+  // Opening or closing "About this network" changes the map's height (build plan
+  // session 8), so the members are fitted into the new area.
+  const aboutOpen = useAppStore((s) => s.ui.aboutOpen);
+  const aboutRef = useRef(aboutOpen);
+  useEffect(() => {
+    if (aboutRef.current === aboutOpen) return;
+    aboutRef.current = aboutOpen;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        measureRef.current();
+        controllerRef.current?.fit();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [aboutOpen]);
+
   const groupSet = useMemo(() => {
     const s = new Set<number>();
     for (const id of group) {

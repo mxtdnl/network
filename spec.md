@@ -201,6 +201,8 @@ Values that depend on a member's own ratings carry a flag when the member gave n
 
 ## 7. Prioritisation (composite weighting)
 
+The composite is a method choice, not a default: the map opens on a question and draws ties from the relation that answers it (section 8). The weight panel sits under "Advanced: combine layers", closed until the user opens it, and the composite is used only when the user chooses to draw ties from it.
+
 - The weight panel has one slider per active layer.
 - Each layer is rescaled to 0–1 before combining. Weights are normalised to sum to 1.
 - Signed layers offer three treatments, and the user picks one:
@@ -212,16 +214,35 @@ Values that depend on a member's own ratings carry a flag when the member gave n
 - The conflict sub-layers have default weight 0: they are frequencies of friction, which the composite could only add, so more conflict would make a stronger tie. The user may give them a weight.
 - The live formula is shown in plain notation beneath the sliders.
 - Presets: Formal structure, Informal network, Relationship health, Custom.
-- The composite drives:
+- When the map draws ties from the composite, the composite drives:
   - layout attraction;
   - edge width, unless the map is set to take edge width from another layer (section 8);
   - the node-size metric;
   - all rankings.
+
+  Its weights are then stated on the map, in the title area and in the legend, and so in every export of the map, as well as in the report.
 - Weight changes animate node positions by interpolation, so users can see what moved.
 
 ## 8. Interactive network map
 
 The network map is an interactive node-link diagram of members and their weighted ties.
+
+**Questions first.** The analysis starts from a question a client asks, chosen at the top of the controls. Each question is bound to the relation that answers it and to the view and settings that show it, and choosing it sets them:
+
+| Question | Relation | View and settings |
+|---|---|---|
+| Who is connected to whom? (the question the map opens on) | Connection strength | Map; node size by connections in; fill by team |
+| How does information reach people? | Advice | Map, directed; node size by received strength; ranked bars of incoming ties offered beside it |
+| Where do teams connect, and where not? | Connection strength | Groups view; the map grouped by the same attribute |
+| Who links groups that otherwise rarely meet? | Informal collaboration | Map; node size by bridging; communities outlined |
+| Whose time do others depend on? | Workflow dependency | Ranked bars of incoming ties; the map sized by received strength |
+| Where does work happen outside the formal structure? | Formal and informal collaboration | Map with ties from informal collaboration in the formal and informal line styles, over the formal hierarchy when manager ids exist; the formal and informal comparison offered beside it |
+| Where does the network rely on a single route? | Connection strength | Map with every tie drawn, bridge ties marked and cut points highlighted |
+| Where are relationships rated negatively, and is that returned? | Valence, or another signed layer | Map with negative ratings coloured and drawn whatever the tie-strength range |
+
+- The chosen question is the view's title and the default caption of a view saved while it is chosen. Choosing another "Ties from" layer returns to the user's own settings, titled by that layer.
+- A question whose relation is missing, switched off or not yet rated stays in the list, says which relation it needs and how to add it, and changes nothing; no other relation is put in its place.
+- **Readouts.** Every number shown about the network is read out as a sentence a newcomer can use, built from the analysis's results: the question's own figures under its title, and, under "About this network", whichever of density, reciprocity, separate parts, communities, centralisation and the E-I index the question has not already read out. Every member measure in the member panel has a sentence beside its rank comparing the member with their colleagues ("lies on more of the shortest routes between colleagues than any of their 39 colleagues"; constraint reads the other way, as a more open or more closed network) and the median of their group. Readouts describe; they never evaluate anyone (section 2), and they follow the insight wording rules (section 9).
 
 **Layouts.**
 - Force-directed (d3-force), with attraction proportional to the selected layer or the composite.
@@ -262,7 +283,7 @@ The network map is an interactive node-link diagram of members and their weighte
 - Groups view: members grouped by any category or ordered attribute, or by detected community, on the layer that sets the ties shown, in the current view. A group connection matrix (the share of possible ties within each group and between each pair of groups, heat-coded, with a sentence for the focused cell), a group map (one node per group, sized by its members, joined by lines whose width is the share of possible ties between the groups, with a table alternative), and a table of members, ties inside, ties leaving and E-I per group. Choosing a group makes its members the subgroup in every view.
 - Side-by-side comparison of two layers.
 
-**Saved views.** A saved view captures weights, filters, layout, positions and selection. Views are named and can be restored.
+**Saved views.** A saved view captures weights, filters, layout, positions, selection and the question it answers. Views are named and can be restored.
 
 **Presentation mode.** Full screen with controls hidden. Opens with the data-quality statement (section 6), then steps through saved views, with a short caption for each.
 

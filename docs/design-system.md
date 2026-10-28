@@ -330,6 +330,8 @@ In all wireframes, box-drawing lines mark the edges of regions for legibility of
   320 px, field                    flexible, paper                             360 px, field
 ```
 
+Since build plan session 8 the left column opens with the question picker ("What do you want to know?"), then the map settings, then the weight panel and formula under "Advanced: combine layers" (closed by default), then the layers; the wireframe above shows the earlier order. The centre column has a title area above its tabs: the question as an `h2` at `t-2` (`t-1` in the compact layout), its sentences at `t-0` up to `--measure-wide` (100ch), the composite's weights in `graphite` when ties come from it, and an "About this network" toggle, closed by default, with one sentence per network measure. A single `stone` rule separates it from the tabs. In the member panel each metric row is followed by a sentence at `t--1` in `graphite` comparing the member with their colleagues.
+
 Alignment rationale:
 - **Three columns, fixed–fluid–fixed.** The map takes all remaining width because it is the primary instrument; the two 320/360 px columns hold controls and detail, following the left-to-right order "set up → look → inspect".
 - **One inner gutter.** Every panel uses `s-5` (24 px) inner padding; all labels in the left column share one left edge, and all numeric values share one right edge (tabular figures, right-aligned), so weights can be compared down a single column.

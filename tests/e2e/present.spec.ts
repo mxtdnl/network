@@ -436,6 +436,16 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await check('bridge ties');
   await page.getByRole('switch', { name: 'Mark bridge ties' }).click();
 
+  // Questions whose readouts name members (build plan session 8), with "About this network" open.
+  await page.getByRole('button', { name: 'About this network' }).click();
+  for (const question of ['brokers', 'singleRoute', 'negative']) {
+    await page.getByLabel('What do you want to know?').selectOption(question);
+    await settled(page);
+    await check(`question ${question}`);
+  }
+  await page.getByLabel('What do you want to know?').selectOption('connected');
+  await settled(page);
+
   // Explore tools: ego view, path, subgroup, resilience.
   await rightTab(page, 'Explore').click();
   await check('explore');

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { serialiseProject } from '../../src/data/projectFile';
 import type { Project } from '../../src/data/schema';
 import { syntheticProject } from '../fixtures/synthetic';
+import { useComposite } from './advanced';
 import { REGION } from './regions';
 
 // Phase 5: composite weighting, layouts, linked views, ego view, shortest
@@ -106,6 +107,9 @@ test('weights: presets, sliders, signed treatment, live formula and animated lay
 }) => {
   await start(page);
   await loadDemo(page);
+  await settled(page);
+  // The weights shape the map once its ties come from the combined layers (build plan session 8).
+  await useComposite(page);
   await settled(page);
 
   // Custom with default weights: three equal shares, valence as a multiplier (D130).
@@ -353,6 +357,7 @@ test('shortest path between two chosen members, highlighted with its distance', 
   await shot(page, 'path');
 
   // A weight change recomputes the path on the new composite.
+  await useComposite(page);
   await page.getByLabel('Preset').selectOption({ label: 'Informal network' });
   await expect(distance).toHaveText(/^\d+(\.\d+)?$/);
   await map.getByRole('button', { name: 'Clear path' }).click();
@@ -362,6 +367,9 @@ test('shortest path between two chosen members, highlighted with its distance', 
 test('resilience: remove members and compare before and after', async ({ page }) => {
   await start(page);
   await loadDemo(page);
+  await settled(page);
+  // The figures below are the composite's, the map's default before build plan session 8.
+  await useComposite(page);
   await settled(page);
   const right = rightColumn(page);
   await right.getByRole('tab', { name: 'Explore' }).click();
@@ -485,7 +493,7 @@ test('rank stability: run the bootstrap and see rank ranges in the table and pan
   await loadDemo(page);
   await page.getByRole('tab', { name: 'Table' }).click();
   await page.getByRole('button', { name: 'Run resampling' }).click();
-  await expect(page.getByText('Rank ranges for Bridging from 200 resamples.')).toBeVisible({
+  await expect(page.getByText(/^Rank ranges for .+ from 200 resamples\.$/)).toBeVisible({
     timeout: 60_000,
   });
   const table = page.getByRole('table', { name: /Network position of 40 members/ });
@@ -553,7 +561,8 @@ test('table export: sortable, and the CSV holds the rows and columns shown', asy
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export table' }).click();
   const file = await download;
-  expect(file.suggestedFilename()).toBe('graticule-metrics-composite-directed.csv');
+  // The table follows "Ties from": connection strength, the map's opening question (session 8).
+  expect(file.suggestedFilename()).toBe('graticule-metrics-connection_strength-directed.csv');
   const text = await (await file.createReadStream()).toArray();
   const csv = Buffer.concat(text as Buffer[])
     .toString('utf8')

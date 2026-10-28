@@ -27,6 +27,20 @@ import { paletteChoice, pinnedHues, withPalette, withPin } from '../../src/ui/ma
 import { initialMapSettings, type MapSettings } from '../../src/ui/state/store';
 import { demoText } from './engineFixtures';
 
+/**
+ * The map settings these tests were written against: ties from the composite, sized by
+ * bridging, as the map opened before questions (build plan session 8 opens it on
+ * connection strength).
+ */
+function compositeMap() {
+  return {
+    ...initialMapSettings(),
+    layer: 'composite',
+    sizeMetric: 'betweenness' as const,
+    question: null,
+  };
+}
+
 const demo = parseProject(demoText);
 
 const VALENCE = ['#833110', '#9d5524', '#a67b55', '#919191', '#5188a1', '#156d8e', '#004d6e'];
@@ -96,7 +110,7 @@ async function resultFor(project: Project, s: MapSettings): Promise<AnalysisResu
 }
 
 async function model(patch: Partial<MapSettings> = {}, project = demo): Promise<MapModel> {
-  const s = { ...initialMapSettings(), ...patch };
+  const s = { ...compositeMap(), ...patch };
   const names = project.members.map((m) => m.display_name);
   return buildMapModel(project, await resultFor(project, s), s, theme, names);
 }
@@ -128,7 +142,7 @@ describe('valence colours', () => {
 describe('map model', () => {
   it('draws one edge per tie with weight above the threshold on the selected layer', async () => {
     const all = await model({ layer: 'connection_strength', threshold: 0 });
-    const r = await resultFor(demo, { ...initialMapSettings() });
+    const r = await resultFor(demo, { ...compositeMap() });
     const w = r.refs.connection_strength?.weights ?? new Float64Array();
     const n = demo.members.length;
     // One edge per pair tied in either direction (CLAUDE.md D131).
@@ -207,7 +221,7 @@ describe('map model', () => {
   });
 
   it('draws a pair as one line only when both directions are within the range (D131, D141)', async () => {
-    const r = await resultFor(demo, initialMapSettings());
+    const r = await resultFor(demo, compositeMap());
     const w = r.refs.connection_strength?.weights ?? new Float64Array();
     const n = demo.members.length;
     const [from, to] = [0.3, 0.6];
@@ -251,9 +265,9 @@ describe('map model', () => {
   });
 
   it('combines the two directions of a pair by the chosen rule', async () => {
-    const r = await resultFor(demo, initialMapSettings());
+    const r = await resultFor(demo, compositeMap());
     const w = r.refs.connection_strength?.weights ?? new Float64Array();
-    const v = valenceMatrix(demo, initialMapSettings()) ?? new Float64Array();
+    const v = valenceMatrix(demo, compositeMap()) ?? new Float64Array();
     const n = demo.members.length;
     for (const rule of ['mean', 'min', 'max', 'both'] as const) {
       // The rule only combines directions on the map; the directed analysis is the same.
@@ -293,7 +307,7 @@ describe('map model', () => {
 
   it('keeps a valence of 0 distinct from a valence that was not rated', async () => {
     const m = await model({ layer: 'connection_strength' });
-    const v = valenceMatrix(demo, { ...initialMapSettings() });
+    const v = valenceMatrix(demo, { ...compositeMap() });
     expect(v).not.toBeNull();
     expect(m.edges.some((e) => e.colour === 0)).toBe(true);
     expect(m.edges.some((e) => Number.isNaN(e.colour))).toBe(true);
@@ -325,8 +339,8 @@ describe('map model', () => {
     };
     const one = buildMapModel(
       noInformal,
-      await resultFor(demo, initialMapSettings()),
-      { ...initialMapSettings(), edgeStyle: 'formalInformal' },
+      await resultFor(demo, compositeMap()),
+      { ...compositeMap(), edgeStyle: 'formalInformal' },
       theme,
       demo.members.map((m) => m.display_name),
     );
@@ -352,7 +366,7 @@ describe('map model', () => {
     const hide = await model({ layerToggles: off, hideOffLayers: true });
     expect(hide.hiddenLayers).toEqual(['formal_collaboration']);
     expect(hide.edges.length).toBeLessThan(all.edges.length);
-    const r = await resultFor(demo, initialMapSettings());
+    const r = await resultFor(demo, compositeMap());
     const f = r.refs.formal_collaboration?.weights ?? new Float64Array();
     const n = demo.members.length;
     expect(hide.edges.every((e) => !((f[e.source * n + e.target] as number) > 0))).toBe(true);
@@ -366,6 +380,7 @@ describe('map model', () => {
     }
     const legend = legendSections(hide, theme).find((x) => x.kind === 'width');
     expect(legend?.kind === 'width' && legend.notes).toEqual([
+      expect.stringMatching(/^Combined layers: /),
       'Ties below 0.30 hidden',
       'Ties on Formal collaboration hidden',
       'Every metric uses all ties, hidden or not',
@@ -422,7 +437,7 @@ describe('map model', () => {
 
   it('colours by community on the selected layer', async () => {
     const m = await model({ fill: { kind: 'community' } });
-    const r = await resultFor(demo, initialMapSettings());
+    const r = await resultFor(demo, compositeMap());
     expect(m.fill.kind).toBe('community');
     expect(m.fill.groups.filter((g) => g.kind === 'community')).toHaveLength(
       Math.min(8, r.refs.composite?.communities?.count ?? 0),
@@ -492,10 +507,12 @@ describe('legend', () => {
       return x?.kind === 'width' ? x.notes : [];
     };
     expect(await notes(0, 0.5)).toEqual([
+      expect.stringMatching(/^Combined layers: /),
       'Ties above 0.50 hidden',
       'Every metric uses all ties, hidden or not',
     ]);
     expect(await notes(0.3, 0.5)).toEqual([
+      expect.stringMatching(/^Combined layers: /),
       'Ties outside 0.30–0.50 hidden',
       'Every metric uses all ties, hidden or not',
     ]);
@@ -503,7 +520,9 @@ describe('legend', () => {
     const none = legendSections(await model({ threshold: 0 }), theme).find(
       (x) => x.kind === 'width',
     );
-    expect(none?.kind === 'width' && none.notes).toEqual([]);
+    expect(none?.kind === 'width' && none.notes).toEqual([
+      expect.stringMatching(/^Combined layers: /),
+    ]);
   });
 
   it('shows the valence scale, and a separate entry for valence not rated', async () => {
@@ -728,7 +747,7 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
       ...demo,
       layers: demo.layers.map((l) => (l.key === 'energy' ? { ...l, enabled: true } : l)),
     };
-    const s = { ...initialMapSettings(), edgeColour: { kind: 'signed', layer: 'energy' } as const };
+    const s = { ...compositeMap(), edgeColour: { kind: 'signed', layer: 'energy' } as const };
     const r = await resultFor(demo, s);
     const names = demo.members.map((x) => x.display_name);
     const on = buildMapModel(withEnergy, r, s, theme, names);
@@ -748,7 +767,7 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
       layer: 'connection_strength',
       edgeColour: { kind: 'unsigned', layer: 'formal_collaboration' },
     });
-    const r = await resultFor(demo, initialMapSettings());
+    const r = await resultFor(demo, compositeMap());
     const f = r.refs.formal_collaboration?.weights ?? new Float64Array();
     for (const e of m.edges) {
       const a = f[e.source * n + e.target] as number;
@@ -780,7 +799,7 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
       'Within or between groups of Team or function',
     );
     const c = await model({ edgeColour: { kind: 'groups' }, fill: { kind: 'community' } });
-    const membership = (await resultFor(demo, initialMapSettings())).refs.composite?.communities
+    const membership = (await resultFor(demo, compositeMap())).refs.composite?.communities
       ?.membership;
     for (const e of c.edges)
       expect(e.colour).toBe(membership?.[e.source] === membership?.[e.target] ? 0 : 1);
@@ -789,7 +808,7 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
 
   it('sets width by another layer, thinnest in stone where it is not rated', async () => {
     const m = await model({ edgeWidth: { kind: 'layer', layer: 'formal_collaboration' } });
-    const r = await resultFor(demo, initialMapSettings());
+    const r = await resultFor(demo, compositeMap());
     const f = r.refs.formal_collaboration?.weights ?? new Float64Array();
     expect(m.width).toMatchObject({ kind: 'layer', layerLabel: 'Formal collaboration' });
     const missing = m.edges.filter((e) => e.widthNotRated);
@@ -810,6 +829,7 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
       label: 'Not rated on Formal collaboration',
     });
     expect(legend?.kind === 'width' && legend.notes).toEqual([
+      expect.stringMatching(/^Combined layers: /),
       'Ties drawn from Composite of all layers',
       'Ties below 0.30 hidden',
       'Every metric uses all ties, hidden or not',
@@ -906,7 +926,7 @@ describe('encoding choices (D126, D132, D134, D136)', () => {
     expect(off.markBridges).toBe(false);
     expect(off.edges.some((e) => e.bridge)).toBe(false);
     const m = await model({ ...patch, markBridges: true });
-    const r = await resultFor(demo, { ...initialMapSettings(), ...patch });
+    const r = await resultFor(demo, { ...compositeMap(), ...patch });
     const lb = r.refs.connection_strength?.ties?.localBridges;
     expect(lb && lb.from.length).toBeGreaterThan(0);
     // Every local bridge is drawn at threshold 0, and only those are marked.
@@ -1040,7 +1060,7 @@ describe('palettes and pinned group colours (D127)', () => {
 
 describe('grouped layout', () => {
   it('keeps names inside a group apart and spreads each group over its cell', async () => {
-    const r = await resultFor(demo, initialMapSettings());
+    const r = await resultFor(demo, compositeMap());
     const teams = [...new Set(demo.members.map((m) => m.attributes.team ?? ''))];
     const group = demo.members.map((m) => teams.indexOf(m.attributes.team ?? ''));
     const radii = demo.members.map((_, i) => theme.nodeMin + (i % 13));

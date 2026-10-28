@@ -27,6 +27,7 @@ import {
   type SizeMetric,
 } from './store';
 import type { WeightState } from './presets';
+import { activeQuestion, isQuestionId, questionText } from './questions';
 
 let counter = 0;
 
@@ -72,6 +73,7 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
     sizeScale: map.sizeScale,
     communityOutlines: map.communityOutlines,
     markBridges: map.markBridges,
+    question: map.question,
   };
 }
 
@@ -88,6 +90,8 @@ export function savedToMap(saved: SavedMapSettings, project: Project): MapSettin
     negativeOutsideRange: saved.negativeOutsideRange === true,
     // Absent in views saved before bridge marks (build plan session 7): off.
     markBridges: saved.markBridges === true,
+    // Absent in views saved before questions (build plan session 8), or unknown: own settings.
+    question: isQuestionId(saved.question) ? saved.question : null,
     // Absent in views saved before the remedies (D150, D151): off.
     nonRespondents: saved.nonRespondents ?? 'mark',
     reconstruct: saved.reconstruct === true,
@@ -150,11 +154,18 @@ const setViews = (fn: (views: SavedView[]) => SavedView[]) => {
   useAppStore.getState().updateProjectViews((p) => ({ ...p, saved_views: fn(p.saved_views) }));
 };
 
+/** The caption a view starts with: the question the map answers, if any (build plan session 8). */
+export function defaultCaption(): string {
+  const s = useAppStore.getState();
+  const question = activeQuestion(s.data.project, s.map);
+  return question ? questionText(question) : '';
+}
+
 export function saveCurrentView(name?: string): SavedView | null {
   const project = useAppStore.getState().data.project;
   if (!project) return null;
   const clean = name?.trim() ?? '';
-  const view = captureView(clean === '' ? nextViewName(project) : clean);
+  const view = captureView(clean === '' ? nextViewName(project) : clean, defaultCaption());
   if (!view) return null;
   setViews((views) => [...views, view]);
   useAppStore.getState().setStatus({

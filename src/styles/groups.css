@@ -11,6 +11,12 @@
   overflow-y: auto;
 }
 
+/* The view scrolls as a whole: its parts keep their height rather than shrink
+   (a table that scrolls sideways would otherwise collapse to nothing). */
+.groups > * {
+  flex-shrink: 0;
+}
+
 .tabs__panel:has(.groups) {
   display: flex;
   flex-direction: column;

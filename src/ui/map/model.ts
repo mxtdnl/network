@@ -15,7 +15,7 @@
 //                 both ways is one line, its two directions combined
 //   outlines    → optional: the communities on the selected layer
 
-import { FI_CLASS, type AnalysisResult } from '../engineClient';
+import { FI_CLASS, type AnalysisResult, type CompositeFormula } from '../engineClient';
 import {
   isCategorical,
   type AttributeDefinition,
@@ -174,6 +174,8 @@ export interface MapModel {
   reconstructed: number;
   /** Each rater's ratings on unsigned layers are ranks within the rater (build plan session 5). */
   standardised: boolean;
+  /** The composite's formula when ties come from it, so the legend states its weights (build plan session 8). */
+  composite: CompositeFormula | null;
 }
 
 export interface Radii {
@@ -807,6 +809,8 @@ export function buildMapModel(
     palette: paletteChoice(project),
     reconstructed: Object.values(result.reconstructed).reduce((s, p) => s + p.length, 0),
     standardised: result.remedies.standardise === 'rank',
+    composite:
+      settings.layer === 'composite' || edgeLayer === 'composite' ? result.composite : null,
   };
 }
 
