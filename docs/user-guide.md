@@ -233,7 +233,7 @@ Use Export non-responders for reminders. Close survey stops further imports unti
 
 ## Importing and validation
 
-Choose Import survey data (empty workspace or Project menu). Choose a members file and, if you have one, a ties file, then Check files. Importing a members file starts a new project; a ties file on its own is added to the open project, whose members it must name.
+Choose Import survey data (empty workspace or Project menu). Choose a members file and, if you have one, a ties file (in long format, or a survey tool's export: see [Importing a survey tool's export](#importing-a-survey-tools-export)), then Check files. Importing a members file starts a new project; a ties file on its own is added to the open project, whose members it must name.
 
 ![The Import survey data dialog with the members and ties file fields and template links](user-guide/import-dialog.jpg)
 
@@ -249,6 +249,21 @@ Nothing is imported until the files have been checked. The validation report lis
 Nothing is changed silently. Fix the rows in your file and check it again, or import the valid rows now and skip the rest; the report says how many will be skipped. Notes such as empty values (stored as not rated) and `n/a` values (stored as "does not apply") are listed separately.
 
 ![The validation report with a table of problems by row, column, value and problem](user-guide/validation-report.jpg)
+
+If a members file has values that differ only in case or spacing, such as "Finance" and "finance" in the team column, the report lists them under "Spellings to reconcile". Tick the ones to write one way (the most common spelling is kept); nothing changes unless you tick it.
+
+### Importing a survey tool's export
+
+Most survey tools export one row per respondent, with a column for each colleague and question. Choose that file as the ties file, with a members file or with a project open: Graticule recognises the layout and opens a wizard in four steps.
+
+1. **Layout.** Graticule says how many respondents, colleagues and questions it found. Check the header: one row, in which each column names its question and colleague (for example "How often…? [Ada Example]" or "How often…? - Ada Example"), or two rows, with the questions above the colleagues. Choose the column that names the respondents if Graticule chose the wrong one.
+2. **Questions.** Choose the relation each question records, or "Do not import". Questions whose text matches a relation's key, label or wording are mapped for you. Answers written as words, such as "Weekly" or "Very positive", are listed with the value each is recorded as; change any that are wrong. An answer left as "Not mapped" is reported and skipped.
+3. **People.** Respondents and colleagues are matched to the roster by id, email or name, first exactly and then ignoring case and spacing. Anything else needs your choice: a suggestion (for example "Zoe Hart" for Zoë Hart, or "Example, Ada" for Ada Example) or a name that two members share. Until you choose, their answers are left out.
+4. **Preview.** The first ratings as the long rows Graticule checks, with the cell each came from.
+
+Check ratings opens the usual validation report, with each problem at its row and column in the export, and the people, questions and columns left out. Back to the survey export keeps your choices. Empty answers record nothing, so they count as not rated. The survey export template (CSV or XLSX, under "Download a template") shows the simplest layout: a `respondent_id` column, then one column per relation key and member id, such as `connection_strength [M02]`.
+
+![The import wizard's People step: a suggested match for Zoe Hart and a name shared by two members, each with a choice of member](user-guide/import-wizard.jpg)
 
 ### Entering ratings by hand
 

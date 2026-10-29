@@ -343,7 +343,7 @@ a {
 
 .report__col-column {
   width: var(--attr-label-width);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .report > .dialog__actions {
@@ -918,4 +918,123 @@ a {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-3);
+}
+
+/* Import wizard for survey tools' exports (build plan session 13) */
+.wizard__heading {
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--s-2);
+}
+
+.wizard__steps {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  margin-bottom: var(--s-4);
+  color: var(--graphite);
+  font-size: var(--t--1-size);
+  line-height: var(--t--1-line);
+}
+
+.wizard__step[aria-current='step'] {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.wizard__intro {
+  max-width: var(--measure);
+  margin-bottom: var(--s-4);
+}
+
+.wizard__group {
+  border: 0;
+  margin: 0 0 var(--s-4);
+  padding: 0;
+}
+
+.wizard__question,
+.wizard__people {
+  margin-bottom: var(--s-5);
+}
+
+.wizard__subheading {
+  font-size: var(--t-0-size);
+  line-height: var(--t-0-line);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--s-1);
+}
+
+.wizard__minor {
+  font-size: var(--t-0-size);
+  line-height: var(--t-0-line);
+  font-weight: var(--weight-medium);
+}
+
+.wizard__question-text {
+  max-width: var(--measure);
+  margin-bottom: var(--s-2);
+}
+
+.wizard__meta {
+  color: var(--graphite);
+}
+
+.wizard__table {
+  margin-top: var(--s-2);
+}
+
+.wizard__table .select {
+  width: 100%;
+}
+
+.wizard__table td,
+.wizard__table th {
+  vertical-align: middle;
+}
+
+.wizard__table th.wizard__cell-text {
+  font-size: var(--t-0-size);
+  line-height: var(--t-0-line);
+  font-weight: var(--weight-regular);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.wizard__caption {
+  caption-side: top;
+  text-align: start;
+  color: var(--graphite);
+  padding-bottom: var(--s-1);
+}
+
+.wizard__matched {
+  margin-top: var(--s-2);
+}
+
+.wizard__matched summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+}
+
+.wizard > .dialog__actions {
+  position: sticky;
+  bottom: 0;
+  padding-block: var(--s-3) 0;
+  background: var(--paper);
+}
+
+/* Reconciling attribute values */
+.reconcile {
+  border: 0;
+  padding: 0;
+}
+
+.reconcile__list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: var(--s-2);
 }

@@ -1,0 +1,4 @@
+respondent_id,connection_strength [M01],connection_strength [M02],connection_strength [M03],valence [M01],valence [M02],valence [M03]
+M01,,4,2,,2,1
+M02,3,,5,1,,3
+M03,1,4,,-1,2,

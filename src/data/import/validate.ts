@@ -42,7 +42,13 @@ export type ErrorCode =
   | 'out_of_range'
   | 'unknown_category'
   | 'invalid_wave'
-  | 'duplicate';
+  | 'duplicate'
+  // Survey tools' wide exports (wide.ts).
+  | 'no_respondent_column'
+  | 'missing_respondent'
+  | 'unmatched_respondent'
+  | 'duplicate_respondent'
+  | 'unmatched_colleague';
 
 export type NoteCode =
   | 'not_rated'
@@ -50,9 +56,14 @@ export type NoteCode =
   | 'disabled_layer'
   | 'later_wave'
   | 'new_attribute'
-  | 'other_sheets';
+  | 'other_sheets'
+  | 'question_not_imported'
+  | 'empty_cells'
+  | 'ignored_columns'
+  | 'skipped_header_rows';
 
-export type FileKind = 'members' | 'ties';
+/** `export` is a survey tool's wide export, checked as ties once reshaped (wide.ts). */
+export type FileKind = 'members' | 'ties' | 'export';
 
 export interface Issue {
   file: FileKind;
@@ -80,6 +91,8 @@ export interface Issue {
 export interface FileReport {
   file: FileKind;
   fileName: string;
+  /** What the counts count: rows of the file, or the answers of a wide export. */
+  unit?: 'rows' | 'ratings';
   /** Data rows read, excluding the header and fully blank rows. */
   totalRows: number;
   validRows: number;
