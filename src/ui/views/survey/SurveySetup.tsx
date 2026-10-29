@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import {
   isCategorical,
   type Project,
@@ -22,12 +22,23 @@ import {
   draftProblems,
   estimateMinutes,
   estimateSeconds,
+  extraSeconds,
   needsNewVersion,
   newSurveyId,
   surveyLayerFrom,
   updateSurvey,
   type SurveyDraft,
 } from '../../../survey/model';
+import {
+  BOUNDARY_QUESTION,
+  CONTEXT_ITEMS,
+  DEFAULT_BOUNDARY_FUNCTIONS,
+  contextOptions,
+  defaultSites,
+  textLines,
+  withContextAttributes,
+} from '../../../survey/context';
+import type { ContextItemId } from '../../../data/schema';
 import { Dialog } from '../../components/Dialog';
 import { Icon } from '../../components/Icon';
 import { surveyCopy } from '../../copy/survey';
@@ -36,6 +47,7 @@ import { useMemberNames } from '../../state/names';
 import { useAppStore } from '../../state/store';
 import { RelationActions } from '../LayerCreateDialog';
 import { downloadText } from './download';
+import { SurveyGuidance } from './SurveyGuidance';
 
 const S = surveyCopy.setup;
 const K = surveyCopy.keys;
@@ -52,6 +64,8 @@ function newDraft(project: Project): SurveyDraft {
     settings: { ...DEFAULT_SURVEY_SETTINGS },
     sharedAttributes: [],
     required: [],
+    context: [],
+    boundary: null,
   };
 }
 
@@ -97,6 +111,7 @@ export function SurveySetup({ project, survey, onDone, onCancel }: Props) {
       draft.entry,
       draft.settings.expected_nominations,
       draft.required.length,
+      extraSeconds(draft.context.length, draft.boundary?.length ?? 0),
     ),
   );
   const overLimit = minutes > draft.settings.burden_limit_minutes;
@@ -126,10 +141,12 @@ export function SurveySetup({ project, survey, onDone, onCancel }: Props) {
     if (!survey) return;
     const now = new Date().toISOString();
     const next = updateSurvey(survey, draft, project, now, issue);
-    updateProjectViews((p) => ({
-      ...p,
-      surveys: p.surveys.map((s) => (s.id === survey.id ? next : s)),
-    }));
+    updateProjectViews((p) =>
+      withContextAttributes(
+        { ...p, surveys: p.surveys.map((s) => (s.id === survey.id ? next : s)) },
+        next,
+      ),
+    );
     const created = next.versions.length > survey.versions.length;
     setStatus({ text: created ? S.versionCreated(next.versions.length) : S.saved, tone: 'info' });
     onDone(survey.id);
@@ -164,6 +181,14 @@ export function SurveySetup({ project, survey, onDone, onCancel }: Props) {
         <p className="field__help">{S.titleHelp}</p>
         {error('title')}
       </div>
+
+      <SurveyGuidance
+        project={project}
+        draft={draft}
+        onAdded={(layer) => {
+          setDraft((d) => ({ ...d, layers: [...d.layers, surveyLayerFrom(layer)] }));
+        }}
+      />
 
       <fieldset className="survey-setup__group">
         <legend className="survey-setup__legend">{S.questions}</legend>
@@ -352,6 +377,15 @@ export function SurveySetup({ project, survey, onDone, onCancel }: Props) {
         )}
       </fieldset>
 
+      <AboutRespondent
+        project={project}
+        draft={draft}
+        set={set}
+        siteError={error('textLines')}
+        boundaryError={error('boundaryFunctions')}
+        invalid={(key) => tried && problems.includes(key)}
+      />
+
       <fieldset className="survey-setup__group">
         <legend className="survey-setup__legend">{S.estimate}</legend>
         <p className="survey-setup__estimate num">{S.estimateValue(minutes)}</p>
@@ -511,7 +545,9 @@ export function SurveySetup({ project, survey, onDone, onCancel }: Props) {
             setTried(true);
           }}
           onCreated={(created) => {
-            updateProjectViews((p) => ({ ...p, surveys: [...p.surveys, created] }));
+            updateProjectViews((p) =>
+              withContextAttributes({ ...p, surveys: [...p.surveys, created] }, created),
+            );
             setStatus({ text: K.created, tone: 'info' });
             onDone(created.id);
           }}
@@ -524,6 +560,143 @@ export function SurveySetup({ project, survey, onDone, onCancel }: Props) {
         </p>
       )}
     </div>
+  );
+}
+
+// Optional questions about the respondent's own situation, and the boundary
+// question (build plan session 12, D179–D181).
+function AboutRespondent({
+  project,
+  draft,
+  set,
+  siteError,
+  boundaryError,
+  invalid,
+}: {
+  project: Project;
+  draft: SurveyDraft;
+  set: (patch: Partial<SurveyDraft>) => void;
+  siteError: ReactNode;
+  boundaryError: ReactNode;
+  invalid: (key: string) => boolean;
+}) {
+  const sitesId = useId();
+  const boundaryId = useId();
+  const site = draft.context.find((q) => q.id === 'main_site');
+  // The text areas keep what is typed; the draft keeps the cleaned lists.
+  const [sitesText, setSitesText] = useState(() =>
+    (site?.options ?? defaultSites(project)).join('\n'),
+  );
+  const [functionsText, setFunctionsText] = useState(() =>
+    (draft.boundary ?? DEFAULT_BOUNDARY_FUNCTIONS).join('\n'),
+  );
+  const order = CONTEXT_ITEMS.map((i) => i.id);
+  const toggle = (id: ContextItemId, on: boolean) => {
+    const rest = draft.context.filter((q) => q.id !== id);
+    const added = id === 'main_site' ? { id, options: textLines(sitesText) } : { id };
+    set({
+      context: (on ? [...rest, added] : rest).sort(
+        (a, b) => order.indexOf(a.id) - order.indexOf(b.id),
+      ),
+    });
+  };
+  return (
+    <fieldset className="survey-setup__group">
+      <legend className="survey-setup__legend">{S.about}</legend>
+      <p className="field__help">{S.aboutHelp}</p>
+      {CONTEXT_ITEMS.map((item) => {
+        const asked = draft.context.find((q) => q.id === item.id);
+        const answers = contextOptions(asked ?? { id: item.id, options: textLines(sitesText) }).map(
+          (o) => o.label,
+        );
+        return (
+          <div key={item.id} className="survey-setup__layer">
+            <label className="radio-list__option">
+              <input
+                type="checkbox"
+                checked={!!asked}
+                aria-describedby={`${sitesId}-${item.id}`}
+                onChange={(e) => {
+                  toggle(item.id, e.currentTarget.checked);
+                }}
+              />
+              {S.askContext(item.question)}
+            </label>
+            <p id={`${sitesId}-${item.id}`} className="field__help survey-setup__option-help">
+              {S.storedAs(item.label, answers.join(', '))}
+            </p>
+            {asked && item.id === 'main_site' && (
+              <div className="field survey-setup__layer-fields">
+                <label htmlFor={sitesId} className="field__label">
+                  {S.sites}
+                </label>
+                <textarea
+                  id={sitesId}
+                  className="text-input text-input--area"
+                  rows={4}
+                  value={sitesText}
+                  aria-invalid={invalid('textLines')}
+                  aria-describedby={`${sitesId}-help`}
+                  onChange={(e) => {
+                    const text = e.currentTarget.value;
+                    setSitesText(text);
+                    set({
+                      context: draft.context.map((q) =>
+                        q.id === 'main_site' ? { id: q.id, options: textLines(text) } : q,
+                      ),
+                    });
+                  }}
+                />
+                <p id={`${sitesId}-help`} className="field__help">
+                  {S.sitesHelp}
+                </p>
+                {siteError}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div className="survey-setup__layer">
+        <label className="radio-list__option">
+          <input
+            type="checkbox"
+            checked={draft.boundary !== null}
+            aria-describedby={`${boundaryId}-about`}
+            onChange={(e) => {
+              set({ boundary: e.currentTarget.checked ? textLines(functionsText) : null });
+            }}
+          />
+          {S.boundary}
+        </label>
+        <p id={`${boundaryId}-about`} className="field__help survey-setup__option-help">
+          {S.boundaryHelp(BOUNDARY_QUESTION)}
+        </p>
+        {draft.boundary !== null && (
+          <div className="field survey-setup__layer-fields">
+            <label htmlFor={boundaryId} className="field__label">
+              {S.boundaryFunctions}
+            </label>
+            <textarea
+              id={boundaryId}
+              className="text-input text-input--area"
+              rows={4}
+              value={functionsText}
+              aria-invalid={invalid('boundaryFunctions')}
+              aria-describedby={`${boundaryId}-help`}
+              onChange={(e) => {
+                const text = e.currentTarget.value;
+                setFunctionsText(text);
+                set({ boundary: textLines(text) });
+              }}
+            />
+            <p id={`${boundaryId}-help`} className="field__help">
+              {S.boundaryFunctionsHelp}
+            </p>
+            {boundaryError}
+          </div>
+        )}
+      </div>
+    </fieldset>
   );
 }
 

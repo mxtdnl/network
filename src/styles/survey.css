@@ -456,3 +456,109 @@
 .members__table thead th {
   text-align: start;
 }
+
+/* Design guidance at the head of setup (build plan session 12) */
+.survey-guidance {
+  margin: 0 0 var(--s-6);
+  padding-bottom: var(--s-4);
+  border-bottom: var(--line-width) solid var(--field);
+}
+
+.survey-guidance__summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+  font-weight: var(--weight-semibold);
+}
+
+.survey-guidance__part {
+  margin-top: var(--s-4);
+}
+
+.survey-guidance__heading {
+  margin-bottom: var(--s-2);
+  font-weight: var(--weight-semibold);
+}
+
+.survey-guidance__subheading {
+  margin-block: var(--s-3) var(--s-2);
+  font-weight: var(--weight-medium);
+}
+
+.survey-guidance__text {
+  max-width: var(--measure);
+  margin-bottom: var(--s-2);
+}
+
+.survey-guidance__list {
+  max-width: var(--measure);
+  margin: 0 0 var(--s-3);
+  padding-inline-start: var(--s-5);
+}
+
+.survey-guidance__list > li {
+  margin-bottom: var(--s-1);
+}
+
+.survey-guidance__compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--col-left-compact)), 1fr));
+  gap: var(--s-4);
+  max-width: var(--dialog-width-wide);
+}
+
+.survey-guidance__compare dt {
+  font-weight: var(--weight-medium);
+}
+
+.survey-guidance__compare dd {
+  margin: var(--s-1) 0 0;
+}
+
+/* Launch kit on the dashboard (build plan session 12) */
+.launch-kit__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.launch-kit__item {
+  padding-block: var(--s-3);
+  border-bottom: var(--line-width) solid var(--field);
+}
+
+.launch-kit__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.launch-kit__name {
+  font-weight: var(--weight-medium);
+}
+
+.launch-kit__preview > summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  margin-top: var(--s-1);
+}
+
+.launch-kit__text {
+  max-width: var(--measure-wide);
+  margin-top: var(--s-2);
+  padding: var(--s-3);
+  background: var(--field);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+}
+
+/* Boundary answers in Check the data (build plan session 12): the table
+   scrolls sideways in the narrow right column. */
+.boundary__table {
+  margin-bottom: var(--s-4);
+  overflow-x: auto;
+}

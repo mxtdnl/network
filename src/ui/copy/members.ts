@@ -86,6 +86,8 @@ export const membersCopy = {
     emailNote:
       'Email addresses are used only to send survey links. They are never analysed, shown in analysis views or exported with the analysis.',
     addAction: 'Add column',
+    fromSurvey:
+      'From survey responses: filled from respondents’ own answers, given with their consent.',
     emptyLabel: 'Enter a label for the column.',
     emailExists: 'The project already has an email column.',
     added: (label: string) => `Column added: ${label}.`,

@@ -484,6 +484,7 @@ function Columns({ project }: { project: Project }) {
               />
               <p id={`${ids.label}-${a.key}-key`} className="field__help">
                 {C.attributes.key(a.key)}
+                {a.from_survey !== undefined && ` ${C.attributes.fromSurvey}`}
               </p>
             </div>
           ))}

@@ -62,6 +62,8 @@ export function draftFor(project: Project, patch: Partial<SurveyDraft> = {}): Su
     settings: { ...DEFAULT_SURVEY_SETTINGS },
     sharedAttributes: [],
     required: [],
+    context: [],
+    boundary: null,
     ...patch,
   };
 }

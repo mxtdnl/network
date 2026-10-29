@@ -14,7 +14,7 @@ Some surveys come with a survey file (its name ends in `.graticule-survey`). Sav
 
 ## Answering
 
-If the survey asks you to select colleagues first, select everyone you have a working relationship with. The screen says what is recorded for people you do not select. Then answer every question about each colleague you are asked about. Where a question has no answer for someone, for example the quality of a relationship you do not have, choose "Does not apply" if it is offered. You can check and change every answer before you finish.
+If the survey asks you to select colleagues first, select everyone you have a working relationship with. The screen says what is recorded for people you do not select. Then answer every question about each colleague you are asked about. Where a question has no answer for someone, for example the quality of a relationship you do not have, choose "Does not apply" if it is offered. Some surveys then ask roughly how many people outside the list you rely on to get your work done, for a few groups such as customers; answer each with a rough number. Some also ask a few optional questions about your own work, such as where you usually work. You choose whether to answer them: they are stored with your name only if you tick the box that says so, each has "Prefer not to say", and they are never shown to your colleagues. You can check and change every answer before you finish.
 
 Your answers are saved on this device as you go, so you can close the page and return to your link later. "Clear my answers from this device" deletes them at any time.
 

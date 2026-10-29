@@ -42,6 +42,8 @@ An optional `email` attribute holds a member's email address for survey administ
 
 Each attribute has a `shareable` flag, off by default. Only attributes marked shareable are included in survey links and packages, and so shown to respondents (section 15.3).
 
+An attribute can be filled from respondents' own answers to a survey's context questions (section 15.1). Such an attribute records the survey it came from, is kept apart from the built-in attributes (a respondent's answer never writes into `location` or `tenure band`), is never placed in a survey link, and is otherwise used like any other category attribute.
+
 ### 4.2 Relationship variables (layers)
 Each layer is a configurable definition:
 
@@ -203,7 +205,8 @@ For path-based metrics, weight is converted to distance as 1/w. The method notes
 - coverage by group (the attribute the insight rules group by) and by level;
 - the people who gave no ratings and those who gave few, counted, and named to the analyst only;
 - each rater's style: mean rescaled rating, spread, share of the scale used, whether they gave everyone the same answer, and the share of colleagues they report as tied;
-- the share of reported ties not reported back, by group and by level.
+- the share of reported ties not reported back, by group and by level;
+- when a survey asked the boundary question (section 15.1), how many respondents rely on each number of people outside the roster, for each group of people asked about, overall and by the insight rules' grouping attribute (counts only).
 
 Values that depend on a member's own ratings carry a flag when the member gave no ratings or few (member panel, metrics table, member metrics export); a member who gave no ratings is drawn hollow on the map, with a legend entry. Observations that name members also state the attribute values most of those members share, and mark those who gave no ratings. A data-quality statement written from these results, naming no one, is shown in the view, at the start of a presentation, in the export settings and on the PDF report's cover. The checks describe the data; they change no metric.
 
@@ -489,10 +492,14 @@ The analyst runs a whole-network survey inside Graticule, with no backend. Each 
   - **Answers are required:** every question must be answered for every colleague the respondent is asked about. Per layer, the analyst chooses whether to offer "Does not apply" as an answer beside the scale; it is offered by default on signed layers, where 0 is a real answer (neutral).
   - **Texts:** introduction, confidentiality statement and return instructions (where to send the response, for example an email address or a file-request link). The survey cannot be issued while any of the three is empty.
   - **Deadline:** optional; shown to respondents.
-  - **Estimated completion time:** calculated from roster size, the number of layers and the entry method, using stated per-item times (recorded in `docs/method-notes.md`), and shown to the analyst and to respondents. Nomination uses an expected number of nominations, which the analyst can edit.
+  - **Estimated completion time:** calculated from roster size, the number of layers, the entry method and any context and boundary questions, using stated per-item times (recorded in `docs/method-notes.md`), and shown to the analyst and to respondents. Nomination uses an expected number of nominations, which the analyst can edit.
 - **Burden warning.** When the estimate exceeds a configurable limit, a warning states the estimate and the limit, and suggests including fewer layers or using nomination.
 - **Identity and versions.** Each survey has a random `id` and a version number, starting at 1. Changing the roster, the included layers, their wording or scales, or the entry method after links have been issued creates a new version; the texts and the deadline can change without one. Earlier links stay valid and answer their own version. The analyst can issue links for the new version (to everyone, or only to members who have no link yet). Responses record the version they answered.
 - **Wave.** Each survey states the wave its ratings are imported into (default 1).
+- **Design guidance.** Setup opens with guidance for a newcomer: relations suggested by purpose from the question bank (section 4.2), with the number of questions asked against a recommended three to five; what rating everyone and selecting first each record and how long each would take for this roster; and the response rate a whole-network design needs (the coverage threshold as a number of people, and the share of pairs reported from both sides at that rate).
+- **Context questions (optional).** The analyst can ask about the respondent's own situation from a fixed set: time in current role, where they usually work, usual working hours, and main site (whose answers the analyst lists, 2 to 8, defaulting to the project's locations, plus "Somewhere else"). Each has "Prefer not to say". The questions are on their own screen, after the ratings, behind an unticked consent box; without consent nothing is asked or sent. With consent, each answer is stored on import in a member attribute created for the question (section 4.1), and a later response from the same member replaces the earlier answers as a whole. Changing the context questions creates a new version.
+- **Boundary question (optional).** "Roughly how many people outside this list do you rely on to get your work done?", asked for each of 1 to 6 groups of people the analyst names (by default other parts of the organisation, customers or clients, suppliers or partners), answered None, 1 or 2, 3 to 5, 6 to 10 or More than 10; every group must be answered. The answers are stored with the response in the import log, not as attributes, and shown in "Check the data" (section 6). Changing the groups creates a new version.
+- **Launch kit.** The survey's page offers drafts built from its settings, each as a text file: a sponsor's announcement, the invitation (a mail-merge template for the links export), two reminders, the one-page respondent help, a confidentiality statement, and a checklist for a data protection impact assessment. The drafts name no member.
 
 ### 15.2 Encryption and integrity
 
@@ -516,8 +523,8 @@ The analyst runs a whole-network survey inside Graticule, with no backend. Each 
 ### 15.3 Survey links
 
 - **Form.** `https://<username>.github.io/network/#/respond/<payload>`. The payload is in the URL fragment, which browsers do not send to the web server. It must not be treated as secret: email and chat security services can rewrite, scan and log whole links (see the research recorded in `CLAUDE.md`).
-- **Payload.** The survey id and version; the respondent's roster position and token; the roster (display names and any attributes marked shareable, none by default); the layer definitions; the entry method and nomination wording; the introduction, confidentiality statement, return instructions and deadline; the estimated completion time; and the analyst's public key. It never contains email addresses, other attributes, other respondents' tokens or any rating.
-- **Encoding.** The payload is serialised as compact JSON, compressed with `CompressionStream('deflate')` (the zlib format, whose checksum detects a truncated or altered link) and encoded as base64url without padding. A payload format version is its first field.
+- **Payload.** The survey id and version; the respondent's roster position and token; the roster (display names and any attributes marked shareable, none by default); the layer definitions; the entry method and nomination wording; the introduction, confidentiality statement, return instructions and deadline; the estimated completion time; the context questions and the boundary question's groups, when asked; and the analyst's public key. It never contains email addresses, other attributes, other respondents' tokens or any rating.
+- **Encoding.** The payload is serialised as compact JSON, compressed with `CompressionStream('deflate')` (the zlib format, whose checksum detects a truncated or altered link) and encoded as base64url without padding. A payload format version is its first field. Any change to what links, packages or responses carry raises their format version, and the respondent page and the dashboard still read every earlier version.
 - **Link-length budget.** A link is issued only if it is at most **2,000 characters**. Longer surveys use a survey package. The analyst can also choose "Always use a survey package" for every survey size; this is recommended where the organisation's email passes through a link-rewriting security service.
 - **Survey package.**
   - The analyst distributes one shared survey file (`.graticule-survey`) containing the same payload minus the personal fields, and gives each person a short personal link: `#/respond/p/<survey id>.<roster position>.<token>.<package fingerprint>` (about 110 characters).
@@ -534,8 +541,10 @@ The analyst runs a whole-network survey inside Graticule, with no backend. Each 
   3. **Name confirmation:** "Are you [name]?" If not, the page asks them not to continue and to tell the sender, and does not show the survey.
   4. **Nomination** (if used): a searchable roster, with the meaning of not selecting someone stated above the list, and the required colleagues listed separately as already included.
   5. **Rating:** one colleague at a time on phones; a compact table on desktop. The question wording and scale labels are always visible while rating. Every question needs an answer; "Does not apply", where offered, sits apart from the scale. Moving on with a question unanswered is refused with a message naming what is missing.
-  6. **Review:** every answer, grouped by colleague, each editable. The response cannot be finished while any question is unanswered.
-  7. **Submit.**
+  6. **People outside this list** (if asked): the boundary question, one answer per group, every group required.
+  7. **About your work** (if asked): the optional context questions behind a consent box, as section 15.1.
+  8. **Review:** every answer, grouped by colleague, then the answers about people outside the list and about the respondent's work, each editable. The response cannot be finished while any question is unanswered.
+  9. **Submit.**
 - **Honest wording.** Responses are confidential, not anonymous: the analyst sees who gave which ratings, because the method requires it. The respondent screens say so. The word "anonymous" never appears in respondent mode.
 - **Progress.** Answers are saved on the device after every change, keyed by survey id and token, so the respondent can close the page and resume. "Clear my answers from this device" is always available. Saved answers are deleted automatically after a successful submission. The welcome screen says that answers are saved on this device until submitted.
 - **Return.** Submitting encrypts the response (15.2) and offers two ways to return it:
@@ -553,6 +562,7 @@ The analyst runs a whole-network survey inside Graticule, with no backend. Each 
 - **Status per survey:** links issued; responses imported; response rate against the coverage threshold (section 6); non-responders; duplicates; rejected files with the reason for each.
 - **Import:** drag and drop of many files at once, a file chooser, and a paste box for text blocks (several blocks can be pasted together).
 - **Passphrase:** required to decrypt. It is held in memory for the session only and never persisted; closing or reloading the page forgets it.
+- **Context and boundary answers:** answers to context questions given with consent are written to the members' attributes; boundary answers are kept in the import log. The import plan says how many responses include answers about the respondent's work.
 - **Ties:** imported responses become ties with `source` = `self_report`, the survey's wave, and the survey id and version. They pass through the existing validation report before they are applied. A response never overwrites a tie from another source; the conflict is reported. A later duplicate from the same token replaces that token's earlier self-report ties as a whole.
 - **Older versions:** responses to an earlier version are mapped to the current roster and layers by member id and layer key. Ratings of members or layers that are no longer in the survey, and colleagues or layers added since, are reported; nothing is guessed.
 - **Close:** closing a survey stops further imports until the analyst reopens it.

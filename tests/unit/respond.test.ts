@@ -3,6 +3,13 @@
 import { describe, expect, it } from 'vitest';
 import { respondCopy } from '../../src/respond/copy';
 import {
+  BOUNDARY_BANDS,
+  BOUNDARY_QUESTION,
+  CONTEXT_ITEMS,
+  DEFAULT_BOUNDARY_FUNCTIONS,
+  ELSEWHERE,
+} from '../../src/survey/context';
+import {
   clearProgress,
   emptyProgress,
   loadProgress,
@@ -40,6 +47,35 @@ describe('respondent copy', () => {
       expect(s).not.toMatch(/!/);
       expect(s).not.toMatch(/\b[A-Z]{4,}\b/);
     }
+  });
+});
+
+describe('questions about the respondent (build plan session 12)', () => {
+  // Respondents read this wording as well as the copy's.
+  const all = [
+    ...strings(CONTEXT_ITEMS),
+    ...strings(BOUNDARY_BANDS),
+    BOUNDARY_QUESTION,
+    ELSEWHERE.label,
+    ...DEFAULT_BOUNDARY_FUNCTIONS,
+  ];
+
+  it('never uses the word anonymous, and uses sentence case', () => {
+    expect(all.filter((s) => /anonym/i.test(s))).toStrictEqual([]);
+    for (const s of all) expect(s).not.toMatch(/\b[A-Z]{4,}\b/);
+  });
+
+  it('asks for consent in the approved words and says the answers are never shown to colleagues', () => {
+    expect(respondCopy.about.body).toMatch(/^These questions are optional\./);
+    expect(respondCopy.about.body).toMatch(/stored with your name/);
+    expect(respondCopy.about.body).toMatch(/never shown to your colleagues/);
+    expect(respondCopy.about.agree).toBe(
+      'I agree that my answers to these questions are stored with my name.',
+    );
+    expect(respondCopy.about.skipped).toBe(
+      'These questions will be skipped: tick the box above if you want to answer them.',
+    );
+    expect(respondCopy.review.aboutSkipped).toBe('About your work: not answered');
   });
 });
 

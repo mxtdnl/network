@@ -144,7 +144,13 @@ The design is a whole-network (roster) survey: every person is asked about their
 
 Open the Survey tab and choose Set up a survey.
 
-![The survey setup form: title, questions with short names and wording, entry method, texts, deadline, wave, time estimate and link options](user-guide/survey-setup.jpg)
+![The survey setup form: design guidance, title, questions with short names and wording, entry method, texts, deadline, wave, time estimate and link options](user-guide/survey-setup.jpg)
+
+**Designing the survey.** The form opens with guidance you can fold away:
+
+- **Start from your question.** Choose what you want to find out; the question bank's items for that purpose are listed, with how sensitive each is, and Add questions for this purpose opens the bank on them. The note below says how many questions the survey asks about each colleague: three to five keep it short enough to answer with care. Use answer labels that mean the same to everyone ("Weekly", not "Often").
+- **Rate everyone, or select first?** What each method records and how long each would take for this roster and these questions.
+- **The response rate you need.** The coverage threshold as a number of people (at 80 %, 32 of 40), and why: each person who does not respond leaves out every rating they would have given, and at 80 % only about 64 % of pairs are reported from both sides. A sponsor's announcement, time set aside in working hours, a deadline about two weeks away and two reminders all help; the launch kit drafts them.
 
 **Questions.** Tick the layers to ask about. For each, set:
 
@@ -168,7 +174,14 @@ Open the Survey tab and choose Set up a survey.
 
 **What respondents read.** The introduction (the purpose and how the results will be used), the confidentiality statement (who will see the answers and the results) and the return instructions (where to send the response, for example an email address) are all required. Responses are confidential, not anonymous: you will see who gave which ratings. Say so, and never describe the survey as anonymous.
 
-**Estimated time.** Graticule estimates the time each respondent needs (a minute to start, 5 seconds a rating, 2 seconds to consider each colleague when selecting) and warns when it passes the limit, 15 minutes by default. Long surveys are abandoned or answered carelessly: ask about fewer layers, or use selection. The rules are in the [method notes](method-notes.md#completion-time-estimate).
+**About each respondent (optional).** Two kinds of question about the respondent rather than their colleagues:
+
+- **Questions about their own work:** how long they have been in their current role, where they usually work, their usual working hours, and which site they mainly work at (list your sites, 2 to 8; "Somewhere else" is added). Respondents answer them on a screen of their own, after the ratings, only if they tick "I agree that my answers to these questions are stored with my name."; each has "Prefer not to say". On import, the answers given with consent are stored in member attributes the survey creates (Time in role, Working pattern, Working hours, Main site), which the Members tab marks "From survey responses". They never write over an attribute you already have, such as Location, and you can use them like any other attribute: as filters, node fill or groups.
+- **People outside the list:** "Roughly how many people outside this list do you rely on to get your work done?", for each group you name (by default other parts of the organisation, customers or clients, suppliers or partners). The answers appear in Check the data under People outside the roster, counted by team; they are not attributes.
+
+![About each respondent in survey setup: the four questions, the sites and the groups outside the list](user-guide/survey-about.jpg)
+
+**Estimated time.** Graticule estimates the time each respondent needs (a minute to start, 5 seconds a rating, 2 seconds to consider each colleague when selecting, 10 seconds a question about the respondent and 5 seconds a group outside the list) and warns when it passes the limit, 15 minutes by default. Long surveys are abandoned or answered carelessly: ask about fewer layers, or use selection. The rules are in the [method notes](method-notes.md#completion-time-estimate).
 
 **Links.** A link carries the whole survey and works on its own up to 2,000 characters. Longer surveys use a shared survey file with a short personal link. Choose "Always use a survey file with short links" if your organisation's email rewrites links for security scanning.
 
@@ -188,9 +201,13 @@ The survey dashboard shows links issued, responses imported, the response rate a
 
 Under Links, copy each person's link, or use Export links for mail merge to save a CSV of names, email addresses and links. Send each link only to the person it names: anyone holding a link can answer as that person. If the survey uses a survey file, send everyone the same file with their own short link. The mail-merge and non-responder files contain personal data by design; delete them when you no longer need them.
 
+**Launch kit.** Below the links, the dashboard drafts every message from the survey's settings, each as a text file to adapt: the sponsor's announcement (a week before the links), the invitation (a mail-merge template: [Name] and [Link] are the links export's columns), a first and a final reminder (for the non-responders export, each saying how many responses the coverage threshold needs), the respondent help, a confidentiality statement and a checklist for a data protection impact assessment. Replace the parts in square brackets. The drafts name no one.
+
+![The launch kit: seven drafts, each with a download button and its text](user-guide/survey-launch-kit.jpg)
+
 ### What respondents see
 
-Respondents see a welcome screen with your introduction, the estimated time, the deadline and your confidentiality statement, then a consent step, then a check that the link is theirs. They select colleagues (if you chose selection), answer every question, check their answers, and encrypt them. Their progress is saved on their own device until they send the response.
+Respondents see a welcome screen with your introduction, the estimated time, the deadline and your confidentiality statement, then a consent step, then a check that the link is theirs. They select colleagues (if you chose selection), answer every question, answer the questions about people outside the list and about their own work if the survey asks them, check their answers, and encrypt them. Their progress is saved on their own device until they send the response.
 
 ![The respondent's welcome screen on a phone](user-guide/respond-welcome.jpg)
 
@@ -198,13 +215,15 @@ Respondents see a welcome screen with your introduction, the estimated time, the
 
 ![Rating one colleague on a phone: each question with its scale, and "Does not apply" apart from the scale](user-guide/respond-rate.jpg)
 
+![About your work on a phone: the consent box, then the optional questions, each with "Prefer not to say"](user-guide/respond-about.jpg)
+
 ![The final screen: copy or download the encrypted answers, the return instructions and a receipt code](user-guide/respond-done.jpg)
 
 The response is a small text file (named like `graticule-response-7KQ2M4XD.txt`) or a block of text to paste into an email. Each has a receipt code the respondent can quote. [Help for respondents](respondent-help.md) is a one-page explanation you can send with the links.
 
 ### Importing responses
 
-On the dashboard, Unlock with the passphrase (it is kept in memory only until you reload or close the page). Drop the response files onto the import area, choose them, or paste response text from emails; several can go at once. Read responses shows a plan before anything changes: responses to import, duplicates, files already imported, rejected files with reasons, and any mapping from an earlier version.
+On the dashboard, Unlock with the passphrase (it is kept in memory only until you reload or close the page). Drop the response files onto the import area, choose them, or paste response text from emails; several can go at once. Read responses shows a plan before anything changes: responses to import, duplicates, files already imported, rejected files with reasons, how many responses include answers about the respondent's work, and any mapping from an earlier version.
 
 ![The import plan: one response to import and the validation report of its ratings](user-guide/survey-import-plan.jpg)
 

@@ -13,6 +13,8 @@ import { tableFromCells } from '../data/import/table';
 import {
   isCategorical,
   tieKey,
+  type AttributeKey,
+  type BoundaryBand,
   type MemberId,
   type Project,
   type RejectReason,
@@ -21,6 +23,7 @@ import {
   type SurveyVersion,
   type Tie,
 } from '../data/schema';
+import { BOUNDARY_KEYS, contextValue, withContextAttributes } from './context';
 import { DecryptError } from './crypto';
 import { currentVersion } from './model';
 import { decryptResponse, receiptCode, type ResponseBody } from './response';
@@ -59,6 +62,14 @@ export interface MappingNote {
   notAsked: MemberId[];
 }
 
+/** A context answer to write to a member's attribute (session 12). */
+export interface ContextUpdate {
+  memberId: MemberId;
+  attribute: AttributeKey;
+  /** The answer's label, or null: "Prefer not to say", not answered, or consent withdrawn. */
+  value: string | null;
+}
+
 export interface ImportPlan {
   surveyId: string;
   rejected: Rejected[];
@@ -71,6 +82,10 @@ export interface ImportPlan {
   mapping: MappingNote[];
   ties: Tie[];
   report: FileReport;
+  /** Answers to context questions, written only with the respondent's consent. */
+  context: ContextUpdate[];
+  /** Responses that answered context questions with consent. */
+  contextResponses: number;
 }
 
 export const RESPONSES_REPORT_NAME = 'Survey responses';
@@ -225,8 +240,34 @@ export async function planImport(
     return { ...t, source: 'self_report' as const, survey: { id: survey.id, version: o.version } };
   });
 
+  // Context answers (session 12): written only with consent. A response
+  // without consent that replaces one with consent clears what that one wrote.
+  const context: ContextUpdate[] = [];
+  let contextResponses = 0;
+  const consentedBefore = new Set(
+    survey.log.flatMap((e) =>
+      e.kind === 'accepted' && e.replaced_by === null && e.context_consent ? [e.member_id] : [],
+    ),
+  );
+  for (const a of accepted) {
+    const version = versions.get(a.version) as SurveyVersion;
+    const questions = version.context ?? [];
+    if (questions.length === 0) continue;
+    const consent = a.body.context?.consent === true;
+    if (consent) contextResponses++;
+    if (!consent && !(replacedMembers.has(a.memberId) && consentedBefore.has(a.memberId))) continue;
+    for (const q of questions)
+      context.push({
+        memberId: a.memberId,
+        attribute: q.attribute,
+        value: consent ? contextValue(q, a.body.context?.answers[q.id] ?? null) : null,
+      });
+  }
+
   return {
     surveyId: survey.id,
+    context,
+    contextResponses,
     rejected,
     alreadyImported,
     accepted,
@@ -317,16 +358,22 @@ export function applyImport(project: Project, plan: ImportPlan, now: string): Pr
         ? { ...e, replaced_by: replacedBy.get(e.receipt) ?? null }
         : e,
     ),
-    ...plan.accepted.map((a): SurveyLogEntry => ({
-      kind: 'accepted',
-      receipt: a.receipt,
-      member_id: a.memberId,
-      version: a.version,
-      submitted_at: a.submittedAt,
-      imported_at: now,
-      ratings: counts.get(a.receipt) ?? 0,
-      replaced_by: null,
-    })),
+    ...plan.accepted.map((a): SurveyLogEntry => {
+      const version = survey.versions.find((v) => v.version === a.version);
+      const boundary = boundaryOf(version, a.body);
+      return {
+        kind: 'accepted',
+        receipt: a.receipt,
+        member_id: a.memberId,
+        version: a.version,
+        submitted_at: a.submittedAt,
+        imported_at: now,
+        ratings: counts.get(a.receipt) ?? 0,
+        replaced_by: null,
+        ...(boundary ? { boundary } : {}),
+        ...(version?.context?.length ? { context_consent: a.body.context?.consent === true } : {}),
+      };
+    }),
     ...plan.duplicates.map((d): SurveyLogEntry => ({
       kind: 'duplicate',
       member_id: d.memberId,
@@ -350,9 +397,29 @@ export function applyImport(project: Project, plan: ImportPlan, now: string): Pr
         replacedMembers.has(t.rater_id)
       ),
   );
+  const withAttributes = withContextAttributes(project, survey);
+  const updates = new Map<MemberId, Record<string, string | null>>();
+  for (const u of plan.context)
+    updates.set(u.memberId, { ...(updates.get(u.memberId) ?? {}), [u.attribute]: u.value });
   return {
-    ...project,
+    ...withAttributes,
+    members: withAttributes.members.map((m) => {
+      const u = updates.get(m.id);
+      return u ? { ...m, attributes: { ...m.attributes, ...u } } : m;
+    }),
     ties: [...ties, ...plan.ties],
     surveys: project.surveys.map((s) => (s.id === survey.id ? { ...s, log } : s)),
   };
+}
+
+/** A response's boundary answers, when its version asked and every band is known. */
+function boundaryOf(
+  version: SurveyVersion | undefined,
+  body: ResponseBody,
+): { functions: string[]; bands: BoundaryBand[] } | null {
+  const functions = version?.boundary;
+  const bands = body.boundary;
+  if (!functions || !bands || bands.length !== functions.length) return null;
+  if (!bands.every((b) => BOUNDARY_KEYS.has(b))) return null;
+  return { functions: [...functions], bands: bands as BoundaryBand[] };
 }

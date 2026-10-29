@@ -94,6 +94,7 @@ export const respondCopy = {
     previousQuestion: 'Previous question',
     nextQuestion: 'Next question',
     review: 'Check your answers',
+    continue: 'Continue',
     back: 'Back',
     colleague: 'Colleague',
     option: (value: string, label: string | undefined) => (label ? `${value}, ${label}` : value),
@@ -111,6 +112,25 @@ export const respondCopy = {
       'You did not select anyone, so there is nothing to rate. Go back to select colleagues, or check your answers.',
   },
 
+  outside: {
+    title: 'People outside this list',
+    body: 'Think of the people you rely on to get your work done who are not on the list of colleagues in this survey.',
+    missing: (n: number) =>
+      `${plural(n, 'group has', 'groups have')} no answer yet. Answer for each to continue.`,
+    continue: 'Continue',
+    back: 'Back',
+  },
+
+  about: {
+    title: 'About your work',
+    body: 'These questions are optional. If you answer them, your answers are stored with your name, like your other answers, and may be used to compare groups, for example people who work mostly on site and people who work mostly remotely. They are never shown to your colleagues.',
+    agree: 'I agree that my answers to these questions are stored with my name.',
+    skipped: 'These questions will be skipped: tick the box above if you want to answer them.',
+    prefer: 'Prefer not to say',
+    continue: 'Continue',
+    back: 'Back',
+  },
+
   review: {
     title: 'Check your answers',
     body: 'You can change any answer before you finish.',
@@ -121,6 +141,11 @@ export const respondCopy = {
     change: (name: string) => `Change answers about ${name}`,
     notSelected: (n: number) => `${plural(n, 'person', 'people')} not selected.`,
     changeSelection: 'Change who you selected',
+    outsideHeading: 'People outside this list',
+    changeOutside: 'Change your answers about people outside this list',
+    aboutHeading: 'About your work',
+    aboutSkipped: 'About your work: not answered',
+    changeAbout: 'Change your answers about your work',
     encrypt: 'Encrypt my answers',
     encrypting: 'Encrypting…',
     failed:

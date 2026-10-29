@@ -8,13 +8,24 @@
 //   <base>#/respond/p/<survey id>.<position>.<token>.<fingerprint>
 // The fingerprint lets the page refuse a substituted package (CLAUDE.md D89).
 // The payload is a JSON array rather than an object to keep links short; its
-// first element is the format version.
+// first element is the format version. Format 2 (build plan session 12) adds
+// two elements at the end: the context questions and the boundary question's
+// functions. Format 1 links and packages are still read (as having neither).
 
 import { fromBase64Url, fromUtf8, sha256, toBase64Url, utf8 } from './bytes';
 import { deflate, inflate } from './compress';
-import type { ScaleType, SurveyEntry, SurveyLayer, SurveyTexts } from '../data/schema';
+import type {
+  ContextItemId,
+  ScaleType,
+  SurveyEntry,
+  SurveyLayer,
+  SurveyTexts,
+} from '../data/schema';
+import { CONTEXT_ITEMS } from './context';
 
-export const PAYLOAD_FORMAT = 1;
+export const PAYLOAD_FORMAT = 2;
+/** Formats this page can read: 1 (before session 12) and 2. */
+export const PAYLOAD_FORMATS: readonly number[] = [1, 2];
 /** Longest link issued; longer surveys use a package (CLAUDE.md D84). */
 export const LINK_BUDGET = 2000;
 export const PACKAGE_FORMAT = 'graticule-survey';
@@ -44,6 +55,10 @@ export interface SurveyPayload {
   estimateMinutes: number;
   publicKey: string;
   keyFingerprint: string;
+  /** Optional questions about the respondent's own situation, in order. */
+  context: { id: ContextItemId; options?: string[] }[];
+  /** Functions outside the roster the boundary question asks about; null: not asked. */
+  boundary: string[] | null;
 }
 
 export interface Personal {
@@ -94,8 +109,12 @@ function toJson(p: SurveyPayload, personal: Personal | null): Json {
     p.keyFingerprint,
     personal ? personal.position : null,
     personal ? personal.token : null,
+    p.context.map((q) => [q.id, q.options ?? null]),
+    p.boundary,
   ];
 }
+
+const CONTEXT_IDS = new Set<string>(CONTEXT_ITEMS.map((i) => i.id));
 
 const SCALES = new Set(['strength', 'frequency', 'signed', 'categorical']);
 const isStr = (v: unknown): v is string => typeof v === 'string';
@@ -133,7 +152,9 @@ function layerFromJson(v: unknown): SurveyLayer {
 }
 
 function fromJson(v: unknown): { payload: SurveyPayload; personal: Personal | null } {
-  if (!Array.isArray(v) || v.length !== 20 || v[0] !== PAYLOAD_FORMAT) fail();
+  if (!Array.isArray(v)) fail();
+  const format: unknown = v[0];
+  if (!(format === 1 && v.length === 20) && !(format === 2 && v.length === 22)) fail();
   const [
     ,
     id,
@@ -155,7 +176,22 @@ function fromJson(v: unknown): { payload: SurveyPayload; personal: Personal | nu
     fp,
     position,
     token,
+    contextJson = [],
+    boundaryJson = null,
   ] = v as unknown[];
+  if (!Array.isArray(contextJson)) fail();
+  const context = contextJson.map((q: unknown) => {
+    if (!Array.isArray(q) || q.length !== 2) fail();
+    const [qid, options] = q as unknown[];
+    if (!isStr(qid) || !CONTEXT_IDS.has(qid)) fail();
+    if (options !== null && !(Array.isArray(options) && options.every(isStr))) fail();
+    return { id: qid as ContextItemId, ...(options ? { options: options } : {}) };
+  });
+  if (
+    boundaryJson !== null &&
+    !(Array.isArray(boundaryJson) && boundaryJson.length > 0 && boundaryJson.every(isStr))
+  )
+    fail();
   if (!isStr(id) || !isNum(version) || !isStr(title)) fail();
   if (!Array.isArray(names) || !names.every(isStr) || names.length < 2) fail();
   if (!Array.isArray(attrLabels) || !attrLabels.every(isStr)) fail();
@@ -206,6 +242,8 @@ function fromJson(v: unknown): { payload: SurveyPayload; personal: Personal | nu
       estimateMinutes: estimate,
       publicKey: pub,
       keyFingerprint: fp,
+      context,
+      boundary: boundaryJson,
     },
     personal,
   };
@@ -304,7 +342,7 @@ export async function readPackage(
     throw new PayloadError('This is not a survey file.');
   }
   const f = file as { format?: unknown; v?: unknown; survey?: unknown };
-  if (f.format !== PACKAGE_FORMAT || f.v !== PAYLOAD_FORMAT || !isStr(f.survey))
+  if (f.format !== PACKAGE_FORMAT || !PAYLOAD_FORMATS.includes(f.v as number) || !isStr(f.survey))
     throw new PayloadError('This is not a survey file.');
   const fingerprint = toBase64Url((await sha256(utf8(f.survey))).slice(0, 16));
   if (fingerprint !== route.fingerprint)

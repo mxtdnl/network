@@ -6,7 +6,16 @@
 
 import type { Answer } from '../survey/response';
 
-export type Step = 'welcome' | 'consent' | 'identity' | 'notMe' | 'nominate' | 'rate' | 'review';
+export type Step =
+  | 'welcome'
+  | 'consent'
+  | 'identity'
+  | 'notMe'
+  | 'nominate'
+  | 'rate'
+  | 'outside'
+  | 'about'
+  | 'review';
 
 export interface Progress {
   v: 1;
@@ -22,6 +31,12 @@ export interface Progress {
   question: number;
   /** A survey package's text, so a package link resumes without choosing the file again. */
   packageText?: string;
+  /** The boundary question: a band per function, by function index (session 12). */
+  boundary?: Record<string, string>;
+  /** Questions about the respondent's work: whether they agreed to their
+   *  answers being stored, and the answers by question id. Answers are kept
+   *  only while the box is ticked. */
+  about?: { consent: boolean; answers: Record<string, string> };
 }
 
 export const PREFIX = 'graticule.respond.';
