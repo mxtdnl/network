@@ -504,6 +504,15 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await layersColumn.getByRole('button', { name: 'Add from the question bank' }).click();
   await check('question bank');
   await page.keyboard.press('Escape');
+  // Survey setup with its design guidance and the questions about respondents (session 12).
+  await centreTab(page, 'Survey').click();
+  await page.getByRole('button', { name: 'Set up a survey' }).click();
+  await page
+    .getByLabel('What do you want to find out?')
+    .selectOption({ label: 'Advice and problem-solving' });
+  await page.getByLabel('Ask: “Which site do you mainly work at?”').check();
+  await page.getByLabel('Ask how many people outside the list each respondent relies on').check();
+  await check('survey setup');
   await centreTab(page, 'Map').click();
   for (const tab of ['Insights', 'Views', 'Check the data']) {
     await rightTab(page, tab).click();

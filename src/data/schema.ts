@@ -49,6 +49,9 @@ export interface AttributeDefinition {
   builtin: boolean;
   /** Included in survey links and shown to respondents (spec §4.1); absent means false. */
   shareable?: boolean;
+  /** Set on an attribute a survey's context question fills from respondents'
+   *  own answers (build plan session 12): the survey's id. Absent otherwise. */
+  from_survey?: string;
 }
 
 export type ScaleType = 'strength' | 'frequency' | 'signed' | 'categorical';
@@ -386,7 +389,33 @@ export interface SurveyVersion {
   shared_attributes: AttributeKey[];
   /** Colleagues every respondent is asked about, selected or not (D103). */
   required: MemberId[];
+  /** Optional questions about the respondent's own situation, each stored in
+   *  a member attribute when the respondent consents (session 12). Absent: none. */
+  context?: SurveyContextQuestion[];
+  /** Functions outside the roster the boundary question asks about (session 12).
+   *  Absent: not asked. */
+  boundary?: string[];
 }
+
+export type ContextItemId = 'time_in_role' | 'working_pattern' | 'working_hours' | 'main_site';
+
+export interface SurveyContextQuestion {
+  id: ContextItemId;
+  /** The member attribute the answers are written to. */
+  attribute: AttributeKey;
+  /** The analyst's answers, for questions that take them (main site). */
+  options?: string[];
+}
+
+/** Answer bands of the boundary question, fewest first. */
+export type BoundaryBand = 'none' | '1_2' | '3_5' | '6_10' | 'over_10';
+export const BOUNDARY_BAND_ORDER: readonly BoundaryBand[] = [
+  'none',
+  '1_2',
+  '3_5',
+  '6_10',
+  'over_10',
+];
 
 export interface SurveyTexts {
   introduction: string;
@@ -447,6 +476,11 @@ export type SurveyLogEntry =
       ratings: number;
       /** Receipt of a later submission that replaced this one. */
       replaced_by: string | null;
+      /** The response's answers to the boundary question, one band per function. */
+      boundary?: { functions: string[]; bands: BoundaryBand[] };
+      /** Whether the respondent agreed to their context answers being stored;
+       *  absent when the version asked no context question. */
+      context_consent?: boolean;
     }
   | {
       kind: 'duplicate';

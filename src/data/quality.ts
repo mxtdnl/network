@@ -11,6 +11,7 @@
 
 import { computeCoverage, type CoverageResult, type RaterCoverage } from './coverage';
 import {
+  BOUNDARY_BAND_ORDER,
   DEFAULT_WAVE,
   isCategorical,
   layerRole,
@@ -352,5 +353,86 @@ export function computeQuality(project: Project): QualityResult {
     lowestGroup,
     breakdowns,
     tieLayers: tieLayers.filter(Boolean).length,
+  };
+}
+
+// People outside the roster (build plan session 12, D181): the boundary
+// question's answers, read from the import log of the latest survey that asks
+// it. Counts per group and answer band; no member is named.
+
+export interface BoundaryRow {
+  /** null: the attribute is not recorded for these respondents. */
+  value: string | null;
+  respondents: number;
+  /** [function][band], bands in BOUNDARY_BAND_ORDER. */
+  counts: number[][];
+}
+
+export interface BoundaryResult {
+  surveyId: string;
+  title: string;
+  functions: string[];
+  /** Respondents whose current response is imported. */
+  responded: number;
+  /** Of those, the ones who answered the boundary question. */
+  answered: number;
+  /** Respondents whose version did not ask it. */
+  notAsked: number;
+  overall: number[][];
+  /** By the rules' grouping attribute; null without one. */
+  groups: { attribute: AttributeKey; label: string; rows: BoundaryRow[] } | null;
+}
+
+export function computeBoundary(project: Project): BoundaryResult | null {
+  const surveys = project.surveys.filter((s) => s.versions.some((v) => v.boundary));
+  const survey = surveys.at(-1);
+  if (!survey) return null;
+  const functions = [...survey.versions].reverse().find((v) => v.boundary)?.boundary ?? [];
+  const empty = () => functions.map(() => BOUNDARY_BAND_ORDER.map(() => 0));
+  const current = survey.log.filter(
+    (e): e is Extract<(typeof survey.log)[number], { kind: 'accepted' }> =>
+      e.kind === 'accepted' && e.replaced_by === null,
+  );
+  const group = groupAttribute(project);
+  const members = new Map(project.members.map((m) => [m.id, m]));
+  const overall = empty();
+  const rows = new Map<string | null, BoundaryRow>();
+  let answered = 0;
+  for (const e of current) {
+    if (!e.boundary) continue;
+    answered++;
+    const value = group ? (members.get(e.member_id)?.attributes[group.key] ?? null) : null;
+    let row = rows.get(value);
+    if (!row) {
+      row = { value, respondents: 0, counts: empty() };
+      rows.set(value, row);
+    }
+    row.respondents++;
+    e.boundary.functions.forEach((f, i) => {
+      const fi = functions.indexOf(f);
+      const bi = BOUNDARY_BAND_ORDER.indexOf(e.boundary?.bands[i] ?? 'none');
+      if (fi < 0 || bi < 0) return;
+      (overall[fi] as number[])[bi] = ((overall[fi] as number[])[bi] ?? 0) + 1;
+      (row.counts[fi] as number[])[bi] = ((row.counts[fi] as number[])[bi] ?? 0) + 1;
+    });
+  }
+  const order = group?.categories ?? [];
+  const sorted = [...rows.values()].sort((a, b) => {
+    if (a.value === null) return 1;
+    if (b.value === null) return -1;
+    const ia = order.indexOf(a.value);
+    const ib = order.indexOf(b.value);
+    return (ia < 0 ? Infinity : ia) - (ib < 0 ? Infinity : ib) || a.value.localeCompare(b.value);
+  });
+  const asked = new Set(survey.versions.filter((v) => v.boundary).map((v) => v.version));
+  return {
+    surveyId: survey.id,
+    title: survey.title,
+    functions,
+    responded: current.length,
+    answered,
+    notAsked: current.filter((e) => !asked.has(e.version)).length,
+    overall,
+    groups: group ? { attribute: group.key, label: group.label, rows: sorted } : null,
   };
 }

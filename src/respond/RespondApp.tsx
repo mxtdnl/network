@@ -19,6 +19,7 @@ import {
   type RespondRoute,
   type SurveyPayload,
 } from '../survey/payload';
+import { BOUNDARY_BANDS, BOUNDARY_QUESTION, contextItem, contextOptions } from '../survey/context';
 import { encryptResponse, type Answer, type ResponseBody } from '../survey/response';
 import { fileTransport, type SubmitResult } from '../survey/transport';
 import { respondCopy as C } from './copy';
@@ -280,8 +281,13 @@ function Survey({ loaded }: { loaded: Loaded }) {
     'identity',
     ...(nominate ? (['nominate'] as const) : []),
     'rate',
+    ...(payload.boundary ? (['outside'] as const) : []),
+    ...(payload.context.length > 0 ? (['about'] as const) : []),
     'review',
   ];
+  // The screens between rating and the review, when the survey asks them (session 12).
+  const afterRate = steps[steps.indexOf('rate') + 1] ?? 'review';
+  const beforeReview = steps[steps.indexOf('review') - 1] ?? 'rate';
   const totalSteps = steps.length + 1; // the final "send back" screen
   const stepIndex = result
     ? totalSteps
@@ -470,6 +476,37 @@ function Survey({ loaded }: { loaded: Loaded }) {
         setAnswer={setAnswer}
         go={go}
         back={nominate ? 'nominate' : 'identity'}
+        next={afterRate}
+      />
+    );
+  } else if (progress.step === 'outside' && payload.boundary) {
+    body = (
+      <Outside
+        heading={heading}
+        functions={payload.boundary}
+        progress={progress}
+        update={update}
+        back={() => {
+          go('rate');
+        }}
+        next={() => {
+          go(steps[steps.indexOf('outside') + 1] ?? 'review');
+        }}
+      />
+    );
+  } else if (progress.step === 'about' && payload.context.length > 0) {
+    body = (
+      <About
+        heading={heading}
+        payload={payload}
+        progress={progress}
+        update={update}
+        back={() => {
+          go(steps[steps.indexOf('about') - 1] ?? 'rate');
+        }}
+        next={() => {
+          go('review');
+        }}
       />
     );
   } else {
@@ -484,6 +521,7 @@ function Survey({ loaded }: { loaded: Loaded }) {
         go={go}
         onEncrypted={setResult}
         personal={personal}
+        back={beforeReview}
       />
     );
   }
@@ -749,6 +787,7 @@ function Rate({
   setAnswer,
   go,
   back,
+  next,
 }: {
   heading: Heading;
   payload: SurveyPayload;
@@ -758,7 +797,10 @@ function Rate({
   setAnswer: (layer: string, position: number, value: Answer) => void;
   go: (s: Step) => void;
   back: Step;
+  /** The screen after the last rating: the review, or a question about the respondent. */
+  next: Step;
 }) {
+  const nextLabel = next === 'review' ? C.rate.review : C.rate.continue;
   const wide = useWide();
   // Set when the respondent tries to move on with questions unanswered; the
   // key names the screen, so the message does not follow them to the next one.
@@ -786,10 +828,10 @@ function Rate({
             type="button"
             className="button button--primary"
             onClick={() => {
-              go('review');
+              go(next);
             }}
           >
-            {C.rate.review}
+            {nextLabel}
           </button>
         </div>
       </>
@@ -906,11 +948,11 @@ function Rate({
                 return;
               }
               setBlocked(null);
-              if (last) go('review');
+              if (last) go(next);
               else update((p) => ({ ...p, question: qi + 1 }));
             }}
           >
-            {last ? C.rate.review : C.rate.nextQuestion}
+            {last ? nextLabel : C.rate.nextQuestion}
           </button>
         </div>
       </>
@@ -981,11 +1023,11 @@ function Rate({
               return;
             }
             setBlocked(null);
-            if (last) go('review');
+            if (last) go(next);
             else update((p) => ({ ...p, person: pi + 1 }));
           }}
         >
-          {last ? C.rate.review : C.rate.nextPerson}
+          {last ? nextLabel : C.rate.nextPerson}
         </button>
       </div>
     </>
@@ -1002,6 +1044,7 @@ function Review({
   go,
   onEncrypted,
   personal,
+  back,
 }: {
   heading: Heading;
   payload: SurveyPayload;
@@ -1012,14 +1055,18 @@ function Review({
   go: (s: Step) => void;
   onEncrypted: (r: SubmitResult) => void;
   personal: Personal;
+  back: Step;
 }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const value = (layer: string, i: number): Answer => progress.answers[layer]?.[String(i)] ?? null;
-  const unanswered = toRate.reduce(
-    (n, i) => n + payload.layers.filter((l) => value(l.key, i) === null).length,
-    0,
-  );
+  const boundaryMissing = (payload.boundary ?? []).filter(
+    (_, i) => progress.boundary?.[String(i)] === undefined,
+  ).length;
+  const unanswered =
+    toRate.reduce((n, i) => n + payload.layers.filter((l) => value(l.key, i) === null).length, 0) +
+    boundaryMissing;
+  const consent = progress.about?.consent === true;
   const notSelected = payload.roster.length - 1 - toRate.length;
 
   async function encrypt() {
@@ -1045,6 +1092,24 @@ function Review({
         nominated: nominate ? [...(progress.nominated ?? [])] : null,
         answers,
         not_applicable: notApplicable,
+        ...(payload.context.length > 0
+          ? {
+              context: {
+                consent,
+                answers: consent
+                  ? Object.fromEntries(
+                      payload.context.map((q) => {
+                        const a = progress.about?.answers[q.id];
+                        return [q.id, a === undefined || a === PREFER ? null : a];
+                      }),
+                    )
+                  : {},
+              },
+            }
+          : {}),
+        ...(payload.boundary
+          ? { boundary: payload.boundary.map((_, i) => progress.boundary?.[String(i)] ?? '') }
+          : {}),
       };
       const envelope = await encryptResponse(body, payload.publicKey, payload.keyFingerprint);
       onEncrypted(await fileTransport.submit(envelope));
@@ -1094,6 +1159,74 @@ function Review({
           );
         })}
       </ul>
+      {payload.boundary && (
+        <section className="review__person" aria-labelledby="review-outside">
+          <h2 id="review-outside" className="review__name">
+            {C.review.outsideHeading}
+          </h2>
+          <p className="respond__text">{BOUNDARY_QUESTION}</p>
+          <dl className="review__answers">
+            {payload.boundary.map((f, i) => {
+              const band = progress.boundary?.[String(i)];
+              return (
+                <div key={f} className="review__row">
+                  <dt>{f}</dt>
+                  <dd className={band === undefined ? 'review__missing' : undefined}>
+                    {BOUNDARY_BANDS.find((b) => b.key === band)?.label ?? C.review.notAnswered}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+          <button
+            type="button"
+            className="button button--text review__change"
+            onClick={() => {
+              go('outside');
+            }}
+          >
+            {C.review.changeOutside}
+          </button>
+        </section>
+      )}
+      {payload.context.length > 0 && (
+        <section className="review__person" aria-labelledby="review-about">
+          <h2 id="review-about" className="review__name">
+            {C.review.aboutHeading}
+          </h2>
+          {consent ? (
+            <dl className="review__answers">
+              {payload.context.map((q) => {
+                const a = progress.about?.answers[q.id];
+                return (
+                  <div key={q.id} className="review__row">
+                    <dt>{contextItem(q.id).question}</dt>
+                    <dd>
+                      {a === undefined
+                        ? C.review.notAnswered
+                        : a === PREFER
+                          ? C.about.prefer
+                          : (contextOptions(q).find((o) => o.key === a)?.label ??
+                            C.review.notAnswered)}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          ) : (
+            <p className="respond__text">{C.review.aboutSkipped}</p>
+          )}
+          <button
+            type="button"
+            className="button button--text review__change"
+            onClick={() => {
+              go('about');
+            }}
+          >
+            {C.review.changeAbout}
+          </button>
+        </section>
+      )}
       {nominate && (
         <div className="review__not-selected">
           <p className="respond__text num">{C.review.notSelected(notSelected)}</p>
@@ -1121,7 +1254,7 @@ function Review({
           type="button"
           className="button button--text"
           onClick={() => {
-            go('rate');
+            go(back);
           }}
         >
           {C.review.back}
@@ -1143,6 +1276,208 @@ function Review({
           {C.review.blocked}
         </p>
       )}
+    </>
+  );
+}
+
+/** "Prefer not to say" while the respondent works; sent as null. */
+const PREFER = '\u0000prefer';
+
+/** One question as a list of large radio options, as categorical scales are drawn. */
+function Choice({
+  name,
+  legend,
+  options,
+  value,
+  onChange,
+  disabled = false,
+  missing = false,
+}: {
+  name: string;
+  legend: string;
+  options: { key: string; label: string; apart?: boolean }[];
+  value: string | undefined;
+  onChange: (key: string) => void;
+  disabled?: boolean;
+  missing?: boolean;
+}) {
+  const missingId = useId();
+  const option = (o: { key: string; label: string; apart?: boolean }) => (
+    <label key={o.key} className={o.apart ? 'scale__option scale__option--na' : 'scale__option'}>
+      <input
+        type="radio"
+        className="scale__input"
+        name={name}
+        disabled={disabled}
+        checked={value === o.key}
+        onChange={() => {
+          onChange(o.key);
+        }}
+      />
+      <span className="scale__mark">{o.label}</span>
+    </label>
+  );
+  const apart = options.filter((o) => o.apart);
+  return (
+    <fieldset
+      className={missing ? 'scale scale--missing' : 'scale'}
+      disabled={disabled}
+      aria-describedby={missing ? missingId : undefined}
+      data-missing={missing ? '' : undefined}
+    >
+      <legend className="scale__question">{legend}</legend>
+      {missing && (
+        <p id={missingId} className="scale__missing">
+          {C.rate.notAnswered}
+        </p>
+      )}
+      <div className="scale__options scale__options--list">
+        {options.filter((o) => !o.apart).map(option)}
+      </div>
+      {apart.length > 0 && <div className="scale__na">{apart.map(option)}</div>}
+    </fieldset>
+  );
+}
+
+// "People outside this list": the boundary question, every group answered (session 12).
+function Outside({
+  heading,
+  functions,
+  progress,
+  update,
+  back,
+  next,
+}: {
+  heading: Heading;
+  functions: string[];
+  progress: Progress;
+  update: (fn: (p: Progress) => Progress) => void;
+  back: () => void;
+  next: () => void;
+}) {
+  const [blocked, setBlocked] = useState(false);
+  const missing = functions.filter((_, i) => progress.boundary?.[String(i)] === undefined);
+  const show = blocked && missing.length > 0;
+  return (
+    <>
+      <h1 ref={heading} tabIndex={-1} className="respond__title">
+        {C.outside.title}
+      </h1>
+      <p className="respond__text respond__text--large">{BOUNDARY_QUESTION}</p>
+      <p className="respond__text">{C.outside.body}</p>
+      {functions.map((f, i) => (
+        <Choice
+          key={f}
+          name={`outside-${String(i)}`}
+          legend={f}
+          options={BOUNDARY_BANDS.map((b) => ({ key: b.key, label: b.label }))}
+          value={progress.boundary?.[String(i)]}
+          missing={show && progress.boundary?.[String(i)] === undefined}
+          onChange={(band) => {
+            update((p) => ({ ...p, boundary: { ...(p.boundary ?? {}), [String(i)]: band } }));
+          }}
+        />
+      ))}
+      {show && (
+        <p role="alert" className="respond__error">
+          {C.outside.missing(missing.length)}
+        </p>
+      )}
+      <div className="respond__actions respond__actions--sticky">
+        <button type="button" className="button button--text" onClick={back}>
+          {C.outside.back}
+        </button>
+        <button
+          type="button"
+          className="button button--primary"
+          onClick={() => {
+            if (missing.length > 0) {
+              setBlocked(true);
+              focusFirstMissing();
+              return;
+            }
+            setBlocked(false);
+            next();
+          }}
+        >
+          {C.outside.continue}
+        </button>
+      </div>
+    </>
+  );
+}
+
+// "About your work": optional context questions, answered only with consent
+// (session 12, D180). Unticking the box clears the answers.
+function About({
+  heading,
+  payload,
+  progress,
+  update,
+  back,
+  next,
+}: {
+  heading: Heading;
+  payload: SurveyPayload;
+  progress: Progress;
+  update: (fn: (p: Progress) => Progress) => void;
+  back: () => void;
+  next: () => void;
+}) {
+  const skippedId = useId();
+  const consent = progress.about?.consent === true;
+  return (
+    <>
+      <h1 ref={heading} tabIndex={-1} className="respond__title">
+        {C.about.title}
+      </h1>
+      <p className="respond__text">{C.about.body}</p>
+      <label className="respond__check">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => {
+            const on = e.currentTarget.checked;
+            update((p) => ({ ...p, about: { consent: on, answers: {} } }));
+          }}
+        />
+        <span>{C.about.agree}</span>
+      </label>
+      {!consent && (
+        <p id={skippedId} className="respond__hint">
+          {C.about.skipped}
+        </p>
+      )}
+      {payload.context.map((q) => (
+        <Choice
+          key={q.id}
+          name={`about-${q.id}`}
+          legend={contextItem(q.id).question}
+          disabled={!consent}
+          options={[
+            ...contextOptions(q).map((o) => ({ key: o.key, label: o.label })),
+            { key: PREFER, label: C.about.prefer, apart: true },
+          ]}
+          value={progress.about?.answers[q.id]}
+          onChange={(key) => {
+            update((p) => ({
+              ...p,
+              about: {
+                consent: true,
+                answers: { ...(p.about?.answers ?? {}), [q.id]: key },
+              },
+            }));
+          }}
+        />
+      ))}
+      <div className="respond__actions respond__actions--sticky">
+        <button type="button" className="button button--text" onClick={back}>
+          {C.about.back}
+        </button>
+        <button type="button" className="button button--primary" onClick={next}>
+          {C.about.continue}
+        </button>
+      </div>
     </>
   );
 }

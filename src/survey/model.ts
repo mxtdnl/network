@@ -5,6 +5,7 @@
 import { isCategorical } from '../data/schema';
 import type {
   AttributeDefinition,
+  ContextItemId,
   LayerDefinition,
   MemberId,
   Project,
@@ -17,6 +18,7 @@ import type {
   SurveyVersion,
 } from '../data/schema';
 import { randomBytes, toBase64Url } from './bytes';
+import { assignAttributes, BOUNDARY_FUNCTIONS, contextItem, SITE_OPTIONS } from './context';
 import { LINK_BUDGET, makePackage, packageLink, personalLink, type SurveyPayload } from './payload';
 
 // Completion-time estimate (CLAUDE.md Q31, approved as proposed). Conventions,
@@ -25,7 +27,16 @@ export const ESTIMATE = {
   overheadSeconds: 60,
   secondsPerRating: 5,
   secondsPerNominationScan: 2,
+  /** Optional questions about the respondent's own situation (session 12). */
+  secondsPerContextQuestion: 10,
+  /** Each function the boundary question asks about. */
+  secondsPerBoundaryFunction: 5,
 } as const;
+
+/** Seconds the context and boundary questions add to the estimate. */
+export const extraSeconds = (contextQuestions: number, boundaryFunctions: number) =>
+  contextQuestions * ESTIMATE.secondsPerContextQuestion +
+  boundaryFunctions * ESTIMATE.secondsPerBoundaryFunction;
 
 export const DEFAULT_SURVEY_SETTINGS: SurveySettings = {
   burden_limit_minutes: 15,
@@ -41,6 +52,7 @@ export function estimateSeconds(
   entry: SurveyEntry,
   expectedNominations: number,
   requiredCount = 0,
+  extra = 0,
 ): number {
   const colleagues = Math.max(0, rosterSize - 1);
   const rated =
@@ -48,7 +60,7 @@ export function estimateSeconds(
       ? Math.min(colleagues, Math.max(expectedNominations, requiredCount))
       : colleagues;
   const scan = entry === 'nominate' ? colleagues * ESTIMATE.secondsPerNominationScan : 0;
-  return ESTIMATE.overheadSeconds + scan + rated * layerCount * ESTIMATE.secondsPerRating;
+  return ESTIMATE.overheadSeconds + scan + rated * layerCount * ESTIMATE.secondsPerRating + extra;
 }
 
 export const estimateMinutes = (seconds: number) => Math.max(1, Math.ceil(seconds / 60));
@@ -66,6 +78,15 @@ export interface SurveyDraft {
   sharedAttributes: string[];
   /** Colleagues every respondent is asked about, selected or not (D103). */
   required: MemberId[];
+  /** Context questions to ask; `options` only for the main site (session 12). */
+  context: DraftContextQuestion[];
+  /** Functions the boundary question asks about; null when it is not asked. */
+  boundary: string[] | null;
+}
+
+export interface DraftContextQuestion {
+  id: ContextItemId;
+  options?: string[];
 }
 
 export const DEFAULT_NOMINATION_QUESTION = 'Select everyone you have a working relationship with.';
@@ -103,6 +124,17 @@ export function draftProblems(draft: SurveyDraft, project: Project): string[] {
     problems.push('nominationQuestion');
   if (project.members.length < 2) problems.push('roster');
   if (!Number.isInteger(draft.wave) || draft.wave < 1) problems.push('wave');
+  for (const q of draft.context) {
+    if (contextItem(q.id).options) continue;
+    const n = q.options?.length ?? 0;
+    if (n < SITE_OPTIONS.min || n > SITE_OPTIONS.max) problems.push('siteOptions');
+  }
+  if (
+    draft.boundary !== null &&
+    (draft.boundary.length < BOUNDARY_FUNCTIONS.min ||
+      draft.boundary.length > BOUNDARY_FUNCTIONS.max)
+  )
+    problems.push('boundaryFunctions');
   return problems;
 }
 
@@ -114,7 +146,13 @@ function versionFrom(
   project: Project,
   version: number,
   now: string,
+  earlier: readonly SurveyVersion[] = [],
 ): SurveyVersion {
+  const context = assignAttributes(
+    project,
+    draft.context,
+    earlier.flatMap((v) => v.context ?? []),
+  );
   return {
     version,
     created_at: now,
@@ -128,6 +166,8 @@ function versionFrom(
       draft.entry === 'nominate'
         ? project.members.map((m) => m.id).filter((id) => draft.required.includes(id))
         : [],
+    ...(context.length > 0 ? { context } : {}),
+    ...(draft.boundary !== null ? { boundary: [...draft.boundary] } : {}),
   };
 }
 
@@ -180,6 +220,11 @@ export function draftFromSurvey(s: Survey): SurveyDraft {
     settings: { ...s.settings },
     sharedAttributes: [...v.shared_attributes],
     required: [...v.required],
+    context: (v.context ?? []).map((q) => ({
+      id: q.id,
+      ...(q.options ? { options: [...q.options] } : {}),
+    })),
+    boundary: v.boundary ? [...v.boundary] : null,
   };
 }
 
@@ -187,7 +232,11 @@ export function draftFromSurvey(s: Survey): SurveyDraft {
 export function needsNewVersion(s: Survey, draft: SurveyDraft, project: Project): boolean {
   const v = currentVersion(s);
   const roster = project.members.map((m) => m.id);
+  const context = (v.context ?? []).map((q) => [q.id, q.options ?? null]);
+  const drafted = draft.context.map((q) => [q.id, q.options ?? null]);
   return (
+    JSON.stringify(context) !== JSON.stringify(drafted) ||
+    JSON.stringify(v.boundary ?? null) !== JSON.stringify(draft.boundary) ||
     JSON.stringify(v.roster) !== JSON.stringify(roster) ||
     JSON.stringify(v.layers) !== JSON.stringify(draft.layers) ||
     v.entry !== draft.entry ||
@@ -220,7 +269,7 @@ export function updateSurvey(
     wave: draft.wave,
   };
   if (!needsNewVersion(s, draft, project)) return base;
-  const version = versionFrom(draft, project, currentVersion(s).version + 1, now);
+  const version = versionFrom(draft, project, currentVersion(s).version + 1, now, s.versions);
   const known = new Map(s.respondents.map((r) => [r.member_id, r]));
   const respondents = [...s.respondents];
   for (const id of version.roster) {
@@ -273,8 +322,14 @@ export function payloadFor(s: Survey, version: SurveyVersion, project: Project):
         version.entry,
         expected,
         version.required.length,
+        extraSeconds(version.context?.length ?? 0, version.boundary?.length ?? 0),
       ),
     ),
+    context: (version.context ?? []).map((q) => ({
+      id: q.id,
+      ...(q.options ? { options: q.options } : {}),
+    })),
+    boundary: version.boundary ?? null,
     publicKey: s.key.public_key,
     keyFingerprint: s.key.fingerprint,
   };

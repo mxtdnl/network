@@ -1,6 +1,14 @@
 import { useId, useMemo, useState } from 'react';
 import { computeCoverage } from '../../data/coverage';
-import { computeQuality, type GroupBreakdown, type QualityResult } from '../../data/quality';
+import {
+  computeBoundary,
+  computeQuality,
+  type BoundaryResult,
+  type BoundaryRow,
+  type GroupBreakdown,
+  type QualityResult,
+} from '../../data/quality';
+import { BOUNDARY_BAND_ORDER } from '../../data/schema';
 import { Icon } from '../components/Icon';
 import { coverageCopy, coveragePercent } from '../copy/data';
 import { qualityCopy, qualityStatement } from '../copy/quality';
@@ -149,6 +157,7 @@ export function DataCheckPanel() {
       {rated && <Silent quality={quality} names={names} />}
       {rated && <Styles quality={quality} names={names} />}
       {rated && <OneWay quality={quality} />}
+      <Boundary />
       {rated && <RemediesSection />}
 
       <table className="coverage__table">
@@ -386,5 +395,93 @@ function OneWay({ quality }: { quality: QualityResult }) {
         </>
       )}
     </section>
+  );
+}
+
+// People outside the roster (build plan session 12): counts of the boundary
+// question's answers, overall and by the rules' grouping attribute. Counts only.
+function Boundary() {
+  const project = useAppStore((s) => s.data.project);
+  const result = useMemo(() => (project ? computeBoundary(project) : null), [project]);
+  const id = useId();
+  if (!result) return null;
+  return (
+    <section className="quality__section" aria-labelledby={id}>
+      <h3 id={id} className="coverage__subheading">
+        {Q.boundaryHeading}
+      </h3>
+      {result.answered === 0 ? (
+        <p className="coverage__explain">{Q.boundaryNone}</p>
+      ) : (
+        <>
+          <p className="coverage__explain num">
+            {Q.boundaryIntro(result.title, result.answered, result.responded)}
+          </p>
+          {result.functions.map((f, fi) => (
+            <BoundaryTable key={f} result={result} name={f} index={fi} />
+          ))}
+        </>
+      )}
+      {result.notAsked > 0 && (
+        <p className="coverage__explain num">{Q.boundaryNotAsked(result.notAsked)}</p>
+      )}
+    </section>
+  );
+}
+
+function BoundaryTable({
+  result,
+  name,
+  index,
+}: {
+  result: BoundaryResult;
+  name: string;
+  index: number;
+}) {
+  const row = (label: string, counts: number[][], respondents: number, key: string) => (
+    <tr key={key}>
+      <th scope="row">{label}</th>
+      <td className="numeric">{respondents}</td>
+      {BOUNDARY_BAND_ORDER.map((b, bi) => (
+        <td key={b} className="numeric">
+          {counts[index]?.[bi] ?? 0}
+        </td>
+      ))}
+    </tr>
+  );
+  const groups: BoundaryRow[] = result.groups?.rows ?? [];
+  return (
+    <div
+      className="boundary__table"
+      role="region"
+      aria-label={Q.boundaryRegion(name)}
+      // Scrolls sideways in the narrow column, so it must take focus.
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+    >
+      <table className="coverage__table quality__table">
+        <caption className="coverage__caption">{Q.boundaryCaption(name)}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{result.groups ? result.groups.label : Q.boundaryAll}</th>
+            <th scope="col" className="numeric">
+              {Q.boundaryRespondents}
+            </th>
+            {BOUNDARY_BAND_ORDER.map((b) => (
+              <th key={b} scope="col" className="numeric">
+                <span aria-hidden="true">{Q.boundaryBands[b].short}</span>
+                <span className="visually-hidden">{Q.boundaryBands[b].full}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {row(Q.boundaryAll, result.overall, result.answered, '\u0000all')}
+          {groups.map((g) =>
+            row(g.value ?? Q.notRecorded, g.counts, g.respondents, g.value ?? '\u0000none'),
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }

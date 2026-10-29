@@ -6,6 +6,7 @@ import {
   hasTopic,
   withTopic,
   type BankItem,
+  type BankPurpose,
 } from '../../data/questionBank';
 import {
   RELATION_SCALES,
@@ -27,22 +28,34 @@ import { useAppStore } from '../state/store';
 // Survey setup. Both add an enabled layer with a key generated once from its
 // label (data/relations.ts).
 
-/** `onAdded` is told of each relation added, so Survey setup can ask it at once. */
-export function RelationActions({ onAdded }: { onAdded?: (layer: LayerDefinition) => void }) {
+/** `onAdded` is told of each relation added, so Survey setup can ask it at once.
+ *  With `purpose`, only the bank is offered, opened on that purpose's questions
+ *  (Survey setup's design guidance, session 12). */
+export function RelationActions({
+  onAdded,
+  purpose,
+  bankLabel,
+}: {
+  onAdded?: (layer: LayerDefinition) => void;
+  purpose?: BankPurpose;
+  bankLabel?: string;
+}) {
   const [open, setOpen] = useState<'create' | 'bank' | null>(null);
   const project = useAppStore((s) => s.data.project);
   if (!project) return null;
   return (
     <div className="relation-actions">
-      <button
-        type="button"
-        className="button button--secondary"
-        onClick={() => {
-          setOpen('create');
-        }}
-      >
-        {relationCopy.create}
-      </button>
+      {!purpose && (
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => {
+            setOpen('create');
+          }}
+        >
+          {relationCopy.create}
+        </button>
+      )}
       <button
         type="button"
         className="button button--secondary"
@@ -50,7 +63,7 @@ export function RelationActions({ onAdded }: { onAdded?: (layer: LayerDefinition
           setOpen('bank');
         }}
       >
-        {bankCopy.open}
+        {bankLabel ?? bankCopy.open}
       </button>
       <Dialog
         open={open === 'create'}
@@ -76,6 +89,7 @@ export function RelationActions({ onAdded }: { onAdded?: (layer: LayerDefinition
       >
         <QuestionBank
           {...(onAdded ? { onAdded } : {})}
+          {...(purpose ? { purpose } : {})}
           onClose={() => {
             setOpen(null);
           }}
@@ -283,9 +297,11 @@ function RelationForm({
 function QuestionBank({
   onClose,
   onAdded,
+  purpose: only,
 }: {
   onClose: () => void;
   onAdded?: (layer: LayerDefinition) => void;
+  purpose?: BankPurpose;
 }) {
   const project = useAppStore((s) => s.data.project);
   const addLayer = useAppStore((s) => s.addLayer);
@@ -345,7 +361,7 @@ function QuestionBank({
       <p className="bank__status" role="status">
         {message}
       </p>
-      {BANK_PURPOSES.map((purpose) => (
+      {BANK_PURPOSES.filter((p) => !only || p === only).map((purpose) => (
         <section
           key={purpose}
           className="bank__purpose"

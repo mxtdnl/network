@@ -74,7 +74,7 @@ export const surveyCopy = {
     estimate: 'Estimated time for each respondent',
     estimateValue: (m: number) => `About ${plural(m, 'minute', 'minutes')}`,
     estimateBasis:
-      'From the roster size, the number of questions and the method: 5 seconds a rating, 2 seconds to consider each colleague for selection, and a minute to read the introduction.',
+      'From the roster size, the number of questions and the method: 5 seconds a rating, 2 seconds to consider each colleague for selection, 10 seconds a question about the respondent, 5 seconds a group outside the list, and a minute to read the introduction.',
     expected: 'Expected colleagues selected',
     limit: 'Time limit for the warning (minutes)',
     burden: (m: number, limit: number) =>
@@ -96,7 +96,23 @@ export const surveyCopy = {
       nominationQuestion: 'Add a selection question.',
       roster: 'The project needs at least two members.',
       wave: 'The wave must be a whole number from 1.',
+      siteOptions: 'Enter between 2 and 8 sites, one per line.',
+      boundaryFunctions: 'Enter between 1 and 6 groups of people outside the list, one per line.',
     } as Record<string, string>,
+    about: 'About each respondent (optional)',
+    aboutHelp:
+      'Questions about the respondent’s own situation. Each answer is stored in a member attribute, only when the respondent agrees, and is never shown to colleagues. Respondents can choose “Prefer not to say”.',
+    askContext: (question: string) => `Ask: “${question}”`,
+    storedAs: (label: string, answers: string) =>
+      `Stored as the attribute ${label}. Answers: ${answers}, or prefer not to say.`,
+    sites: 'Sites, one per line',
+    sitesHelp:
+      'Between 2 and 8. “Somewhere else” and “Prefer not to say” are added. Starts from the project’s locations.',
+    boundary: 'Ask how many people outside the list each respondent relies on',
+    boundaryHelp: (question: string) =>
+      `Respondents read: “${question}”, and choose None, 1 or 2, 3 to 5, 6 to 10 or More than 10 for each group below. Shown in Check the data, not stored as an attribute.`,
+    boundaryFunctions: 'Groups of people outside the list, one per line',
+    boundaryFunctionsHelp: 'Between 1 and 6, for example other departments or customers.',
     save: 'Save changes',
     cancel: 'Cancel',
     newVersionTitle: 'Create a new version?',
@@ -193,6 +209,8 @@ export const surveyCopy = {
     planAlready: (n: number) =>
       `${plural(n, 'file was', 'files were')} already imported and will not change anything`,
     planRejected: (n: number) => `${plural(n, 'file', 'files')} rejected`,
+    planContext: (n: number) =>
+      `${plural(n, 'response includes', 'responses include')} answers about the respondent’s work, given with consent; they are stored in member attributes`,
     mappingHeading: 'Responses to an earlier version',
     mapping: (receipt: string, version: number) =>
       `Response ${receipt} answered version ${String(version)}.`,

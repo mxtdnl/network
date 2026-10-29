@@ -654,3 +654,222 @@ test('survey file with short links on a phone, a mismatched file, clearing answe
   await page.getByRole('switch', { name: 'Hide names' }).click();
   await shot(page, 'dashboard-10-version-2');
 });
+
+/** Tabs until the focused element's accessible name matches (keyboard-only checks). */
+async function tabTo(page: Page, label: RegExp, max = 80) {
+  for (let i = 0; i < max; i++) {
+    await page.keyboard.press('Tab');
+    const focused = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el) return '';
+      const labelled = el.getAttribute('aria-label');
+      if (labelled) return labelled;
+      const label = el instanceof HTMLInputElement ? el.labels?.[0] : undefined;
+      if (label) return label.textContent;
+      return el.textContent;
+    });
+    if (label.test(focused.trim())) return;
+  }
+  throw new Error(`Could not reach ${String(label)} by Tab`);
+}
+
+test('questions about the respondent and people outside the list: setup, launch kit, phone with consent, keyboard without, import and Check the data', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(240_000);
+  await openAnalyst(page, rosterProject());
+  await page.getByRole('button', { name: 'Set up a survey' }).click();
+  // Design guidance: what each entry method costs here, and the response rate needed.
+  await expect(page.getByText('Designing the survey')).toBeVisible();
+  await expect(page.getByText(/at least 32 people need to respond/)).toBeVisible();
+  await page
+    .getByLabel('What do you want to find out?')
+    .selectOption({ label: 'Advice and problem-solving' });
+  await expect(page.getByRole('button', { name: 'Add questions for this purpose' })).toBeVisible();
+  await page.getByLabel('Introduction').fill('We are mapping how people work together.');
+  await page
+    .getByLabel('Confidentiality statement')
+    .fill('Two people in People Analytics see the answers.');
+  await page
+    .getByLabel('Return instructions')
+    .fill('Email your response to ona-survey@example.org.');
+  await page.getByLabel('Deadline (optional)').fill('2026-11-14');
+  await page.getByLabel('Ask: “Where do you usually work?”').check();
+  await page.getByLabel('Ask: “Which site do you mainly work at?”').check();
+  await page.getByLabel('Sites, one per line').fill('North office\nSouth office');
+  await page.getByLabel('Ask how many people outside the list each respondent relies on').check();
+  await page
+    .getByLabel('Groups of people outside the list, one per line')
+    .fill('Other parts of the organisation\nCustomers or clients');
+  await shot(page, 'dashboard-11-about-respondent');
+  await expectNoAxeViolations(page, 'setup with context');
+  await page.getByLabel('Passphrase', { exact: true }).fill(PASSPHRASE);
+  await page.getByLabel('Type the passphrase again').fill(PASSPHRASE);
+  await page.getByRole('button', { name: 'Create the key' }).click();
+  const backup = await saveDownload(page, () =>
+    page.getByRole('button', { name: 'Download key backup' }).click(),
+  );
+  await page.getByLabel('Choose the backup file').setInputFiles(backup);
+  await page.getByRole('button', { name: 'Create the survey' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Survey created' })).toBeVisible();
+
+  // Launch kit: seven text files, none naming a member.
+  await expect(page.getByRole('heading', { name: 'Launch kit' })).toBeVisible();
+  const invitation = readFileSync(
+    await saveDownload(page, () =>
+      page.getByRole('button', { name: 'Download invitation' }).click(),
+    ),
+    'utf8',
+  );
+  expect(invitation).toContain('[Link]');
+  expect(invitation).toContain('Email your response to ona-survey@example.org.');
+  expect(invitation).toMatch(/outside the list/);
+  for (const name of ['sponsor’s announcement', 'data protection impact assessment checklist']) {
+    const text = readFileSync(
+      await saveDownload(page, () =>
+        page.getByRole('button', { name: `Download ${name}` }).click(),
+      ),
+      'utf8',
+    );
+    expect(demo.members.filter((m) => text.includes(m.display_name))).toStrictEqual([]);
+  }
+  await page.locator('.launch-kit__preview summary').first().click();
+  await expectNoAxeViolations(page, 'launch kit');
+  const links = await exportLinks(page);
+
+  // Phone: answers people outside the list, agrees and answers about their work.
+  const r1 = await respondent(browser, true);
+  await r1.page.goto(links.get('Ada Meridian') ?? '');
+  await throughIdentity(r1.page, 'Ada Meridian');
+  await nominate(r1.page, ['Bram Contour']);
+  for (const question of LAYERS)
+    await r1.page.getByRole('group', { name: question }).getByRole('radio').nth(2).check();
+  await r1.page.getByRole('button', { name: 'Continue' }).click();
+  await expect(r1.page.getByRole('heading', { name: 'People outside this list' })).toBeVisible();
+  await r1.page.getByRole('button', { name: 'Continue' }).click();
+  await expect(r1.page.getByRole('alert')).toContainText('2 groups have no answer yet');
+  await shot(r1.page, 'respond-mobile-16-outside-missing');
+  await r1.page
+    .getByRole('group', { name: 'Other parts of the organisation' })
+    .getByRole('radio', { name: '3 to 5' })
+    .check();
+  await r1.page
+    .getByRole('group', { name: 'Customers or clients' })
+    .getByRole('radio', { name: 'None' })
+    .check();
+  await shot(r1.page, 'respond-mobile-16-outside');
+  await expectNoAxeViolations(r1.page, 'outside');
+  await r1.page.getByRole('button', { name: 'Continue' }).click();
+  await expect(r1.page.getByRole('heading', { name: 'About your work' })).toBeVisible();
+  // Without the tick the questions are disabled.
+  await expect(
+    r1.page.getByRole('group', { name: 'Where do you usually work?' }).getByRole('radio').first(),
+  ).toBeDisabled();
+  await expect(r1.page.getByText('These questions will be skipped')).toBeVisible();
+  await r1.page
+    .getByLabel('I agree that my answers to these questions are stored with my name.')
+    .check();
+  await r1.page
+    .getByRole('group', { name: 'Where do you usually work?' })
+    .getByRole('radio', { name: 'Mostly remote' })
+    .check();
+  await r1.page
+    .getByRole('group', { name: 'Which site do you mainly work at?' })
+    .getByRole('radio', { name: 'South office' })
+    .check();
+  await shot(r1.page, 'respond-mobile-17-about');
+  await expectNoAxeViolations(r1.page, 'about');
+  await r1.page.getByRole('button', { name: 'Continue' }).click();
+  await expect(r1.page.getByRole('heading', { name: 'Check your answers' })).toBeVisible();
+  await expect(r1.page.getByText('Mostly remote')).toBeVisible();
+  await expect(r1.page.getByText('3 to 5')).toBeVisible();
+  await shot(r1.page, 'respond-mobile-18-review');
+  await expectNoAxeViolations(r1.page, 'review with context');
+  await r1.page.getByRole('button', { name: 'Encrypt my answers' }).click();
+  await r1.page.getByRole('button', { name: 'Copy encrypted text' }).click();
+  const text1 = await r1.page.evaluate(() => navigator.clipboard.readText());
+  await r1.context.close();
+
+  // Desktop, keyboard only: answers people outside the list, skips the optional questions.
+  const r2 = await respondent(browser, false);
+  await r2.page.goto(links.get('Bram Contour') ?? '');
+  await expect(r2.page.getByRole('heading', { level: 1 })).toHaveText('Northfield teams');
+  await tabTo(r2.page, /^Continue$/);
+  await r2.page.keyboard.press('Enter');
+  await tabTo(r2.page, /agree to take part/);
+  await r2.page.keyboard.press('Space');
+  await tabTo(r2.page, /^Start the survey$/);
+  await r2.page.keyboard.press('Enter');
+  await tabTo(r2.page, /^Yes, I am Bram Contour$/);
+  await r2.page.keyboard.press('Enter');
+  await tabTo(r2.page, /^Search by name$/);
+  await r2.page.keyboard.type('Ada');
+  await tabTo(r2.page, /^Ada Meridian/);
+  await r2.page.keyboard.press('Space');
+  await tabTo(r2.page, /^Continue$/);
+  await r2.page.keyboard.press('Enter');
+  for (const [q] of LAYERS.entries()) {
+    await tabTo(r2.page, /^Ada Meridian: /);
+    await r2.page.keyboard.press('ArrowRight');
+    await r2.page.keyboard.press('ArrowRight');
+    await tabTo(r2.page, q === LAYERS.length - 1 ? /^Continue$/ : /^Next question$/);
+    await r2.page.keyboard.press('Enter');
+  }
+  await expect(r2.page.getByRole('heading', { name: 'People outside this list' })).toBeFocused();
+  for (let i = 0; i < 2; i++) {
+    // Tab into each group's first option, then arrow to "1 or 2".
+    await tabTo(r2.page, /^None$/);
+    await r2.page.keyboard.press('ArrowDown');
+  }
+  await tabTo(r2.page, /^Continue$/);
+  await r2.page.keyboard.press('Enter');
+  await expect(r2.page.getByRole('heading', { name: 'About your work' })).toBeFocused();
+  await shot(r2.page, 'respond-desktop-17-about');
+  await expectNoAxeViolations(r2.page, 'about desktop');
+  await tabTo(r2.page, /^Continue$/);
+  await r2.page.keyboard.press('Enter');
+  await expect(r2.page.getByText('About your work: not answered')).toBeVisible();
+  await expect(r2.page.getByRole('heading', { name: 'Check your answers' })).toBeFocused();
+  await tabTo(r2.page, /^Encrypt my answers$/);
+  await r2.page.keyboard.press('Enter');
+  // The new screen moves focus to its heading: wait for it before tabbing on.
+  await expect(r2.page.getByRole('heading', { name: 'Send your answers back' })).toBeFocused();
+  await tabTo(r2.page, /^Download response file$/);
+  const file2 = await saveDownload(r2.page, () => r2.page.keyboard.press('Enter'));
+  await r2.context.close();
+
+  // Import both; the plan says one response includes answers about the respondent's work.
+  await page.getByLabel('Choose response files').setInputFiles([file2]);
+  await page.getByLabel('Or paste response text from emails').fill(text1);
+  await page.getByRole('button', { name: 'Read responses' }).click();
+  await expect(page.getByText('2 responses to import')).toBeVisible();
+  await expect(
+    page.getByText(/1 response includes answers about the respondent’s work/),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Import 2 responses' }).click();
+  await page.getByRole('button', { name: 'Done' }).click();
+
+  const saved = parseProject(
+    readFileSync(
+      await saveDownload(page, async () => {
+        await page.getByRole('button', { name: 'Project' }).click();
+        await page.getByRole('menuitem', { name: 'Save project' }).click();
+      }),
+      'utf8',
+    ),
+  );
+  const member = (id: string) => saved.members.find((m) => m.id === id);
+  expect(member('FIN01')?.attributes.working_pattern).toBe('Mostly remote');
+  expect(member('FIN01')?.attributes.main_site).toBe('South office');
+  expect(member('FIN02')?.attributes.working_pattern).toBeNull();
+  const log = saved.surveys[0]?.log.filter((e) => e.kind === 'accepted') ?? [];
+  const bands = Object.fromEntries(log.map((e) => [e.member_id, e.boundary?.bands]));
+  expect(bands).toStrictEqual({ FIN01: ['3_5', 'none'], FIN02: ['1_2', '1_2'] });
+
+  // Check the data: people outside the roster, counted by team.
+  await page.getByRole('tab', { name: 'Check the data' }).click();
+  await expect(page.getByRole('heading', { name: 'People outside the roster' })).toBeVisible();
+  await expect(page.getByText(/2 of 2 respondents said roughly how many people/)).toBeVisible();
+  await expectNoAxeViolations(page, 'check the data with boundary');
+});

@@ -456,6 +456,14 @@ test(
       .fill('Email your response to ona-survey@example.org by 14 November.');
     await page.getByLabel('Deadline (optional)').fill('2026-11-14');
     await page.getByLabel('Short name shown to respondents').nth(1).fill('Relationship quality');
+    // Questions about each respondent and people outside the list (build plan session 12).
+    await page.getByLabel('Ask: “Where do you usually work?”').check();
+    await page.getByLabel('Ask: “Which site do you mainly work at?”').check();
+    await page.getByLabel('Sites, one per line').fill('North office\nSouth office\nWarehouse');
+    await page.getByLabel('Ask how many people outside the list each respondent relies on').check();
+    const about = page.locator('.survey-setup__group').filter({ hasText: 'About each respondent' });
+    await about.scrollIntoViewIfNeeded();
+    await shot(page, 'survey-about', about);
     await page.evaluate(() => {
       document.querySelector('.survey')?.scrollTo(0, 0);
     });
@@ -482,6 +490,12 @@ test(
       document.querySelector('.survey')?.scrollTo(0, 0);
     });
     await shot(page, 'survey-dashboard');
+    const kit = page.locator('.survey-dashboard__section').filter({ hasText: 'Launch kit' });
+    await kit.locator('.launch-kit__preview summary').nth(1).click();
+    await kit.evaluate((el) => {
+      el.scrollIntoView({ block: 'start' });
+    });
+    await shot(page, 'survey-launch-kit');
 
     const linksFile = await saveDownload(page, () =>
       page.getByRole('button', { name: 'Export links for mail merge' }).click(),
@@ -533,10 +547,34 @@ test(
           type: 'jpeg',
           quality: 88,
         });
-      await r.page
-        .getByRole('button', { name: person === 1 ? 'Check your answers' : 'Next person' })
-        .click();
+      await r.page.getByRole('button', { name: person === 1 ? 'Continue' : 'Next person' }).click();
     }
+    // People outside the list, then the optional questions about their work.
+    await expect(r.page.getByRole('heading', { name: 'People outside this list' })).toBeVisible();
+    const outside = r.page.getByRole('group').filter({ has: r.page.getByRole('radio') });
+    for (let g = 0; g < (await outside.count()); g++)
+      await outside.nth(g).getByRole('radio').nth(1).check();
+    await r.page.getByRole('button', { name: 'Continue' }).click();
+    await r.page
+      .getByLabel('I agree that my answers to these questions are stored with my name.')
+      .check();
+    await r.page
+      .getByRole('group', { name: 'Where do you usually work?' })
+      .getByRole('radio', { name: 'Partly on site, partly remote' })
+      .check();
+    await r.page
+      .getByRole('group', { name: 'Which site do you mainly work at?' })
+      .getByRole('radio', { name: 'North office' })
+      .check();
+    await r.page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
+    await r.page.screenshot({
+      path: join(guideDir, 'respond-about.jpg'),
+      type: 'jpeg',
+      quality: 88,
+    });
+    await r.page.getByRole('button', { name: 'Continue' }).click();
     await r.page.getByRole('button', { name: 'Encrypt my answers' }).click();
     await expect(r.page.getByRole('heading', { name: 'Send your answers back' })).toBeVisible();
     const response = await saveDownload(r.page, () =>

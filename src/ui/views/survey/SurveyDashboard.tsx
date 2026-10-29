@@ -22,6 +22,7 @@ import { useAppStore } from '../../state/store';
 import { lockKey, setUnlockedKey, useUnlockedKey } from '../../state/surveyKeys';
 import { FileReportSection } from '../ValidationReport';
 import { downloadText } from './download';
+import { LaunchKit } from './LaunchKit';
 
 const D = surveyCopy.dashboard;
 
@@ -124,6 +125,8 @@ export function SurveyDashboard({
       )}
 
       <Links project={project} survey={survey} />
+
+      <LaunchKit project={project} survey={survey} />
 
       <section className="survey-dashboard__section" aria-labelledby={`${survey.id}-rejected`}>
         <h3 id={`${survey.id}-rejected`} className="survey-dashboard__subheading">
@@ -460,6 +463,7 @@ function Collect({ project, survey }: { project: Project; survey: Survey }) {
               <li>{D.planAlready(plan.alreadyImported.length)}</li>
             )}
             {plan.rejected.length > 0 && <li>{D.planRejected(plan.rejected.length)}</li>}
+            {plan.contextResponses > 0 && <li>{D.planContext(plan.contextResponses)}</li>}
           </ul>
           {plan.rejected.length > 0 && (
             <ul className="survey-dashboard__list">

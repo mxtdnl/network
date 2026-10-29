@@ -185,6 +185,26 @@ export const qualityCopy = {
   exportHelp:
     'The data-quality statement, from the project as these settings export it. The report prints it on its cover; it names no one.',
   presentationHeading: 'About the data',
+  // The boundary question (build plan session 12, D181).
+  boundaryHeading: 'People outside the roster',
+  boundaryIntro: (title: string, answered: number, responded: number) =>
+    `From ${title}: ${String(answered)} of ${String(responded)} ${responded === 1 ? 'respondent' : 'respondents'} said roughly how many people outside the list they rely on to get their work done, for each group below.`,
+  boundaryNotAsked: (n: number) =>
+    `${String(n)} ${n === 1 ? 'respondent answered a version' : 'respondents answered a version'} of the survey that did not ask.`,
+  boundaryNone: 'No imported response has answered this question yet.',
+  boundaryCaption: (group: string) => `Relied on outside the list: ${group}`,
+  boundaryGroup: (label: string) => label,
+  boundaryAll: 'All respondents',
+  boundaryRegion: (group: string) => `Table: ${group}`,
+  /** Short column heads; the full answer is read to screen readers. */
+  boundaryBands: {
+    none: { short: '0', full: 'None' },
+    '1_2': { short: '1–2', full: '1 or 2' },
+    '3_5': { short: '3–5', full: '3 to 5' },
+    '6_10': { short: '6–10', full: '6 to 10' },
+    over_10: { short: '10+', full: 'More than 10' },
+  },
+  boundaryRespondents: 'Respondents',
 };
 
 /** Rating flags on values that depend on the member's own ratings (member panel, table, CSV). */

@@ -472,7 +472,7 @@ The analyst can also name colleagues every respondent is asked about, whether or
 
 ### Completion-time estimate
 
-Estimated time = 60 s to read the introduction and agree + 5 s per rating + (with selection) 2 s per colleague considered, where ratings = colleagues × questions for a full roster, or, with selection, the larger of the expected number of selections (default 12) and the number of required colleagues, at most the number of colleagues, × questions. The result is rounded up to whole minutes, and is at least 1 minute. These are conventions, not measurements; the owner approved them as proposed (CLAUDE.md Q31). The warning limit defaults to 15 minutes; above it, the setup warns and suggests fewer layers or selection first.
+Estimated time = 60 s to read the introduction and agree + 5 s per rating + (with selection) 2 s per colleague considered + 10 s per context question + 5 s per group in the boundary question (section 21), where ratings = colleagues × questions for a full roster, or, with selection, the larger of the expected number of selections (default 12) and the number of required colleagues, at most the number of colleagues, × questions. The result is rounded up to whole minutes, and is at least 1 minute. These are conventions, not measurements; the owner approved them as proposed (CLAUDE.md Q31). The warning limit defaults to 15 minutes; above it, the setup warns and suggests fewer layers or selection first.
 
 ### Survey rules and limits
 
@@ -977,3 +977,38 @@ The items are Graticule's own drafts, not validated scales. Sensitivity says how
 | Energy and friction | How often is work with this person slowed by tension between you? | Frequency | Friction | High |
 
 Created relations travel like built-in layers: in project files (with their role), survey links and packages (with their label, wording and scale; a respondent never sees the role), responses and imports (by key), ties files (by key), and every export (by label), where the exclusion removes those whose role is affect or friction.
+
+## 21. Survey design support
+
+Build plan session 12 helps a newcomer design a whole-network survey and launch it (spec §15.1). Nothing here changes a metric; the boundary answers are reported as counts.
+
+### Design guidance
+
+Survey setup opens with three notes, computed from the draft and the project:
+
+- **Start from the question.** A purpose chosen from the question bank's ten (section 20) lists its items, with their sensitivity, and opens the bank on that purpose to add them. The number of questions asked about each colleague is stated against a recommended three to five, a convention for keeping a survey short enough to answer with care, not a measured limit. Answer labels should mean the same to everyone ("Weekly", not "Often").
+- **Rate everyone, or select first.** What each records (section 9, "Colleagues not selected") and the completion-time estimate of each for this roster and these questions.
+- **The response rate needed.** The coverage threshold (section 11) as a number of people, ⌈threshold × members⌉. When a share r of members respond and non-response is independent of the pair, a pair has both directions reported with probability r × r, so about 64 % of pairs at the default 80 %. The practices listed (a sponsor's announcement, time set aside in working hours, a deadline about two weeks away, two reminders) are Graticule's guidance, not measurements.
+
+### Context questions
+
+An optional, fixed set of questions about the respondent's own situation: time in current role (Less than 1 year, 1 to 3 years, 3 to 5 years, More than 5 years; ordinal), where they usually work (Mostly on site; Partly on site, partly remote; Mostly remote), usual working hours (Full time, Part time), and main site (2 to 8 sites the analyst lists, defaulting to the project's locations, plus "Somewhere else"). Each also offers "Prefer not to say", stored as not recorded.
+
+- **Consent.** The questions sit on their own screen after the ratings, under the text "These questions are optional. If you answer them, your answers are stored with your name, like your other answers, and may be used to compare groups … They are never shown to your colleagues", behind the unticked box "I agree that my answers to these questions are stored with my name." While it is unticked the questions are disabled, unticking clears what was chosen, and the response carries no answers.
+- **Storage.** Creating the survey (or a version that adds a question) creates a member attribute per question, keyed by the question's id (`time_in_role`, `working_pattern`, `working_hours`, `main_site`), with `_2`, `_3` added when the key is taken, so a self-reported answer never writes over a recorded attribute such as `location` or `tenure_band`. The attribute is categorical (time in role: ordinal), its categories are the answers in order, and it records the survey it came from (`from_survey`); the Members tab says so. A question keeps its attribute across versions.
+- **Import.** With consent, each answer is written to the member's attribute; an answer the question does not offer is not recorded. A response without consent writes nothing, except that, when it replaces an earlier response that had consent, it clears what that response wrote: a later response replaces the earlier answers as a whole, as it does for ratings (section 9). An analyst's own edit stays until a newer response from that member arrives.
+
+The attributes are then ordinary category attributes (filters, node fill, the Groups view, the rules' grouping). Audience levels pool groups below the minimum size (section 18), and Hide names applies as everywhere.
+
+### Boundary question
+
+"Roughly how many people outside this list do you rely on to get your work done?", asked for each of 1 to 6 groups the analyst names (by default other parts of the organisation, customers or clients, suppliers or partners), with the answers None, 1 or 2, 3 to 5, 6 to 10 and More than 10. Every group must be answered. The answers are stored on the accepted response's log entry, with the groups as asked, and not as attributes. "Check the data" shows, for the latest survey that asks the question, the number of respondents giving each answer for each group, overall and by the insight rules' grouping attribute, and how many respondents answered a version that did not ask. It shows how much work depends on people the network cannot see; it is not part of any metric.
+
+### Formats
+
+Adding these questions raised the formats (spec §15.3). Links and packages are payload format 2, which appends the context questions and the boundary groups to format 1's fields (about 5 characters longer for a survey that asks neither: 1,759 characters at 40 members against 1,755). Responses are version 2, whose body adds the context answers with the consent flag and the boundary bands. The version is bound in the additional authenticated data (`graticule-response/2|…`), so a version 2 response relabelled as version 1 fails its integrity check; the HKDF context string is unchanged. The respondent page reads format 1 links and packages as asking neither question, and the dashboard reads version 1 responses as answering neither.
+
+### Launch kit
+
+Seven text files built from the survey's current version: a sponsor's announcement, the invitation (a mail-merge template whose [Name] and [Link] are the links export's columns, naming the survey file when links need one), two reminders for the non-responders export (each stating how many responses the coverage threshold needs), the respondent help (`docs/respondent-help.md` as plain text), a confidentiality statement built around the survey's own, and a checklist for a data protection impact assessment. Parts to fill are in square brackets. The drafts name no member, so neither export setting applies; the checklist is a prompt for an adviser, not legal advice.
+

@@ -5,13 +5,20 @@
 // the clear so the dashboard can sort files before decrypting; they are bound
 // as additional authenticated data, so altering them makes decryption fail.
 // Files and pasted text use the same armoured text block.
+//
+// Version 2 (build plan session 12) adds the answers to the context and
+// boundary questions to the body. The version is bound in the additional
+// authenticated data, so a version 1 response is opened with its own string
+// and read as having neither.
 
 import { fromBase64Url, fromUtf8, receiptFromHash, sha256, toBase64Url, utf8 } from './bytes';
 import { deflate, inflate } from './compress';
 import { open, seal, type Sealed } from './crypto';
 
 export const RESPONSE_FORMAT = 'graticule-response';
-export const RESPONSE_VERSION = 1;
+export const RESPONSE_VERSION = 2;
+export type ResponseVersion = 1 | 2;
+const RESPONSE_VERSIONS = new Set<unknown>([1, 2]);
 const BEGIN = '-----BEGIN GRATICULE RESPONSE-----';
 const END = '-----END GRATICULE RESPONSE-----';
 const LINE = 64;
@@ -31,11 +38,18 @@ export interface ResponseBody {
   answers: Record<string, Answer[]>;
   /** Per layer key, the roster positions answered "Does not apply" (D102). */
   not_applicable: Record<string, number[]>;
+  /** Version 2, when the survey asked context questions: whether the
+   *  respondent agreed to their answers being stored, and the answers by
+   *  question id (an answer key, or null for "Prefer not to say" or none).
+   *  Without consent, `answers` is empty. */
+  context?: { consent: boolean; answers: Record<string, string | null> };
+  /** Version 2, when the survey asked the boundary question: one band per function. */
+  boundary?: string[];
 }
 
 export interface Envelope extends Sealed {
   format: typeof RESPONSE_FORMAT;
-  v: typeof RESPONSE_VERSION;
+  v: ResponseVersion;
   survey_id: string;
   version: number;
   /** Fingerprint of the analyst key the response is sealed to. */
@@ -44,9 +58,11 @@ export interface Envelope extends Sealed {
 
 export class EnvelopeError extends Error {}
 
-export const aadFor = (e: Pick<Envelope, 'survey_id' | 'version' | 'kid'>) =>
+export const aadFor = (
+  e: Pick<Envelope, 'survey_id' | 'version' | 'kid'> & { v?: ResponseVersion },
+) =>
   utf8(
-    `${RESPONSE_FORMAT}/${String(RESPONSE_VERSION)}|${e.survey_id}|${String(e.version)}|${e.kid}`,
+    `${RESPONSE_FORMAT}/${String(e.v ?? RESPONSE_VERSION)}|${e.survey_id}|${String(e.version)}|${e.kid}`,
   );
 
 export async function encryptResponse(
@@ -97,7 +113,7 @@ function toEnvelope(v: unknown): Envelope {
     typeof v !== 'object' ||
     v === null ||
     e.format !== RESPONSE_FORMAT ||
-    e.v !== RESPONSE_VERSION ||
+    !RESPONSE_VERSIONS.has(e.v) ||
     !isStr(e.survey_id) ||
     !isInt(e.version) ||
     !isStr(e.kid) ||
@@ -142,6 +158,18 @@ export function readArmoured(text: string): ArmourResult {
   return { envelopes, unreadable };
 }
 
+function isContext(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false;
+  const c = v as Record<string, unknown>;
+  return (
+    typeof c.consent === 'boolean' &&
+    typeof c.answers === 'object' &&
+    c.answers !== null &&
+    !Array.isArray(c.answers) &&
+    Object.values(c.answers).every((a) => a === null || isStr(a))
+  );
+}
+
 function toBody(v: unknown): ResponseBody {
   const b = v as Record<string, unknown>;
   const answers: unknown = b.answers;
@@ -167,7 +195,9 @@ function toBody(v: unknown): ResponseBody {
     na !== null &&
     Object.values(na as Record<string, unknown>).every(
       (list) => Array.isArray(list) && list.every(isInt),
-    );
+    ) &&
+    (b.context === undefined || isContext(b.context)) &&
+    (b.boundary === undefined || (Array.isArray(b.boundary) && b.boundary.every(isStr)));
   if (!ok) throw new EnvelopeError('The response body is not in the expected form.');
   return v as ResponseBody;
 }

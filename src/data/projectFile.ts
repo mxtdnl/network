@@ -97,6 +97,10 @@ export function checkProject(file: Obj): string[] {
         a.shareable === undefined || isBool(a.shareable),
         `${at} (${a.key}) has an invalid shareable flag.`,
       );
+      need(
+        a.from_survey === undefined || isStr(a.from_survey),
+        `${at} (${a.key}) names its survey invalidly.`,
+      );
     });
 
   // Members
@@ -519,6 +523,9 @@ export function checkSavedView(v: Obj): string[] {
 
 const ENTRIES = new Set(['nominate', 'full']);
 const UNSELECTED = new Set(['zero', 'not_applicable']);
+// The ids of survey/context.ts's questions and bands (data/ does not import survey/).
+const CONTEXT_IDS = new Set(['time_in_role', 'working_pattern', 'working_hours', 'main_site']);
+const BOUNDARY_KEYS = new Set(['none', '1_2', '3_5', '6_10', 'over_10']);
 const REJECT_REASONS = new Set([
   'unreadable',
   'other_survey',
@@ -601,6 +608,22 @@ export function checkSurvey(v: Obj): string[] {
       need(isStrArray(ver.shared_attributes), `${at} has invalid shared attributes.`);
       need(isStrArray(ver.required), `${at} has an invalid list of required colleagues.`);
       need(
+        ver.context === undefined ||
+          (Array.isArray(ver.context) &&
+            ver.context.every(
+              (q: unknown) =>
+                isObj(q) &&
+                CONTEXT_IDS.has(q.id as string) &&
+                isStr(q.attribute) &&
+                (q.options === undefined || isStrArray(q.options)),
+            )),
+        `${at} has invalid context questions.`,
+      );
+      need(
+        ver.boundary === undefined || (isStrArray(ver.boundary) && ver.boundary.length > 0),
+        `${at} has an invalid boundary question.`,
+      );
+      need(
         Array.isArray(ver.layers) &&
           ver.layers.length > 0 &&
           ver.layers.every(
@@ -652,7 +675,14 @@ export function checkSurvey(v: Obj): string[] {
           isInt(e.version) &&
           isStr(e.submitted_at) &&
           isInt(e.ratings) &&
-          isNullableStr(e.replaced_by)) ||
+          isNullableStr(e.replaced_by) &&
+          (e.context_consent === undefined || isBool(e.context_consent)) &&
+          (e.boundary === undefined ||
+            (isObj(e.boundary) &&
+              isStrArray(e.boundary.functions) &&
+              isStrArray(e.boundary.bands) &&
+              e.boundary.bands.length === e.boundary.functions.length &&
+              e.boundary.bands.every((b) => BOUNDARY_KEYS.has(b))))) ||
           (e.kind === 'duplicate' && isStr(e.member_id) && isStr(e.kept) && isStr(e.set_aside)) ||
           (e.kind === 'rejected' &&
             isStr(e.source) &&
