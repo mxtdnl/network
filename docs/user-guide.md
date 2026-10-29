@@ -117,6 +117,17 @@ Each relationship you rate is a layer. Four core layers are turned on in a new p
 
 Ask only about the layers you need. Each extra layer adds a rating per colleague for every respondent.
 
+#### Your own relations and the question bank
+
+The built-in layers describe working relationships in general. To ask about your client's issue, create relations of your own.
+
+- **Create a relation** (under the layer lists) asks for a label, the question, a **role** and a scale: frequency 0–5, agreement 0–5, signed −3 to +3, or two to eight named answers. The role says what kind of relation it is (working connection, formal or informal collaboration, information flow, advice, dependency, ideas, trust, influence, awareness, how people feel about each other, friction, or other). The insight rules, presets and exports treat a relation by its role, not its name: an advice relation is read by the overload and demand rules, and a friction relation is left out of the silo rules and weighted 0 in the composite. Each role offers only the scales that suit it. The import key is made from the label once and never changes, so ties files written with it keep working if you rename the relation.
+- **Add from the question bank** lists about thirty questions grouped by purpose, from information flow and advice to decisions, merger and matrix work, onboarding, inclusion, energy and friction. Enter a topic, such as "the improvement programme", and it takes the place of {topic} in the questions. Each question shows its scale, role and how sensitive its answers are; questions marked high judge a colleague or a relationship, so ask them only with a clear purpose and report them by group. Adding one creates a relation you can edit.
+
+![The question bank with a topic entered](user-guide/question-bank.jpg)
+
+Your relations are listed under "Relations you added". Deleting one deletes its ratings; the confirmation says how many, and how many saved views and surveys use it. The roles and the full bank are in the [method notes](method-notes.md#10-relationship-layers).
+
 ## Running a roster survey
 
 Graticule can run the survey itself. Each person receives a personal link, answers on their phone or computer, and sends you back an encrypted response by email or as a file. You import all the responses at once. Nothing passes through a server.
@@ -126,7 +137,7 @@ The design is a whole-network (roster) survey: every person is asked about their
 ### Before you start
 
 1. List everyone who will take part: add them in the Members tab (see [Building a roster in Graticule](#building-a-roster-in-graticule)), or import a members file (Project → Import survey data…). Add an email column if you want a mail-merge list of links.
-2. Turn on the layers you want to ask about, and check their wording in the Layers section.
+2. Turn on the layers you want to ask about, and check their wording in the Layers section. To ask about your client's issue, create relations or add them from the question bank (see [Your own relations and the question bank](#your-own-relations-and-the-question-bank)); both are also offered under the questions in survey setup, where an added relation is included in the survey at once.
 3. Agree the purpose, who will see the results and how long the data will be kept, and take data protection advice (see [Ethics and consent](#ethics-and-consent)).
 
 ### Setting up
@@ -420,7 +431,7 @@ Captions and view names follow the level: anyone the audience may not see become
 Export (top bar) opens the export dialog. Under its settings it shows the data-quality statement as the exports carry it; the report prints it on its cover. Every export follows its two settings:
 
 - **Hide names**: names are replaced by codes, including names written in captions and titles.
-- **Leave out valence, energy and conflict**: these layers hold negative ratings of named colleagues. When left out, the exports are calculated again without them, so no figure depends on them. The setting is saved with the project.
+- **Leave out how people feel about each other and friction**: leaves out every signed layer (valence, energy) and every layer whose role is how people feel about each other or friction (conflict, and relations you created with those roles). These layers hold judgements of named colleagues. When left out, the exports are calculated again without them, so no figure depends on them. The setting is saved with the project.
 
 ![The Export dialog: the two settings, map export options, table exports and the report](user-guide/export-dialog.jpg)
 
@@ -465,7 +476,7 @@ Network data about named colleagues is sensitive. Before collecting or loading a
 - **Ask for informed consent.** Tell participants what will be collected, why, who will see the results and how they will be used, before they take part. Graticule will not issue a survey without an introduction and a confidentiality statement.
 - **Be honest about confidentiality.** Responses are confidential, not anonymous: the analyst sees who gave which ratings, because a whole-network analysis needs it. Never describe the survey as anonymous.
 - **Do not use the results to evaluate individuals.** Graticule describes the structure of a network. Its results are not a measure of anyone's performance, and should not be used in performance evaluation or decisions about individuals. Treat each observation as a prompt for conversation with the people involved.
-- **Take particular care with negative ratings.** Valence, energy and conflict ratings of named colleagues need a clear purpose. Ask for them only if you need them, restrict who sees them, and use Leave out valence, energy and conflict when exporting for a wider audience.
+- **Take particular care with negative ratings.** Valence, energy and conflict ratings of named colleagues need a clear purpose. Ask for them only if you need them, restrict who sees them, and use Leave out how people feel about each other and friction when exporting for a wider audience.
 - **Hide names for wider audiences**, and check the small-group note: a code can still identify someone in a small team.
 - **Delete what you no longer need**: response files and the emails that carried them once imported, mail-merge and non-responder lists after the survey, and project files at the end of the agreed retention period. Project → Clear local data removes anything kept in the browser.
 - **Mind the limits of the data.** Below the coverage threshold, whole-network metrics may be unreliable. Every metric has caveats, listed in the member panel and the [method notes](method-notes.md).

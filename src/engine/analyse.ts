@@ -316,7 +316,10 @@ export async function analysePrepared(
     multiplex: mx,
     ...(input.settings.insightGroup ? { groupAttribute: input.settings.insightGroup } : {}),
     excludedLayers: input.layers
-      .filter((l) => l.group !== undefined && INSIGHT_RULES.excludedLayerGroups.includes(l.group))
+      .filter((l) => INSIGHT_RULES.excludedRoles.includes(l.role ?? 'other'))
+      .map((l) => l.key),
+    demandLayers: input.layers
+      .filter((l) => !l.signed && INSIGHT_RULES.overload.roles.includes(l.role ?? 'other'))
       .map((l) => l.key),
   });
 

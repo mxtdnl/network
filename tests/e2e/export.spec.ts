@@ -147,7 +147,9 @@ test('with signed layers left out, the exports and the table export hold no vale
   const problems = await start(page);
   await openExport(page);
   const d = dialog(page);
-  await d.getByRole('switch', { name: 'Leave out valence, energy and conflict' }).click();
+  await d
+    .getByRole('switch', { name: 'Leave out how people feel about each other and friction' })
+    .click();
   await d.getByLabel('SVG drawing').check();
   const svg = await download(page, 'Export map');
   expect(svg.file.suggestedFilename()).toBe('graticule-map-directed-no-signed.svg');

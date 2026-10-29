@@ -384,6 +384,16 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await page.keyboard.press('Escape');
   await expectNoNames(page);
 
+  // The question bank with a topic entered (build plan session 11).
+  await page
+    .getByRole('complementary', { name: 'Layers and filters' })
+    .getByRole('button', { name: 'Add from the question bank' })
+    .click();
+  const bank = page.getByRole('dialog', { name: 'Question bank' });
+  await bank.getByRole('textbox', { name: 'Topic' }).fill('the improvement programme');
+  await shot(page, 'question-bank', bank);
+  await page.keyboard.press('Escape');
+
   const help = await openHelp(page, 'Method notes');
   await expect(help.getByRole('heading', { name: 'Betweenness', exact: true })).toBeVisible();
   await shot(page, 'help');

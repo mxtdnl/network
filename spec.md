@@ -46,8 +46,30 @@ Each attribute has a `shareable` flag, off by default. Only attributes marked sh
 Each layer is a configurable definition:
 
 ```
-{ key, label, question_wording, scale_type, min, max, signed, default_weight, enabled }
+{ key, label, question_wording, scale_type, min, max, signed, default_weight, enabled, role }
 ```
+
+Every layer has a **role**, the kind of relation it records. The rules, presets, composite defaults, question catalogue and export exclusion read the role, never the key, so a relation the analyst creates is treated like a built-in layer of the same kind. Each built-in layer has a fixed role (below).
+
+| Role | Built-in layers | Scales | Treatment |
+|---|---|---|---|
+| Working connection | Connection strength | Frequency, agreement | Working tie; the map opens on it; mutual by nature |
+| Formal collaboration | Formal collaboration | Frequency, agreement | Working tie; the formal–informal comparison; Formal structure preset; mutual by nature |
+| Informal collaboration | Informal collaboration | Frequency, agreement | Working tie; the formal–informal comparison; Informal network preset; mutual by nature |
+| Information flow | — | Frequency, agreement | Working tie |
+| Advice | Advice | Frequency, agreement | Working tie; possible overload and concentrated demand; Informal network preset |
+| Dependency | Workflow dependency | Frequency, agreement | Working tie; possible overload and concentrated demand; Formal structure preset |
+| Ideas | Idea sharing | Frequency, agreement | Working tie; Informal network preset |
+| Trust | Competence-based and benevolence-based trust, interpersonal safety | Agreement | Working tie; Relationship health preset |
+| Influence | Decision influence | Frequency, agreement | Working tie |
+| Awareness | Knowledge awareness | Agreement | Working tie |
+| How people feel about each other (affect) | Valence, energy | Signed, agreement | Signed: adjusts ties in the composite and can colour them; Relationship health preset. Always left out by the export exclusion (section 10) |
+| Friction | Conflict (both sub-layers) | Frequency, agreement | Not a working tie; weight 0 in the composite by default; left out by the export exclusion |
+| Other | Primary channel | Any; categories only here | Working tie when rated on a scale; categories are recorded, not analysed |
+
+**Relations the analyst creates.** Besides the built-in layers, the analyst can create a relation with a label, question wording, a role and a scale from a fixed set: frequency 0–5 (never → daily), agreement 0–5 (not at all → completely), signed −3 to +3, or two to eight categories. The role limits the scales offered (table above). The key is generated from the label (lower case, ASCII, underscores), is never a built-in key or a key a survey asked about, and never changes, because ties, surveys, saved views and imports name the layer by key. Deleting a created relation deletes its ratings, and the confirmation says how many, and how many saved views and surveys use it. Created relations travel through project files, survey links, packages, responses, imports and exports like built-in layers.
+
+**Question bank.** "Add from the question bank" (in the Layers section and in survey setup) offers about thirty questions grouped by purpose (information flow; advice and problem-solving; work and dependency; innovation and ideas; decisions; collaboration; across a merger or matrix; awareness and onboarding; inclusion and trust; energy and friction), each with its wording, scale, role and a note on its sensitivity. Questions may contain a `{topic}` placeholder, replaced by a topic the analyst enters (for example "How often do you give information about {topic} to this person?"). Adding one creates a relation the analyst can edit. The bank is listed in the method notes.
 
 Store unrated pairs as `null`. "Rated 0" and "not rated" must never be conflated anywhere in the pipeline.
 
@@ -211,7 +233,7 @@ The composite is a method choice, not a default: the map opens on a question and
   - use the layer as a multiplier on the composite.
 
   Unless the user or a preset chooses otherwise, a signed layer is a multiplier: it adjusts the strength of ties found on other layers and does not create ties of its own.
-- The conflict sub-layers have default weight 0: they are frequencies of friction, which the composite could only add, so more conflict would make a stronger tie. The user may give them a weight.
+- Layers whose role is friction (the conflict sub-layers, and any friction relation the analyst creates) have default weight 0: they are frequencies of friction, which the composite could only add, so more conflict would make a stronger tie. The user may give them a weight.
 - The live formula is shown in plain notation beneath the sliders.
 - Presets: Formal structure, Informal network, Relationship health, Custom.
 - When the map draws ties from the composite, the composite drives:
@@ -318,7 +340,7 @@ The panel lists rule-based observations. Each one shows the rule that produced i
 - **Negative ratings not returned:** negative ratings whose reverse rating is not negative, counted by group.
 - **Formal/informal gaps:** formal ties with no informal counterpart, and informal ties with no formal counterpart.
 
-Rules that compare groups use one attribute, chosen by the user and saved with the project (team by default). Rules hold on realistic data: a rule on groups is not applied when there is only one group of meaningful size; relative rules need a minimum difference before they name anyone, and list at most five members; conflict layers are not read as working ties; and a finding about a group is not repeated as a list of its members.
+Rules that compare groups use one attribute, chosen by the user and saved with the project (team by default). Rules hold on realistic data: a rule on groups is not applied when there is only one group of meaningful size; relative rules need a minimum difference before they name anyone, and list at most five members; friction layers (conflict, and any relation whose role is friction) are not read as working ties; rules that read a kind of relation, such as possible overload on advice and dependency, read every layer of that role; and a finding about a group is not repeated as a list of its members.
 
 Wording is neutral and framed as questions for inquiry, never as verdicts on individuals. For example: "Three members connect Finance to the rest of the organisation. What happens if one leaves?"
 
@@ -334,11 +356,11 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
 - **Respondent mode (section 15).** The notice gains a section for analysts who run a survey. It states that:
   - participants must be told the purpose, the confidentiality terms and who will see the results before they respond, and the survey cannot be sent without an introduction and a confidentiality statement;
   - responses are confidential, not anonymous: the analyst sees who gave which ratings;
-  - negative ratings of named colleagues (valence, energy, conflict) need particular care: ask for them only with a clear purpose, and protect them accordingly;
+  - negative ratings of named colleagues (valence, energy, conflict, and any relation whose role is affect or friction) need particular care: ask for them only with a clear purpose, and protect them accordingly;
   - response files and the emails that carried them are personal data, and should be deleted once imported.
 
   Respondents never see the analyst's first-run notice; they see the welcome and consent screens of section 15.4.
-- **Signed-layer exclusion.** An option excludes signed layers (valence, energy, conflict) from all exports.
+- **Signed-layer exclusion.** An option, "Leave out how people feel about each other and friction", excludes every signed layer and every layer whose role is affect or friction (valence, energy, conflict, and any such relation the analyst created) from all exports.
 - **Anonymisation.** Available in one click from any view.
 - **Audience levels (section 8).** Outputs for a board, a leadership team, a team workshop or a one-to-one show only what that audience may see: no individual and no group below a minimum size for a board; roles between groups named only with the member's agreement for a leadership team; one team's own network, named only with the team's agreement, for a workshop; one person's own card for a one-to-one. Who agreed is recorded in the project.
 - **Content Security Policy.** Set via a `<meta>` tag, because GitHub Pages cannot set headers. The policy restricts `connect-src` to `'self'`, so the claim that data stays in the browser is enforced rather than asserted.

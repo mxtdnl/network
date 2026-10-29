@@ -70,7 +70,8 @@ export function parseMethodNotes(markdown: string): NoteSection[] {
 }
 
 /** Words that mark text about the layers the signed-layer exclusion removes. */
-const SIGNED_TERMS = /\b(valence|energy|conflict|signed|negative sub-layers?|w⁺|w⁻|in-valence)\b/i;
+const SIGNED_TERMS =
+  /\b(valence|energy|conflict|friction|signed|negative sub-layers?|w⁺|w⁻|in-valence)\b/i;
 
 /** Drops the sentences and list items that describe signed or conflict layers. */
 export function withoutSignedText(paragraph: string): string {

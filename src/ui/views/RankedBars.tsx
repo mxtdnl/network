@@ -6,7 +6,7 @@ import { refLabel } from '../map/model';
 import type { MapData } from '../map/useMapModel';
 import { useMemberNames } from '../state/names';
 import { useAppStore } from '../state/store';
-import { incomingLayer, incomingLayers, incomingRows } from './incoming';
+import { demandLayerKeys, incomingLayer, incomingLayers, incomingRows } from './incoming';
 
 const T = tableCopy.incoming;
 
@@ -32,7 +32,7 @@ export function RankedBars({ data }: { data: MapData }) {
   const helpId = useId();
 
   const layers = incomingLayers(project, result);
-  const layer = incomingLayer(layers, chosen, settings.layer);
+  const layer = incomingLayer(layers, chosen, settings.layer, demandLayerKeys(project));
   const rows = layer ? incomingRows(project, result, layer, model) : [];
   const load = layer ? result.refs[layer]?.load : undefined;
   const label = (key: string) =>

@@ -13,6 +13,7 @@ import {
 import { V1_PROJECT, V1_VIEW_MIGRATED } from '../fixtures/migrations/v1';
 import { V2_PROJECT } from '../fixtures/migrations/v2';
 import { V3_PROJECT } from '../fixtures/migrations/v3';
+import { CUSTOM_KEYS, withCustomRelations } from '../fixtures/customRelations';
 import { parseProject, projectFileName, serialiseProject } from '../../src/data/projectFile';
 import { SCHEMA_VERSION, type Project } from '../../src/data/schema';
 
@@ -541,5 +542,25 @@ describe('palettes and pinned colours (D127) are checked on load', () => {
     ['pins that are not by attribute', { group_colours: { Sales: 2 } }],
   ])('refuses %s', (_name, patch) => {
     expect(() => parseProject(withSettings(patch))).toThrow(/settings\.(palette|group_colours)/);
+  });
+});
+
+describe('relations the analyst created (build plan session 11)', () => {
+  it('round-trips them with their role, scale, key and ratings', () => {
+    const project = withCustomRelations();
+    const back = parseProject(serialiseProject(project));
+    expect(back).toStrictEqual(project);
+    expect(back.layers.find((l) => l.key === CUSTOM_KEYS.tension)).toMatchObject({
+      role: 'friction',
+      builtin: false,
+      core: false,
+      default_weight: 0,
+    });
+    expect(back.ties.filter((t) => t.variable === CUSTOM_KEYS.advice).length).toBeGreaterThan(39);
+  });
+
+  it('reads a built-in layer without a role by its key, as before', () => {
+    const back = parseProject(serialiseProject(withCustomRelations()));
+    expect(back.layers.find((l) => l.key === 'conflict_task')?.role).toBeUndefined();
   });
 });

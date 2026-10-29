@@ -191,7 +191,9 @@ test(
     expect(pdf.name).toMatch(/^graticule-report-\d{4}-\d{2}-\d{2}-codes\.pdf$/);
     expect(pdf.bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     // Leaving out the signed layers recalculates the exports.
-    await dialog.getByRole('switch', { name: 'Leave out valence, energy and conflict' }).click();
+    await dialog
+      .getByRole('switch', { name: 'Leave out how people feel about each other and friction' })
+      .click();
     const excluded = await download('Export member metrics');
     expect(excluded.name).toBe('graticule-member-metrics-directed-codes-no-signed.csv');
     await dialog.getByRole('button', { name: 'Close' }).click();

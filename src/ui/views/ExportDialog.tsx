@@ -4,7 +4,7 @@ import { Switch } from '../components/Switch';
 import { exportCopy as E } from '../copy/export';
 import { computeQuality } from '../../data/quality';
 import { qualityCopy } from '../copy/quality';
-import { exclusionApplies, exportProject } from '../export/scope';
+import { excludedLayers, exclusionApplies, exportProject } from '../export/scope';
 import { QualityStatement } from './DataCheckPanel';
 import {
   exportMapFile,
@@ -131,7 +131,13 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
             onChange={setExcludeSigned}
           />
           <p className="field__help">
-            {anyExcludable ? E.settings.excludeSignedHelp : E.settings.excludeSignedNone}
+            {anyExcludable && project
+              ? E.settings.excludeSignedHelp(
+                  excludedLayers(project)
+                    .filter((l) => l.enabled)
+                    .map((l) => l.label),
+                )
+              : E.settings.excludeSignedNone}
           </p>
         </div>
       </section>

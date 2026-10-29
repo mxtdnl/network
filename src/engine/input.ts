@@ -5,7 +5,13 @@
 // it is computed here from the project (src/data/coverage.ts, D29).
 
 import { computeCoverage } from '../data/coverage';
-import { DEFAULT_WAVE, isCategorical, isMutualLayer, type Project } from '../data/schema';
+import {
+  DEFAULT_WAVE,
+  isCategorical,
+  isMutualLayer,
+  layerRole,
+  type Project,
+} from '../data/schema';
 import type { AnalysisInput, AttributeColumn, EngineLayer, EngineSettings } from './types';
 
 export type AnalysisOptions = Pick<
@@ -48,8 +54,7 @@ export function buildAnalysisInput(
     min: l.min,
     max: l.max,
     signed: l.signed,
-    ...(l.role === undefined ? {} : { role: l.role }),
-    ...(l.group === undefined ? {} : { group: l.group }),
+    role: layerRole(l),
     defaultWeight: l.default_weight,
     ...(isMutualLayer(l) ? { mutual: true } : {}),
   }));

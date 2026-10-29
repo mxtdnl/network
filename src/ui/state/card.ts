@@ -9,6 +9,8 @@
 import {
   DEFAULT_WAVE,
   isCategorical,
+  layerRole,
+  NON_WORKING_ROLES,
   type LayerDefinition,
   type MemberId,
   type Project,
@@ -34,10 +36,10 @@ export interface CardModel {
   sections: ReportSection[];
 }
 
-/** Layers whose ties are working ties: rated on a scale, unsigned, not conflict. */
+/** Layers whose ties are working ties: rated on a scale, unsigned, not friction. */
 function workingLayers(project: Project): LayerDefinition[] {
   return project.layers.filter(
-    (l) => l.enabled && !isCategorical(l) && !l.signed && l.group !== 'conflict',
+    (l) => l.enabled && !isCategorical(l) && !l.signed && !NON_WORKING_ROLES.includes(layerRole(l)),
   );
 }
 
