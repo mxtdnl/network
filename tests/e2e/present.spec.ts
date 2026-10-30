@@ -513,6 +513,40 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await page.getByLabel('Ask: “Which site do you mainly work at?”').check();
   await page.getByLabel('Ask how many people outside the list each respondent relies on').check();
   await check('survey setup');
+  // The import wizard for a survey tool's export (build plan session 13): the
+  // file names people, which the wizard shows through the names layer.
+  const named = DISPLAY_NAMES.slice(0, 4);
+  const question = 'How strong is your working connection with this person?';
+  const wideCsv = [
+    ['Name', ...named.map((n) => `${question} [${n}]`), `${question} [Not On Roster]`].join(','),
+    ...named.map((n, i) =>
+      [n.toUpperCase(), ...named.map((_, j) => (i === j ? '' : '3')), '2'].join(','),
+    ),
+  ].join('\n');
+  await page.getByRole('button', { name: 'Project' }).click();
+  await page.getByRole('menuitem', { name: 'Import survey data…' }).click();
+  const importDialog = page.getByRole('dialog', { name: 'Import survey data' });
+  await importDialog.getByLabel('Ties file').setInputFiles({
+    name: 'survey-export.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(wideCsv),
+  });
+  await importDialog.getByRole('button', { name: 'Check files' }).click();
+  for (const step of ['Layout', 'Questions', 'People', 'Preview']) {
+    await expect(
+      importDialog.getByRole('heading', { name: new RegExp(`: ${step}$`) }),
+    ).toBeVisible();
+    if (step === 'People')
+      for (const d of await importDialog.locator('details').all())
+        await d.locator('summary').click();
+    await check(`import wizard ${step}`);
+    await importDialog
+      .getByRole('button', { name: step === 'Preview' ? 'Check ratings' : 'Next' })
+      .click();
+  }
+  await expect(importDialog.getByRole('heading', { name: 'Validation report' })).toBeVisible();
+  await check('import wizard validation report');
+  await importDialog.getByRole('button', { name: 'Cancel' }).click();
   await centreTab(page, 'Map').click();
   for (const tab of ['Insights', 'Views', 'Check the data']) {
     await rightTab(page, tab).click();

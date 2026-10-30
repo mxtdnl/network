@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { bracketExportCsv, wideRosterCsv } from '../fixtures/import/wide-exports';
 import { seededMembersCsv, seededTiesCsv } from '../fixtures/validation/seeded-errors';
 import { REGION } from './regions';
 
@@ -129,6 +130,183 @@ test('import the XLSX templates under the production CSP', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: 'Imported 9 rows.' })).toBeVisible();
   expect(cspViolations).toEqual([]);
 });
+
+test('a survey tool’s export: detection, matching, answers, preview, validation and reconciling', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await start(page);
+  await page.getByRole('button', { name: 'Import survey data' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Import survey data' });
+  const file = (name: string, text: string) => ({
+    name,
+    mimeType: 'text/csv',
+    buffer: Buffer.from(text),
+  });
+  await dialog.getByLabel('Members file').setInputFiles(file('roster.csv', wideRosterCsv));
+  await dialog.getByLabel('Ties file').setInputFiles(file('survey-export.csv', bracketExportCsv));
+  await dialog.getByRole('button', { name: 'Check files' }).click();
+
+  // Step 1: the layout as detected.
+  await expect(dialog.getByRole('heading', { name: 'Step 1 of 4: Layout' })).toBeVisible();
+  await expect(
+    dialog.getByText(
+      'This reads as a survey tool’s export: 4 respondents, with 7 columns of answers about 5 colleagues and 2 questions.',
+    ),
+  ).toBeVisible();
+  await expect(dialog.getByRole('radio', { name: /^One header row/ })).toBeChecked();
+  await expect(dialog.getByLabel('Column that names the respondent')).toHaveValue('1');
+  await expectNoAxeViolations(page, REGION.dialog);
+  await shot(page, 'import-wizard-layout');
+  await dialog.getByRole('button', { name: 'Next' }).click();
+
+  // Step 2: relations chosen from the question wording; answers written as words.
+  await expect(dialog.getByRole('heading', { name: 'Step 2 of 4: Questions' })).toBeFocused();
+  const relations = dialog.getByLabel('Relation');
+  await expect(relations.nth(0)).toHaveValue('connection_strength');
+  await expect(relations.nth(1)).toHaveValue('valence');
+  await expect(dialog.getByLabel('Recorded value for “Very positive”')).toHaveValue('3');
+  await expect(dialog.getByLabel('Recorded value for “Neutral”')).toHaveValue('0');
+  await expectNoAxeViolations(page, REGION.dialog);
+  await shot(page, 'import-wizard-questions');
+  await dialog.getByRole('button', { name: 'Next' }).click();
+
+  // Step 3: a suggestion and an ambiguous name wait for the analyst.
+  await expect(dialog.getByRole('heading', { name: 'Step 3 of 4: People' })).toBeFocused();
+  await expect(dialog.getByText('3 of 5 matched: 3 by name. 2 need your choice.')).toBeVisible();
+  await expect(
+    dialog.getByText(
+      '3 of 4 matched: 1 by email, 1 by name, 1 ignoring case and spacing. 1 needs your choice.',
+    ),
+  ).toBeVisible();
+  const zoe = dialog.getByLabel('Member for “Zoe Hart”');
+  await expect(zoe).toHaveValue('');
+  await expect(zoe.locator('optgroup[label="Suggested"] option')).toHaveText([
+    'Zoë Hart (the same name without accents or punctuation)',
+  ]);
+  await zoe.selectOption('W03');
+  const sam = dialog.getByLabel('Member for “Sam Lee”');
+  await expect(sam.locator('optgroup[label="Suggested"] option')).toHaveCount(2);
+  await sam.selectOption('W04');
+  await expectNoAxeViolations(page, REGION.dialog);
+  await shot(page, 'import-wizard-people');
+  await dialog.getByRole('button', { name: 'Next' }).click();
+
+  // Step 4: the long rows that go to the validation report.
+  await expect(dialog.getByRole('heading', { name: 'Step 4 of 4: Preview' })).toBeFocused();
+  await expect(
+    dialog.getByText('12 ratings of 17 answers will be checked.', { exact: false }),
+  ).toBeVisible();
+  await expect(dialog.getByRole('cell', { name: 'C2', exact: true })).toBeVisible();
+  await expectNoAxeViolations(page, REGION.dialog);
+  await dialog.getByRole('button', { name: 'Check ratings' }).click();
+
+  // The validation report, every problem at its row and column of the file.
+  await expect(dialog.getByRole('heading', { name: 'Validation report' })).toBeVisible();
+  await expect(dialog.getByText('6 rows of 6 can be imported.')).toBeVisible();
+  await expect(dialog.getByText('11 ratings of 17 can be imported.')).toBeVisible();
+  await expect(dialog.getByText('6 ratings will be skipped.')).toBeVisible();
+  const row = (r: string, c: string) =>
+    dialog
+      .getByRole('row')
+      .filter({ has: page.getByRole('cell', { name: r, exact: true }) })
+      .filter({
+        has: page.getByRole('cell', { name: c, exact: true }),
+      });
+  await expect(row('4', 'D')).toContainText('“9” is outside the connection_strength scale');
+  await expect(row('5', 'B')).toContainText(
+    '“unknown@example.org” is not matched to anyone in the roster',
+  );
+  // Spellings that differ only in case or spacing are offered, not changed.
+  const reconcile = dialog.getByRole('checkbox', {
+    name: /^Team or function: “Finance” \(2\), “finance” \(1\)/,
+  });
+  await expect(reconcile).not.toBeChecked();
+  await reconcile.check();
+  await expectNoAxeViolations(page, REGION.dialog);
+  await shot(page, 'import-wizard-report');
+
+  // Back to the wizard keeps the choices.
+  await dialog.getByRole('button', { name: 'Back to the survey export' }).click();
+  await expect(dialog.getByRole('heading', { name: 'Step 4 of 4: Preview' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Check ratings' }).click();
+  await dialog.getByRole('checkbox', { name: /^Team or function/ }).check();
+  await dialog.getByRole('button', { name: 'Import 6 valid rows and 11 ratings' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page
+      .getByRole('status')
+      .filter({ hasText: 'Imported 6 rows and 11 ratings. 6 rows or ratings were skipped.' }),
+  ).toBeVisible();
+
+  // The reconciled team and the imported ratings are in the saved project.
+  await page.getByRole('button', { name: 'Project' }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('menuitem', { name: 'Save project' }).click();
+  const saved = JSON.parse(readFileSync(await (await downloadPromise).path(), 'utf8')) as {
+    members: { id: string; attributes: Record<string, string | null> }[];
+    ties: { rater_id: string; ratee_id: string; variable: string; value: number; source: string }[];
+  };
+  expect(saved.members.find((m) => m.id === 'W06')?.attributes.team).toBe('Finance');
+  expect(saved.ties).toHaveLength(11);
+  expect(saved.ties.every((t) => t.source === 'imported')).toBe(true);
+  expect(saved.ties).toContainEqual(
+    expect.objectContaining({
+      rater_id: 'W02',
+      ratee_id: 'W03',
+      variable: 'connection_strength',
+      value: 3,
+    }),
+  );
+});
+
+for (const [width, height, layout] of [
+  [1280, 720, 'compact'],
+  [768, 1024, 'tablet'],
+] as const) {
+  test(`the wide template by keyboard, in the ${layout} layout`, async ({ page }) => {
+    mkdirSync(screenshotDir, { recursive: true });
+    await page.setViewportSize({ width, height });
+    await page.goto('./');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Import survey data' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Import survey data' });
+    await dialog.getByLabel('Members file').setInputFiles(join(templates, 'members.csv'));
+    await dialog.getByLabel('Ties file').setInputFiles(join(templates, 'ratings-wide.csv'));
+    await dialog.getByRole('button', { name: 'Check files' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog.getByRole('heading', { name: 'Step 1 of 4: Layout' })).toBeVisible();
+    // Every step by keyboard: Next is the last control of each step.
+    for (const step of ['Questions', 'People', 'Preview']) {
+      await dialog.getByRole('button', { name: 'Next' }).focus();
+      await page.keyboard.press('Enter');
+      const heading = dialog.getByRole('heading', { name: new RegExp(`: ${step}$`) });
+      await expect(heading).toBeFocused();
+      // Ids in the template match the roster exactly: nothing to confirm.
+      if (step === 'People') await expect(dialog.getByText('Nothing to confirm.')).toHaveCount(2);
+      await expectNoAxeViolations(page, REGION.dialog);
+    }
+    await dialog.getByRole('button', { name: 'Check ratings' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog.getByText('12 ratings of 12 can be imported.')).toBeVisible();
+    // The dialog fits the window and does not scroll sideways.
+    const fits = await dialog.evaluate((el) => {
+      const body = el.querySelector('.dialog__body') ?? el;
+      return (
+        el.getBoundingClientRect().right <= window.innerWidth &&
+        body.scrollWidth <= body.clientWidth
+      );
+    });
+    expect(fits).toBe(true);
+    await expectNoAxeViolations(page, REGION.dialog);
+    await shot(page, `import-wizard-${String(width)}`);
+    await dialog.getByRole('button', { name: 'Import 3 valid rows and 12 ratings' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Imported 3 rows and 12 ratings.' }),
+    ).toBeVisible();
+  });
+}
 
 test('the validation report lists every seeded error with its row', async ({ page }) => {
   await start(page);

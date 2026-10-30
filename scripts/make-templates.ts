@@ -14,9 +14,11 @@ const NUMERIC = new Set(['value', 'wave']);
 // Fixed so the files only change when their content does.
 const CREATED = new Date('2026-09-26T00:00:00Z');
 
-for (const name of ['members', 'ties']) {
+// The wide template (a survey tool's export, build plan session 13) holds a
+// respondent column, then one column of ratings per question and colleague.
+for (const name of ['members', 'ties', 'ratings-wide']) {
   const table = parseCsv(`${name}.csv`, readFileSync(join(dir, `${name}.csv`), 'utf8'));
-  const numeric = table.headers.map((h) => NUMERIC.has(h));
+  const numeric = table.headers.map((h, i) => (name === 'ratings-wide' ? i > 0 : NUMERIC.has(h)));
   const rows = table.rows.map((r) =>
     r.cells.map((cell, i) => (numeric[i] && cell !== '' ? Number(cell) : cell)),
   );

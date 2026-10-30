@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import type { FileReport } from '../../data/import/validate';
 import { Icon } from '../components/Icon';
 import { importCopy } from '../copy/import';
+import { useMemberNames } from '../state/names';
 
 // Problems shown before "Show all", so a large file does not produce a huge table.
 const INITIAL_ROWS = 50;
@@ -17,6 +18,8 @@ export function FileReportSection({
   heading?: string;
 }) {
   const headingId = useId();
+  // A value quoted from the file may be a member's name (a survey export names people).
+  const names = useMemberNames();
   const [showAll, setShowAll] = useState(false);
   const errors = report.issues.filter((i) => i.severity === 'error');
   const notes = report.issues.filter((i) => i.severity === 'note');
@@ -36,11 +39,11 @@ export function FileReportSection({
       ) : (
         <>
           <p className="report__line num">
-            {importCopy.fileSummary(report.validRows, report.totalRows)}
+            {importCopy.fileSummary(report.validRows, report.totalRows, report.unit)}
           </p>
           <p className="report__line num">
             {report.skippedRows > 0 ? <Icon name="warning" /> : <Icon name="check" />}
-            {importCopy.skipped(report.skippedRows)}
+            {importCopy.skipped(report.skippedRows, report.unit)}
           </p>
         </>
       )}
@@ -67,7 +70,7 @@ export function FileReportSection({
                 <tr key={`${String(issue.row)}-${issue.code}-${issue.column ?? ''}-${String(i)}`}>
                   <td className="report__col-row">{issue.row ?? ''}</td>
                   <td className="report__col-column">{issue.column ?? ''}</td>
-                  <td>{importCopy.problem(issue)}</td>
+                  <td>{names.text(importCopy.problem(issue))}</td>
                 </tr>
               ))}
             </tbody>
@@ -93,7 +96,7 @@ export function FileReportSection({
             {notes.map((note, i) => (
               <li key={`${note.code}-${String(i)}`} className="report__line">
                 <Icon name="info" />
-                {importCopy.problem(note)}
+                {names.text(importCopy.problem(note))}
               </li>
             ))}
           </ul>

@@ -586,6 +586,21 @@ Matrix entry follows the same rules: a value is a number in the layer's range, `
 
 Survey responses (section 9) are turned into rows and pass through the same validation.
 
+**Survey tools' exports** (wide format: one row per respondent, one column per colleague and question) are read by the import wizard and turned into the same long rows, so every rule above applies to them; problems are reported at the row and column of the export.
+
+| Rule | Detail |
+|---|---|
+| Detection | A file with the four ties columns is long. Otherwise each header is read as a question and a colleague: the colleague in square brackets ("How often…? [Ada Example]"), or question and colleague joined by " - ", " – ", " — ", " \| " or ": " (in either order), or a header that is only a colleague's name (one question). With two header rows, the question may sit in the first row over blank cells and the colleagues in the second, or the second row may hold the full "question - colleague" text under question codes. The reading that finds more colleagues is chosen, and the analyst can change it. A row of import codes directly under the header is not read |
+| Respondent column | The column (other than the rating columns) in which most cells name a member; failing that, one headed respondent, email, name or id |
+| Matching people | By id, email address (the members' email attribute) or name, first exactly, then ignoring case and spacing. A label that matches more than one member is ambiguous. Other labels get suggestions: the same name without accents or punctuation, in another word order, with an initial, with a close spelling (one change for names of up to 8 letters, two for longer), or an email address whose first part is the name. Ambiguous names and suggestions are used only when the analyst chooses a member |
+| Relations | A question is mapped to the relation whose key, label or question wording it equals (ignoring case, spacing and closing punctuation), or whose wording it contains or is contained in; otherwise the analyst chooses, or leaves it out |
+| Answers | Numbers and `n/a` are read as written. An answer in words is read as the scale value whose label it equals, a category or its label, "Not applicable" or "Does not apply" as `n/a`, or a value of the scale followed by a label ("4 - Weekly"); the analyst can change each, and an answer left unmapped is reported as not a number |
+| Left out and reported | Rows whose respondent is not matched or is empty; every row of a respondent who appears more than once; answers about a colleague who is not matched; questions with no relation; other columns (timestamps, other questions), which are only counted |
+| Empty answers | Nothing is recorded (the rating is not entered), so it counts as not rated; they are counted in a note |
+| Waves | Answers are read as wave 1 |
+
+**Reconciling attribute values.** In a members file, values of a category attribute that are equal ignoring case and spacing are offered for reconciliation. The spelling kept is the most common, the first in the file on a tie; values are changed only for the attributes the analyst ticks.
+
 ### Data coverage threshold
 
 Coverage (section 6) is compared with a threshold, 80 % by default, which the analyst can set as a whole percentage from 0 to 100 under Check the data; it is saved with the project. Below it, a persistent warning under the top bar and on the map states that whole-network metrics may be unreliable, the insights panel repeats it, and the PDF report states it with the raters below the threshold. Until the project has at least one rating, a neutral "No ratings yet" note is shown instead of the warning. Coverage is shown as a whole percentage, except where rounding would reach or cross the threshold: then it keeps one decimal place, rounded away from the threshold, so 79.6 % against 80 % reads 79.6 %, and 79.98 % reads 79.9 %. Coverage counts wave 1 on enabled layers.

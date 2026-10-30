@@ -123,7 +123,9 @@ The passphrase and the decrypted private key are never stored.
 
 - **Import.** CSV and XLSX import, with downloadable templates:
   - a members file;
-  - a ties file in long format: `rater_id, ratee_id, variable, value[, wave]`.
+  - a ties file in long format: `rater_id, ratee_id, variable, value[, wave]`;
+  - a survey tool's export in wide format: one row per respondent, with a column for each colleague and question. Graticule detects the format and opens an import wizard: it reads the header (one row, or the questions in one row and the colleagues in the next), maps each question to a relation and answers written as words to scale values, and matches respondents and colleagues to the roster by id, email or name, first exactly, then ignoring case and spacing; anything else is only suggested, and a suggestion or a name shared by several members is used only once the analyst confirms it. A preview shows the long rows the answers become, and these pass through the same validation report as a ties file, with each problem placed at its row and column in the export. Unmatched people and unmapped questions are left out and reported, never guessed.
+- **Reconciling attribute values.** When a members file holds values of one attribute that differ only in case or spacing (for example "Finance" and "finance"), the validation report offers to write them one way, using the most common spelling. Nothing is changed unless the analyst chooses it.
 - **Validation report.** Lists problems with row numbers. It covers:
   - unknown ids;
   - self-ratings;

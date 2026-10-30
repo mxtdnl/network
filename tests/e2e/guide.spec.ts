@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { memberCodes } from '../../src/data/anonymise';
 import { parseProject, serialiseProject } from '../../src/data/projectFile';
 import type { Project } from '../../src/data/schema';
+import { bracketExportCsv, wideRosterCsv } from '../fixtures/import/wide-exports';
 import { seededMembersCsv, seededTiesCsv } from '../fixtures/validation/seeded-errors';
 import { openAdvanced, useComposite } from './advanced';
 import { NIGHTLY } from './nightly';
@@ -178,6 +179,26 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await dialog.getByRole('button', { name: 'Check files' }).click();
   await expect(dialog.getByRole('heading', { name: 'Validation report' })).toBeVisible();
   await shot(page, 'validation-report', dialog);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+  // A survey tool's export in the import wizard (build plan session 13), on fictional names.
+  await page.getByRole('button', { name: 'Import survey data' }).first().click();
+  await dialog.getByLabel('Members file').setInputFiles({
+    name: 'roster.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(wideRosterCsv),
+  });
+  await dialog.getByLabel('Ties file').setInputFiles({
+    name: 'survey-export.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(bracketExportCsv),
+  });
+  await dialog.getByRole('button', { name: 'Check files' }).click();
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await expect(dialog.getByRole('heading', { name: 'Step 3 of 4: People' })).toBeVisible();
+  await dialog.getByLabel('Member for “Zoe Hart”').selectOption('W03');
+  await shot(page, 'import-wizard', dialog);
   await dialog.getByRole('button', { name: 'Cancel' }).click();
 
   // The demo, names hidden from the start.
