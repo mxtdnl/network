@@ -387,6 +387,20 @@
   font-weight: var(--weight-semibold);
 }
 
+/* Rosters by wave (build plan session 14). */
+.members__wave-help {
+  max-width: var(--measure);
+}
+
+.members__wave {
+  text-align: center;
+}
+
+.members__wave input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .members__note {
   display: flex;
   gap: var(--s-2);

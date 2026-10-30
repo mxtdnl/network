@@ -1,3 +1,11 @@
+import {
+  isMultiWave,
+  latestRecordedWave,
+  setOnWaveRoster,
+  waveNumbers,
+  waveRosterIds,
+} from '../../data/waves';
+import { wavesCopy } from '../copy/waves';
 import { useCallback, useId, useRef, useState } from 'react';
 import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
@@ -176,6 +184,8 @@ function MembersEditor({ project }: { project: Project }) {
         )}
       </section>
 
+      <WaveRosters project={project} />
+
       <Columns project={project} />
 
       {project.members.length >= 2 && (
@@ -257,6 +267,9 @@ function AddPeople() {
             return;
           }
           setError(false);
+          // A project with recorded waves adds them to the latest wave (build plan session 14).
+          const current = useAppStore.getState().data.project;
+          const wave = current ? latestRecordedWave(current) : null;
           useAppStore.getState().updateProject(
             (p) =>
               addMembers(
@@ -264,7 +277,10 @@ function AddPeople() {
                 list.map((name) => ({ name })),
               ),
             {
-              text: C.add.added(list.length),
+              text:
+                wave === null
+                  ? C.add.added(list.length)
+                  : wavesCopy.members.added(list.length, wave),
               tone: 'info',
             },
           );
@@ -407,6 +423,76 @@ function MemberRow({ member, columns, name, names, listId, helpId, onRemove }: R
         </button>
       </td>
     </tr>
+  );
+}
+
+/**
+ * Who is on each wave's roster (build plan session 14), when the project has
+ * more than one wave. Each box changes one member's place on one roster, which
+ * changes that wave's coverage and analysis, so the analysis runs again.
+ */
+function WaveRosters({ project }: { project: Project }) {
+  const names = useMemberNames();
+  const updateProject = useAppStore((s) => s.updateProject);
+  const id = useId();
+  if (!isMultiWave(project) || project.members.length === 0) return null;
+  const W = wavesCopy.members;
+  const waves = waveNumbers(project);
+  const rosters = new Map(waves.map((w) => [w, new Set(waveRosterIds(project, w))]));
+  return (
+    <section className="members__section" aria-labelledby={id}>
+      <h3 id={id} className="members__heading">
+        {W.heading}
+      </h3>
+      <p className="field__help members__wave-help">{W.help}</p>
+      <p className="field__help num">
+        {waves.map((w) => W.count(w, rosters.get(w)?.size ?? 0)).join('; ')}
+      </p>
+      <div className="members__scroll">
+        <table className="data-table members__table">
+          <caption className="visually-hidden">{W.heading}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{C.list.name}</th>
+              {waves.map((w) => (
+                <th key={w} scope="col" className="members__wave">
+                  {W.column(w)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {project.members.map((m) => {
+              const name = names.of(m.id);
+              return (
+                <tr key={m.id}>
+                  <th scope="row">{name}</th>
+                  {waves.map((w) => {
+                    const on = rosters.get(w)?.has(m.id) ?? false;
+                    return (
+                      <td key={w} className="members__wave">
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          aria-label={W.onRoster(name, w)}
+                          onChange={(e) => {
+                            const next = e.currentTarget.checked;
+                            updateProject((p) => setOnWaveRoster(p, w, m.id, next), {
+                              text: W.changed(name, w, next),
+                              tone: 'info',
+                            });
+                          }}
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

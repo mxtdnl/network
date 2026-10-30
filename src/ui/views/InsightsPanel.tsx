@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import { useId, useMemo } from 'react';
 import type { InsightOutcome, Observation } from '../engineClient';
 import { Icon } from '../components/Icon';
@@ -26,7 +27,7 @@ import { useAppStore } from '../state/store';
 // could not be applied say so, so the panel never implies more than it
 // checked. Member names come from the names layer, so anonymisation applies.
 export function InsightsPanel() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const result = useAppStore((s) => s.results.current);
   const highlight = useAppStore((s) => s.map.highlight);
   const setMap = useAppStore((s) => s.setMap);

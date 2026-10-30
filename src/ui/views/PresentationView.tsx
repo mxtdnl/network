@@ -1,3 +1,5 @@
+import { useWaveInfo, useWaveProject } from '../state/waves';
+import { wavesCopy } from '../copy/waves';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { Switch } from '../components/Switch';
@@ -34,7 +36,10 @@ const PREVIOUS = new Set(['ArrowLeft', 'ArrowUp', 'PageUp']);
 // bar and the cursor hide again. Names, captions and legends pass through the
 // names layer, so anonymisation applies here as everywhere.
 export function PresentationView() {
-  const project = useAppStore((s) => s.data.project);
+  // Codes are numbered over every member (the whole project); the card and the
+  // opening statement read the wave analysed (build plan session 14).
+  const full = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const index = useAppStore((s) => s.ui.presentation?.index ?? 0);
   const anonymise = useAppStore((s) => s.ui.anonymise);
   const running = useAppStore((s) => s.results.status === 'running');
@@ -51,13 +56,19 @@ export function PresentationView() {
   const views = project?.saved_views ?? [];
   // Who the presentation is for (build plan session 9): the policy decides what each step shows.
   const chosen = useAppStore((s) => s.ui.audience);
+  // The one-to-one's member is one on the wave's roster.
   const choice = project ? audienceChoice(project, chosen) : null;
   const policy = useMemo(
-    () => (project && choice ? audiencePolicy(project, choice, anonymise) : null),
+    () => (full && choice ? audiencePolicy(full, choice, anonymise) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [project, choice?.level, choice?.team, choice?.member, anonymise],
+    [full, choice?.level, choice?.team, choice?.member, anonymise],
   );
   const level = policy?.level ?? 'analyst';
+  // The wave is named beside the counter when the project has more than one (build plan session 14).
+  const wave = useWaveInfo();
+  const counterText = wave?.shown
+    ? wavesCopy.counter(P.counter(index + 1, views.length), wave.wave, wave.waves.length)
+    : P.counter(index + 1, views.length);
   // A change of level, team or member shows the current view again under the new policy.
   const first = useRef(true);
   useEffect(() => {
@@ -235,7 +246,9 @@ export function PresentationView() {
       )}
       {opening && (
         <p className="presentation__counter num" aria-live="polite">
-          {P.opening(views.length)}
+          {wave?.shown
+            ? wavesCopy.counter(P.opening(views.length), wave.wave, wave.waves.length)
+            : P.opening(views.length)}
         </p>
       )}
       {!opening && !oneToOne && view && policy.groupsOnly && (
@@ -249,7 +262,7 @@ export function PresentationView() {
           )}
           <p className="presentation__caption">{text(view.caption)}</p>
           <p className="presentation__counter num" aria-live="polite">
-            {P.counter(index + 1, views.length)}
+            {counterText}
           </p>
         </>
       )}
@@ -298,7 +311,7 @@ export function PresentationView() {
           </div>
           <p className="presentation__caption">{text(view.caption)}</p>
           <p className="presentation__counter num" aria-live="polite">
-            {P.counter(index + 1, views.length)}
+            {counterText}
           </p>
         </>
       )}

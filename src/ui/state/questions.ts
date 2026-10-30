@@ -8,15 +8,11 @@
 // Wording lives in ui/copy/questions.ts (D9); the sentences shown with each
 // question are built in ui/state/readouts.ts.
 
+import { selectWaveProject } from './waves';
+import { latestRatedWave } from '../../data/waves';
 import { builtinLayer } from '../../data/defaults';
 import { builtinForRole, relationForRole } from '../../data/relations';
-import {
-  DEFAULT_WAVE,
-  layerRole,
-  type LayerDefinition,
-  type LayerRole,
-  type Project,
-} from '../../data/schema';
+import { layerRole, type LayerDefinition, type LayerRole, type Project } from '../../data/schema';
 import type { AnalysisResult } from '../engineClient';
 import { questionsCopy } from '../copy/questions';
 import { hierarchyAvailable } from '../map/useMapModel';
@@ -93,7 +89,7 @@ function relationName(project: Project, key: string): string {
 /** Whether the layer has at least one rating with a value in wave 1. */
 export function hasRatings(project: Project, key: string): boolean {
   return project.ties.some(
-    (t) => t.variable === key && t.wave === DEFAULT_WAVE && typeof t.value === 'number',
+    (t) => t.variable === key && t.wave === latestRatedWave(project) && typeof t.value === 'number',
   );
 }
 
@@ -324,7 +320,7 @@ export function activeQuestion(project: Project | null, map: MapSettings): Quest
 /** Applies a question. Returns false, changing nothing, when the project cannot answer it. */
 export function applyQuestion(id: QuestionId): boolean {
   const s = useAppStore.getState();
-  const project = s.data.project;
+  const project = selectWaveProject(s);
   if (!project || !questionAvailability(id, project).ok) return false;
   const settings = questionSettings(id, project, s.map, s.results.current);
   s.setMap(settings.map);

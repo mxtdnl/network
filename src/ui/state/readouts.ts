@@ -4,7 +4,8 @@
 // metric: every figure is read from the analysis (or, for negative ratings,
 // counted from the ratings as given), so a sentence states what a table states.
 
-import { DEFAULT_WAVE, type Project } from '../../data/schema';
+import { latestRatedWave } from '../../data/waves';
+import { type Project } from '../../data/schema';
 import { FI_CLASS, type AnalysisResult, type RefResult } from '../engineClient';
 import type { SizeMetric } from './store';
 import { insightGroup } from './insightGroup';
@@ -281,7 +282,7 @@ function negative(project: Project, result: AnalysisResult): QuestionReadout | n
   for (const t of project.ties)
     if (
       t.variable === layer.key &&
-      t.wave === DEFAULT_WAVE &&
+      t.wave === latestRatedWave(project) &&
       typeof t.value === 'number' &&
       ids.has(t.rater_id) &&
       ids.has(t.ratee_id)

@@ -30,12 +30,14 @@ export const REMEDY_ORDER: readonly RemedyId[] = [
 
 /** The analysis options in the map settings that the engine reads. */
 export function analysisOptions(
-  map: Pick<MapSettings, 'nonRespondents' | 'reconstruct' | 'standardise'>,
-): Pick<AnalysisOptions, 'nonRespondents' | 'reconstruct' | 'standardise'> {
+  map: Pick<MapSettings, 'nonRespondents' | 'reconstruct' | 'standardise'> &
+    Partial<Pick<MapSettings, 'wave'>>,
+): Pick<AnalysisOptions, 'nonRespondents' | 'reconstruct' | 'standardise' | 'wave'> {
   return {
     nonRespondents: map.nonRespondents,
     reconstruct: map.reconstruct,
     standardise: map.standardise,
+    wave: map.wave ?? null,
   };
 }
 

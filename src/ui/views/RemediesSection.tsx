@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import { useEffect, useId, useRef, useState } from 'react';
 import { EngineClient, type Observation } from '../engineClient';
 import { Switch } from '../components/Switch';
@@ -79,7 +80,7 @@ function Preview({
 // change in the insights. Previews run on a worker of their own, one option
 // at a time, and are dropped when the analysis on screen changes.
 export function RemediesSection() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const result = useAppStore((s) => s.results.current);
   const map = useAppStore((s) => s.map);
   const weights = useAppStore((s) => s.weights);

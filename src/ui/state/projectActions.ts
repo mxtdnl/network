@@ -5,15 +5,24 @@ import type { RawTable } from '../../data/import/table';
 import { parseProject, projectFileName, serialiseProject } from '../../data/projectFile';
 import { importCopy } from '../copy/import';
 import { projectCopy } from '../copy/data';
+import type { Project } from '../../data/schema';
+import { memberNames } from './names';
 import { useAppStore } from './store';
 
 const reason = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** A title may name a member, so it goes through the names layer (D79): codes while names are
+ *  hidden, or when the project was saved with them hidden. */
+export function titleOf(project: Project): string {
+  const hidden = useAppStore.getState().ui.anonymise || project.settings.anonymise;
+  return memberNames(project, hidden).text(project.meta.title);
+}
 
 export async function openProjectFile(file: File): Promise<void> {
   const { setProject, setStatus } = useAppStore.getState();
   try {
     const project = parseProject(await file.text());
-    setProject(project, { text: projectCopy.opened(project.meta.title), tone: 'info' });
+    setProject(project, { text: projectCopy.opened(titleOf(project)), tone: 'info' });
   } catch (e) {
     setStatus({ text: projectCopy.openFailed(file.name, reason(e)), tone: 'error' });
   }

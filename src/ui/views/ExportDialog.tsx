@@ -1,3 +1,4 @@
+import { useWaveInfo, useWaveProject } from '../state/waves';
 import { useId, useMemo, useRef, useState } from 'react';
 import { Dialog } from '../components/Dialog';
 import { Switch } from '../components/Switch';
@@ -32,11 +33,14 @@ import { useReadOnly } from '../state/layoutMode';
 // in the status line with the button's verb ("Export map" → "Map exported").
 export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const project = useAppStore((s) => s.data.project);
+  // The exports show the wave analysed (build plan session 14).
+  const scoped = useWaveProject();
+  const wave = useWaveInfo();
   const ready = useAppStore(
     (s) =>
       s.results.current !== null &&
-      s.data.project !== null &&
-      s.results.current.memberIds.length === s.data.project.members.length,
+      scoped !== null &&
+      s.results.current.memberIds.length === scoped.members.length,
   );
   const anonymise = useAppStore((s) => s.ui.anonymise);
   const hasFormalInformal = useAppStore(
@@ -67,8 +71,8 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const anyExcludable = project ? exclusionApplies(project, true) : false;
   // The statement as the exports carry it: from the project they show (D105).
   const quality = useMemo(
-    () => (project ? computeQuality(exportProject(project, excludeSigned)) : null),
-    [project, excludeSigned],
+    () => (scoped ? computeQuality(exportProject(scoped, excludeSigned), wave?.wave) : null),
+    [scoped, excludeSigned, wave?.wave],
   );
 
   const run = async (key: string, action: () => Promise<string | null>) => {

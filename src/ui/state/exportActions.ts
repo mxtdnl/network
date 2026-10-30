@@ -3,6 +3,7 @@
 // build the file and download it. Every download is a blob: URL, which the
 // Content Security Policy allows; nothing leaves the browser.
 
+import { selectWaveProject } from './waves';
 import { EngineClient, type AnalysisInput } from '../engineClient';
 import { exportCopy } from '../copy/export';
 import { exportContext, type ExportContext, type ExportRequest } from '../export/context';
@@ -44,8 +45,10 @@ export function setExcludeSigned(on: boolean): void {
 function request(): ExportRequest | null {
   const s = useAppStore.getState();
   const project = s.data.project;
+  const scoped = selectWaveProject(s);
   const result = s.results.current;
-  if (!project || !result || result.memberIds.length !== project.members.length) return null;
+  if (!project || !scoped || !result || result.memberIds.length !== scoped.members.length)
+    return null;
   return {
     project,
     result,
@@ -54,7 +57,8 @@ function request(): ExportRequest | null {
     anonymise: s.ui.anonymise,
     excludeSigned: project.settings.exclude_signed_from_exports,
     grouping: s.ui.grouping,
-    audience: audienceChoice(project, s.ui.audience),
+    // The one-to-one's member is one on the exported wave's roster (build plan session 14).
+    audience: audienceChoice(scoped, s.ui.audience),
   };
 }
 
@@ -76,7 +80,7 @@ async function context(): Promise<ExportContext> {
 
 function mapState(): MapState {
   const s = useAppStore.getState();
-  const n = s.data.project?.members.length ?? 0;
+  const n = selectWaveProject(s)?.members.length ?? 0;
   const path = s.tools.path;
   return {
     positions: sharedLayout.nodes.length === n ? sharedLayout.snapshot() : null,

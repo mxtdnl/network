@@ -327,6 +327,7 @@ export async function analysePrepared(
     inputKey: input.inputKey,
     view: input.settings.view,
     symmetrise: input.settings.symmetrise,
+    wave: input.wave ?? 1,
     memberIds: input.memberIds,
     refOrder: p.refs.map((r) => r.ref),
     refs,

@@ -7,7 +7,9 @@
 // anonymisation, the signed-layer exclusion and the audience level can be
 // tested without a PDF; export/pdf.ts lays the blocks out on pages.
 
-import { DEFAULT_WAVE, isCategorical } from '../../data/schema';
+import { latestRatedWave, waveNumbers } from '../../data/waves';
+import { wavesCopy } from '../copy/waves';
+import { isCategorical } from '../../data/schema';
 import { surveyStatus } from '../../survey/model';
 import { coveragePercent, percent } from '../copy/data';
 import { remediesCopy } from '../copy/remedies';
@@ -449,7 +451,7 @@ function coverageSection(ctx: ExportContext): Block[] {
   const enabled = new Set(ctx.project.layers.filter((l) => l.enabled).map((l) => l.key));
   const counts = { self_report: 0, imported: 0, entered: 0, none: 0 };
   for (const t of ctx.project.ties) {
-    if (t.wave !== DEFAULT_WAVE || !enabled.has(t.variable)) continue;
+    if (t.wave !== latestRatedWave(ctx.project) || !enabled.has(t.variable)) continue;
     counts[t.source ?? 'none'] += 1;
   }
   const sources = (['self_report', 'imported', 'entered', 'none'] as const).filter(
@@ -473,7 +475,10 @@ function coverageSection(ctx: ExportContext): Block[] {
   // Survey response rates (spec §14, Phase 7): read from the open project, since
   // they count people, not ratings.
   blocks.push({ kind: 'heading', text: C.surveys });
-  const surveys = ctx.source.surveys;
+  // With several waves, the surveys of the wave reported (build plan session 14).
+  const surveys = ctx.wave.shown
+    ? ctx.source.surveys.filter((s) => s.wave === ctx.wave.wave)
+    : ctx.source.surveys;
   if (surveys.length === 0) blocks.push({ kind: 'paragraph', text: C.noSurveys });
   else {
     blocks.push({
@@ -622,6 +627,10 @@ export function buildReport(ctx: ExportContext, options: ReportOptions): ReportM
       ? R.cover.directed
       : R.cover.symmetrised(exportCopy.csv.rules[result.symmetrise]);
   const cover = [
+    // The wave, when there is more than one: its roster is the members counted (build plan session 14).
+    ...(ctx.wave.shown
+      ? [wavesCopy.cover(ctx.wave.wave, waveNumbers(ctx.source).length, project.members.length)]
+      : []),
     R.cover.members(project.members.length, layers),
     R.cover.view(view),
     R.cover.weights(R.cover.presets[ctx.weightsPreset]),
@@ -675,7 +684,7 @@ export function buildReport(ctx: ExportContext, options: ReportOptions): ReportM
     audience: audienceCopy.cover(ctx.policy.level, ctx.policy.minGroupSize),
     cover,
     statementHeading: qualityCopy.exportHeading,
-    statement: qualityStatement(computeQuality(project)),
+    statement: qualityStatement(computeQuality(project, ctx.wave.wave)),
     summary: reportSummary(ctx),
     views,
     sections,

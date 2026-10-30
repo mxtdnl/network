@@ -1,3 +1,6 @@
+import { useWaveInfo, useWaveProject } from '../state/waves';
+import { waveSummaries } from '../../data/waves';
+import { wavesCopy } from '../copy/waves';
 import { useId, useMemo, useState } from 'react';
 import { computeCoverage } from '../../data/coverage';
 import {
@@ -20,14 +23,16 @@ import { RemediesSection } from './RemediesSection';
 const Q = qualityCopy;
 
 export function useCoverage() {
-  const project = useAppStore((s) => s.data.project);
-  return useMemo(() => (project ? computeCoverage(project) : null), [project]);
+  const project = useWaveProject();
+  const wave = useWaveInfo()?.wave;
+  return useMemo(() => (project ? computeCoverage(project, wave) : null), [project, wave]);
 }
 
-/** The data-quality checks of the open project (src/data/quality.ts). */
+/** The data-quality checks of the open project in the wave analysed (src/data/quality.ts). */
 export function useQuality(): QualityResult | null {
-  const project = useAppStore((s) => s.data.project);
-  return useMemo(() => (project ? computeQuality(project) : null), [project]);
+  const project = useWaveProject();
+  const wave = useWaveInfo()?.wave;
+  return useMemo(() => (project ? computeQuality(project, wave) : null), [project, wave]);
 }
 
 /** The data-quality statement as paragraphs, for the panel, the Export dialog and the presentation. */
@@ -53,7 +58,7 @@ export function QualityStatement({
 // by one side only. Members are named here for the analyst only, through the
 // names layer; the statement gives counts.
 export function DataCheckPanel() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const quality = useQuality();
   const setThreshold = useAppStore((s) => s.setCoverageThreshold);
   const thresholdId = useId();
@@ -108,6 +113,7 @@ export function DataCheckPanel() {
         {coverageCopy.counts(coverage.rated, coverage.possible)}
       </p>
       <p className="coverage__explain">{coverageCopy.explain}</p>
+      <WaveTable />
       <h3 className="coverage__subheading">{coverageCopy.sourcesHeading}</h3>
       <dl className="definition-list definition-list--wide">
         {(['self_report', 'imported', 'entered', 'none'] as const).map((k) => {
@@ -216,6 +222,70 @@ export function DataCheckPanel() {
         </tfoot>
       </table>
     </div>
+  );
+}
+
+/** Coverage of every wave, each on its own roster (build plan session 14); only with several waves. */
+function WaveTable() {
+  const full = useAppStore((s) => s.data.project);
+  const info = useWaveInfo();
+  const rows = useMemo(
+    () =>
+      full && info?.shown
+        ? waveSummaries(full).map((w) => ({ ...w, coverage: computeCoverage(full, w.wave) }))
+        : [],
+    [full, info?.shown],
+  );
+  const id = useId();
+  if (!info?.shown || rows.length === 0) return null;
+  const B = wavesCopy.byWave;
+  return (
+    <section className="quality__section" aria-labelledby={id}>
+      <h3 id={id} className="coverage__subheading">
+        {B.heading}
+      </h3>
+      <p className="coverage__explain">{B.intro}</p>
+      <table className="coverage__table quality__table">
+        <caption className="visually-hidden">{B.caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{B.wave}</th>
+            <th scope="col" className="numeric">
+              {B.roster}
+            </th>
+            <th scope="col">{B.changes}</th>
+            <th scope="col" className="numeric">
+              {B.coverage}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((w) => {
+            const c = w.coverage;
+            const below = c.belowThreshold;
+            return (
+              <tr key={w.wave}>
+                <th scope="row">
+                  {B.waveName(w.wave)}
+                  {w.wave === info.wave && <span className="quality__note"> {B.analysed}</span>}
+                </th>
+                <td className="numeric">{w.roster}</td>
+                <td>{B.changeText(w.joined, w.left, w.wave === info.waves[0])}</td>
+                <td className="numeric">
+                  {below && (
+                    <span className="coverage__row-flag">
+                      <Icon name="warning" />
+                      <span className="visually-hidden">{coverageCopy.below}</span>
+                    </span>
+                  )}
+                  {c.rated === 0 ? B.noRatings : coveragePercent(c.rate, c.threshold)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
   );
 }
 
@@ -401,7 +471,7 @@ function OneWay({ quality }: { quality: QualityResult }) {
 // People outside the roster (build plan session 12): counts of the boundary
 // question's answers, overall and by the rules' grouping attribute. Counts only.
 function Boundary() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const result = useMemo(() => (project ? computeBoundary(project) : null), [project]);
   const id = useId();
   if (!result) return null;

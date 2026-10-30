@@ -19,6 +19,7 @@ import type {
   ResilienceResult,
 } from '../engineClient';
 import { readNoticeSeen, writeNoticeSeen } from './noticeStorage';
+import { resolveWave, waveRosterIds } from '../../data/waves';
 import {
   effectiveWeights,
   initialWeightState,
@@ -132,6 +133,8 @@ export interface MapSettings {
   reconstruct: boolean;
   /** Analysis: each rater's ratings on unsigned layers replaced by ranks within the rater (D151). */
   standardise: 'none' | 'rank';
+  /** Analysis: the wave analysed (build plan session 14); null is the latest wave with ratings. */
+  wave: number | null;
   /** Layers switched off on the map; with `hideOffLayers`, their ties are hidden (D59). */
   layerToggles: Record<LayerKey, boolean>;
   /** When true, a layer switched off also hides its ties (CLAUDE.md D59). */
@@ -312,6 +315,7 @@ export function initialMapSettings(): MapSettings {
     nonRespondents: 'mark',
     reconstruct: false,
     standardise: 'none',
+    wave: null,
     layerToggles: {},
     hideOffLayers: false,
     filters: [],
@@ -585,7 +589,10 @@ export const useAppStore = create<AppState>()((set, get) => {
       if (get().data.matrixLayer === null) setData({ matrixLayer: layer.key });
     },
     applyRatings: (variable, changes) => {
-      change((p) => applyRatingChanges(p, variable, changes, now()));
+      // Entered in the wave analysed (build plan session 14).
+      change((p) =>
+        applyRatingChanges(p, variable, changes, now(), resolveWave(p, get().map.wave)),
+      );
     },
     setCoverageThreshold: (coverage_threshold) => {
       change((p) => ({ ...p, settings: { ...p.settings, coverage_threshold } }));
@@ -625,6 +632,26 @@ export const useAppStore = create<AppState>()((set, get) => {
           next.question = null;
         if (patch.view && patch.sizeMetric === undefined) {
           next.sizeMetric = metricForView(next.sizeMetric, patch.view);
+        }
+        // Another wave has its own roster and ratings (build plan session 14): members
+        // not on its roster leave the selection, and the explore tools end.
+        const project = s.data.project;
+        if (patch.wave !== undefined && patch.wave !== s.map.wave && project) {
+          const on = new Set(waveRosterIds(project, resolveWave(project, next.wave)));
+          if (next.ego && !on.has(next.ego.member)) next.ego = null;
+          next.highlight = next.highlight.filter((id) => on.has(id));
+          return {
+            map: next,
+            selection: {
+              ...s.selection,
+              member:
+                s.selection.member !== null && on.has(s.selection.member)
+                  ? s.selection.member
+                  : null,
+              group: s.selection.group.filter((id) => on.has(id)),
+            },
+            tools: { ...initialToolsState(), removal: [] },
+          };
         }
         return { map: next };
       });

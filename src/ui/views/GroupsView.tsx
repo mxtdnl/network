@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import {
   useEffect,
   useId,
@@ -49,7 +50,7 @@ function shareClass(ties: number, possible: number): string {
 // table per group; choosing a group makes its members the subgroup, so the
 // map, the matrix and the table follow (D64).
 export function GroupsView() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const data = useMapData();
   if (!project || project.members.length === 0) return <EmptyState />;
   if (!data) return <p className="placeholder">{mapCopy.calculating}</p>;

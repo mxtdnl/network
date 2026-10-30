@@ -108,6 +108,8 @@ export const layerCopy = {
 
 export const matrixCopy = {
   layer: 'Layer',
+  wave: (wave: number) =>
+    `Ratings entered here go into wave ${String(wave)}, for the members on its roster. Choose another under Wave, at the top of the left column.`,
   heading: (label: string) => `${label} matrix`,
   help: 'Each row rates the columns. Use the arrow keys to move, type a value and press Enter, press Delete to clear a cell, and paste a block copied from a spreadsheet.',
   corner: 'Rows rate columns',

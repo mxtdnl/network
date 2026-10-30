@@ -34,6 +34,11 @@
   gap: var(--s-1);
 }
 
+.top-bar__wave {
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
 .top-bar__indicator,
 .top-bar__coverage--none {
   color: var(--graphite);
@@ -575,6 +580,7 @@ a {
 }
 
 .matrix__help,
+.matrix__wave,
 .matrix__scale,
 .matrix__position {
   color: var(--graphite);

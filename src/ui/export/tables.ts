@@ -6,6 +6,7 @@
 // (CLAUDE.md D66); values are unrounded and a value that is not defined is an
 // empty cell.
 
+import { wavesCopy } from '../copy/waves';
 import type { SizeMetric } from '../state/store';
 import { FI_CLASS } from '../engineClient';
 import { remediesCopy } from '../copy/remedies';
@@ -31,7 +32,7 @@ const cell = (v: number) => (Number.isFinite(v) ? String(v) : '');
 /** File-name part for the view: `directed`, or `mutual-mean` and so on. */
 export function viewSlug(ctx: ExportContext): string {
   const base = ctx.result.view === 'directed' ? 'directed' : `mutual-${ctx.result.symmetrise}`;
-  return `${base}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level)}`;
+  return `${base}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level, ctx.wave.shown ? ctx.wave.wave : null)}`;
 }
 
 /** Plain label of a layer reference in the export's project. */
@@ -159,6 +160,7 @@ export function networkMetricsCsv(ctx: ExportContext): ExportFile {
   const attrLabel = (key: string) =>
     project.attribute_definitions.find((a) => a.key === key)?.label ?? key;
 
+  if (ctx.wave.shown) add('', wavesCopy.measure, String(ctx.wave.wave));
   add('', M.view, viewText(ctx));
   for (const id of appliedRemedies(result)) add('', M.option, remediesCopy.applied[id]);
   const coverage = result.coverage;
@@ -403,10 +405,6 @@ export function metricsTableCsv(ctx: ExportContext, spec: TableSpec): ExportFile
       ]),
     ]);
   }
-  const fileName = `graticule-metrics-${settings.layer}-${result.view}${exportCopy.suffix(
-    ctx.anonymised,
-    ctx.reanalysed,
-    ctx.policy.level,
-  )}.csv`;
+  const fileName = `graticule-metrics-${settings.layer}-${result.view}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level, ctx.wave.shown ? ctx.wave.wave : null)}.csv`;
   return { fileName, text: toCsv(rows) };
 }

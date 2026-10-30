@@ -85,17 +85,18 @@ function changeValue(c: Exclude<RatingChange, { kind: 'clear' }>) {
   return c.kind === 'set' ? { value: c.value } : { value: null, not_applicable: true as const };
 }
 
-/** Applies changes to one layer's wave-1 ratings. Self-pairs are ignored. */
+/** Applies changes to one layer's ratings in a wave (wave 1 unless given). Self-pairs are ignored. */
 export function applyRatingChanges(
   project: Project,
   variable: string,
   changes: readonly RatingChange[],
   now: string,
+  wave = DEFAULT_WAVE,
 ): Project {
   const pending = new Map<string, RatingChange>();
   for (const c of changes) {
     if (c.rater === c.ratee) continue;
-    pending.set(tieKey(c.rater, c.ratee, variable, DEFAULT_WAVE), c);
+    pending.set(tieKey(c.rater, c.ratee, variable, wave), c);
   }
   if (pending.size === 0) return project;
 
@@ -123,7 +124,7 @@ export function applyRatingChanges(
         ratee_id: c.ratee,
         variable,
         ...changeValue(c),
-        wave: DEFAULT_WAVE,
+        wave,
         source: 'entered',
       });
     }
@@ -131,11 +132,15 @@ export function applyRatingChanges(
   return { ...project, meta: { ...project.meta, modified_at: now }, ties };
 }
 
-/** Index of one layer's wave-1 ratings by rater and ratee. */
-export function layerIndex(ties: readonly Tie[], variable: string): Map<string, Tie> {
+/** Index of one layer's ratings in a wave (wave 1 unless given) by rater and ratee. */
+export function layerIndex(
+  ties: readonly Tie[],
+  variable: string,
+  wave = DEFAULT_WAVE,
+): Map<string, Tie> {
   const index = new Map<string, Tie>();
   for (const t of ties) {
-    if (t.variable === variable && t.wave === DEFAULT_WAVE) {
+    if (t.variable === variable && t.wave === wave) {
       index.set(pairKey(t.rater_id, t.ratee_id), t);
     }
   }

@@ -33,6 +33,8 @@ import { DIRECTED_METRICS, flagCopy } from '../../src/ui/copy/metrics';
 import { qualityCopy, qualityStatement } from '../../src/ui/copy/quality';
 import { mapCopy } from '../../src/ui/copy/map';
 import { remediesCopy } from '../../src/ui/copy/remedies';
+import { wavesCopy } from '../../src/ui/copy/waves';
+import type { Project } from '../../src/data/schema';
 import { computeQuality } from '../../src/data/quality';
 import { effectiveWeights, type WeightState } from '../../src/ui/state/presets';
 import type { MapSettings } from '../../src/ui/state/store';
@@ -960,5 +962,85 @@ describe('relations the analyst created (build plan session 11)', () => {
         }
       }, 30_000);
     });
+  });
+});
+
+describe('waves in exports (build plan session 14)', () => {
+  // The sensitive project with a second wave: every rating again, a member off its roster.
+  // The leaver is in the middle of the roster, so names follow member ids, not positions.
+  const leaverMember = project.members[5];
+  const leaver = leaverMember?.id ?? '';
+  const twoWaves: Project = {
+    ...project,
+    ties: [
+      ...project.ties,
+      ...project.ties
+        .filter((t) => t.rater_id !== leaver && t.ratee_id !== leaver)
+        .map((t) => ({ ...t, wave: 2 })),
+    ],
+    settings: {
+      ...project.settings,
+      waves: [
+        { wave: 1, roster: project.members.map((m) => m.id) },
+        { wave: 2, roster: project.members.map((m) => m.id).filter((id) => id !== leaver) },
+      ],
+    },
+  };
+  const n1 = project.members.length;
+
+  describe.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])('names hidden %s, signed layers left out %s', (anonymise, excludeSigned) => {
+    it.each([1, 2])(
+      'names wave %i and its roster in every export',
+      async (wave) => {
+        const ctx = await contextFor(twoWaves, {
+          anonymise,
+          excludeSigned,
+          weights: HEALTH,
+          map: { wave },
+        });
+        const roster = wave === 1 ? n1 : n1 - 1;
+        expect(ctx.wave).toStrictEqual({ wave, shown: true });
+        expect(ctx.result.wave).toBe(wave);
+        expect(ctx.project.members).toHaveLength(roster);
+        const legend = wavesCopy.legend(wave, roster);
+        for (const type of ['png', 'svg', 'pdf'] as const) {
+          const out = await produce(type, ctx);
+          // Legend text wraps in the drawn exports, so the start of the note is looked for.
+          expect(out.text).toContain(legend.slice(0, 20));
+          if (anonymise) expect(NAMES.filter((x) => out.text.includes(x))).toEqual([]);
+        }
+        const pdf = await produce('pdf', ctx);
+        expect(pdf.text).toContain(wavesCopy.cover(wave, 2, roster).slice(0, 12));
+        expect(pdf.text).toContain(`-wave-${String(wave)}`);
+        const network = networkMetricsCsv(ctx);
+        expect(network.fileName).toContain(`-wave-${String(wave)}`);
+        expect(network.text).toContain(`${wavesCopy.measure},,,,${String(wave)}`);
+        const members = memberMetricsCsv(ctx);
+        expect(members.fileName).toContain(`-wave-${String(wave)}`);
+        // The leaver is in wave 1's rows and map only; every other member keeps their name.
+        const leaverName = leaverMember?.display_name ?? '';
+        expect(ctx.names.byIndex).toEqual(ctx.project.members.map((m) => ctx.names.of(m.id)));
+        if (!anonymise) {
+          expect(members.text.includes(leaverName)).toBe(wave === 1);
+          const svg = await produce('svg', ctx);
+          expect(svg.text.includes(leaverName)).toBe(wave === 1);
+          expect(svg.text).toContain(project.members.at(-1)?.display_name ?? '');
+        }
+      },
+      60_000,
+    );
+  });
+
+  it('names no wave in a project with one', async () => {
+    const ctx = await contextFor(project, { anonymise: false, excludeSigned: false });
+    expect(ctx.wave).toStrictEqual({ wave: 1, shown: false });
+    const out = await produce('svg', ctx);
+    expect(out.text).not.toContain('Wave 1:');
+    expect(networkMetricsCsv(ctx).fileName).not.toContain('-wave-');
   });
 });

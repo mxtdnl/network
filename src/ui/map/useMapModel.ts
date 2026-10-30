@@ -1,6 +1,7 @@
 // The map model for the current project, analysis result and map settings,
 // shared by the map, its legend, the controls and the member panel.
 
+import { useWaveInfo, useWaveProject } from '../state/waves';
 import { useMemo } from 'react';
 import type { AttributeDefinition, Project } from '../../data/schema';
 import type { AnalysisResult } from '../engineClient';
@@ -15,7 +16,7 @@ import {
   type MapModel,
 } from './model';
 import { readMapTheme, type MapTheme } from './theme';
-import { useMemberNames, type MemberNames } from '../state/names';
+import { alignNames, useMemberNames, type MemberNames } from '../state/names';
 import { mapCopy } from '../copy/map';
 
 let cachedTheme: MapTheme | null = null;
@@ -128,7 +129,8 @@ export function layoutRequest(
   // Names order members within groups; codes order them differently, so the key changes with them.
   const names = memberNames.byIndex;
   const weights = result.refs[settings.layer]?.weights;
-  const base = `${String(revision)}|${String(project.members.length)}`;
+  // The wave too: two waves can have rosters of the same size (build plan session 14).
+  const base = `${String(revision)}|${String(project.members.length)}|w${String(result.wave)}`;
   // Names order members within groups, so codes lay them out differently; the force layout ignores names.
   const naming = memberNames.anonymised ? '|coded' : '|named';
   switch (settings.layout) {
@@ -181,19 +183,23 @@ export interface MapData {
 }
 
 export function useMapData(): MapData | null {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const revision = useAppStore((s) => s.data.revision);
   const result = useAppStore((s) => s.results.current);
   const raw = useAppStore((s) => s.map);
   const removal = useAppStore((s) =>
     s.tools.resilience && s.tools.showRemoval ? s.tools.removal : null,
   );
-  const names = useMemberNames();
+  const allNames = useMemberNames();
+  const waveInfo = useWaveInfo();
+  const wave = waveInfo?.shown ? waveInfo.wave : null;
   return useMemo(() => {
     if (!project || !result || result.memberIds.length !== project.members.length) return null;
+    // Names in the order of the wave's roster (build plan session 14).
+    const names = alignNames(allNames, project);
     const theme = mapTheme();
     const settings = effectiveSettings(project, result, raw);
-    const model = buildMapModel(project, result, settings, theme, names.byIndex);
+    const model = buildMapModel(project, result, settings, theme, names.byIndex, { wave });
     const informal = roleLayer(project, 'informal');
     const overlay =
       settings.layout === 'hierarchy' && informal && result.refs[informal.key]
@@ -202,11 +208,12 @@ export function useMapData(): MapData | null {
     const mapModel =
       overlay || (removal && removal.length > 0)
         ? buildMapModel(project, result, settings, theme, names.byIndex, {
+            wave,
             ...(overlay ? { edgeLayer: overlay } : {}),
             ...(removal ? { removed: new Set(removal) } : {}),
           })
         : model;
     const layout = layoutRequest(project, result, settings, revision, names);
     return { project, result, settings, model, mapModel, layout, theme };
-  }, [project, revision, result, raw, removal, names]);
+  }, [project, revision, result, raw, removal, allNames, wave]);
 }

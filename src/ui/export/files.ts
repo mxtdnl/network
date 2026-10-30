@@ -224,7 +224,7 @@ export async function pdfExport(
   const date = deps.now.toISOString().slice(0, 10);
   return {
     fileName: exportCopy.files.report(
-      `${date}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level)}`,
+      `${date}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level, ctx.wave.shown ? ctx.wave.wave : null)}`,
     ),
     bytes: out.bytes,
     report,
@@ -262,7 +262,7 @@ export async function cardExport(
   const date = deps.now.toISOString().slice(0, 10);
   return {
     fileName: exportCopy.files.card(
-      `${date}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level)}`,
+      `${date}${exportCopy.suffix(ctx.anonymised, ctx.reanalysed, ctx.policy.level, ctx.wave.shown ? ctx.wave.wave : null)}`,
     ),
     bytes: out.bytes,
     card,

@@ -27,6 +27,8 @@ import {
   type SizeMetric,
 } from './store';
 import type { WeightState } from './presets';
+import { resolveWave, scopeToWave, waveNumbers } from '../../data/waves';
+import { analysedWave, selectWaveProject } from './waves';
 import { activeQuestion, isQuestionId, questionText } from './questions';
 
 let counter = 0;
@@ -59,6 +61,7 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
     nonRespondents: map.nonRespondents,
     reconstruct: map.reconstruct,
     standardise: map.standardise,
+    ...(map.wave !== null ? { wave: map.wave } : {}),
     layerToggles: { ...map.layerToggles },
     hideOffLayers: map.hideOffLayers,
     filters: map.filters.map((f) => ({ key: f.key, values: [...f.values] })),
@@ -77,7 +80,11 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
   };
 }
 
-export function savedToMap(saved: SavedMapSettings, project: Project): MapSettings {
+export function savedToMap(saved: SavedMapSettings, full: Project): MapSettings {
+  // A wave the project no longer has falls back to the latest with ratings.
+  const wave =
+    saved.wave !== undefined && waveNumbers(full).includes(saved.wave) ? saved.wave : null;
+  const project = scopeToWave(full, resolveWave(full, wave));
   const ids = new Set(project.members.map((m) => m.id));
   return {
     ...initialMapSettings(),
@@ -96,6 +103,7 @@ export function savedToMap(saved: SavedMapSettings, project: Project): MapSettin
     nonRespondents: saved.nonRespondents ?? 'mark',
     reconstruct: saved.reconstruct === true,
     standardise: saved.standardise ?? 'none',
+    wave,
     layerToggles: { ...saved.layerToggles },
     filters: saved.filters.map((f) => ({ key: f.key, values: [...f.values] })),
     ego: saved.ego && ids.has(saved.ego.member) ? { ...saved.ego } : null,
@@ -129,15 +137,17 @@ export function capturePositions(
 export function captureView(name: string, caption = ''): SavedView | null {
   const s = useAppStore.getState();
   const project = s.data.project;
-  if (!project) return null;
+  const scoped = selectWaveProject(s);
+  if (!project || !scoped) return null;
   return {
     id: newViewId(project),
     name,
     caption,
     created_at: new Date().toISOString(),
     weights: weightsToSaved(s.weights),
-    map: mapToSaved(s.map),
-    positions: capturePositions(project, sharedLayout.snapshot()),
+    // The wave is saved as a number, so the view keeps its wave when a later one arrives.
+    map: mapToSaved({ ...s.map, wave: analysedWave(s) }),
+    positions: capturePositions(scoped, sharedLayout.snapshot()),
     selection: { member: s.selection.member, group: [...s.selection.group] },
   };
 }
@@ -238,8 +248,11 @@ export function updateView(id: string): void {
 /** Puts the app in the state a view recorded and shows the map. */
 export function restoreView(view: SavedView): void {
   const s = useAppStore.getState();
-  const project = s.data.project;
-  if (!project) return;
+  const full = s.data.project;
+  if (!full) return;
+  const map = savedToMap(view.map, full);
+  // Positions and selection belong to the members of the wave the view shows.
+  const project = scopeToWave(full, resolveWave(full, map.wave));
   const ids = new Set(project.members.map((m) => m.id));
   const weights: WeightState = {
     preset: view.weights.preset,
@@ -249,7 +262,7 @@ export function restoreView(view: SavedView): void {
   const points = project.members.map((m) => view.positions[m.id] ?? null);
   const hasPositions = points.some((p) => p !== null);
   s.applyViewState({
-    map: savedToMap(view.map, project),
+    map,
     weights,
     selection: {
       member:

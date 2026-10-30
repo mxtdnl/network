@@ -355,6 +355,26 @@ export function checkProject(file: Obj): string[] {
         `settings.audience must give a level (${AUDIENCE_LEVELS.join(', ')}), a whole minimum group size of at least ${String(MIN_GROUP_SIZE_FLOOR)}, named_teams and named_members.`,
       );
     }
+    // Wave rosters (build plan session 14): one record per wave. Member ids no longer in the
+    // project are allowed: they simply match nobody.
+    if (s.waves !== undefined) {
+      const waves = s.waves;
+      const ok =
+        Array.isArray(waves) &&
+        waves.every(
+          (w: unknown) =>
+            isObj(w) &&
+            isNum(w.wave) &&
+            Number.isInteger(w.wave) &&
+            w.wave >= 1 &&
+            isStrArray(w.roster),
+        ) &&
+        new Set(waves.map((w: Obj) => w.wave)).size === waves.length;
+      need(
+        ok,
+        'settings.waves must give each wave once, with a whole-number wave and a roster of member ids.',
+      );
+    }
     // Edited executive summaries (build plan session 10), one per audience level.
     if (s.summaries !== undefined) {
       const sums = s.summaries;
@@ -461,6 +481,7 @@ export function checkSavedView(v: Obj): string[] {
       m.standardise === undefined || m.standardise === 'none' || m.standardise === 'rank',
       'has an invalid standardisation setting.',
     );
+    need(m.wave === undefined || (isInt(m.wave) && m.wave >= 1), 'has an invalid wave.');
     need(
       isObj(m.layerToggles) && Object.values(m.layerToggles).every(isBool),
       'has invalid layer toggles.',
@@ -553,6 +574,10 @@ export function checkSurvey(v: Obj): string[] {
   need(isStr(v.created_at), 'has no created_at.');
   need(v.status === 'open' || v.status === 'closed', 'has an unknown status.');
   need(isInt(v.wave) && v.wave >= 1, 'must have a whole-number wave of 1 or more.');
+  need(
+    v.repeats === undefined || (isStr(v.repeats) && v.repeats !== ''),
+    'names an invalid survey it repeats.',
+  );
   const t = v.texts;
   need(
     isObj(t) && isStr(t.introduction) && isStr(t.confidentiality) && isStr(t.return_instructions),

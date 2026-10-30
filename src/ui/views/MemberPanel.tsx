@@ -1,5 +1,6 @@
+import { latestRatedWave } from '../../data/waves';
 import { Fragment, useId, useMemo, useState, type KeyboardEvent } from 'react';
-import { DEFAULT_WAVE, isCategorical, type LayerDefinition, type Project } from '../../data/schema';
+import { isCategorical, type LayerDefinition, type Project } from '../../data/schema';
 import type { AnalysisResult } from '../engineClient';
 import { Icon } from '../components/Icon';
 import { formatValue, mapCopy } from '../copy/map';
@@ -105,7 +106,7 @@ function tiesFor(
     return r;
   };
   for (const t of project.ties) {
-    if (t.variable !== layer.key || t.wave !== DEFAULT_WAVE) continue;
+    if (t.variable !== layer.key || t.wave !== latestRatedWave(project)) continue;
     const v = typeof t.value === 'number' ? t.value : t.not_applicable ? 'na' : null;
     if (v === null) continue;
     if (t.rater_id === memberId && known.has(t.ratee_id)) row(t.ratee_id).given = v;

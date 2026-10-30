@@ -1,5 +1,6 @@
 // Data coverage (spec §6, plan §3.7): the share of possible ratings that were
-// given, per rater and overall, over the enabled layers of wave 1.
+// given, per rater and overall, over the enabled layers of one wave, on that
+// wave's roster (build plan session 14): the wave given, else the latest with ratings.
 //
 //   coverage_i = |{(j, l) : rating_ijl given}| / ((n − 1) × L_enabled − NA_i)
 //
@@ -11,7 +12,8 @@
 // Pure and cheap (one pass over the ties), so it runs on the main thread; the
 // Phase 3 engine imports the same function.
 
-import { DEFAULT_WAVE, type MemberId, type Project } from './schema';
+import { type MemberId, type Project } from './schema';
+import { resolveWave, scopeToWave } from './waves';
 
 export interface RaterCoverage {
   id: MemberId;
@@ -40,9 +42,13 @@ export interface CoverageResult {
    */
   belowThreshold: boolean;
   layerCount: number;
+  /** The wave counted. */
+  wave: number;
 }
 
-export function computeCoverage(project: Project): CoverageResult {
+export function computeCoverage(full: Project, chosenWave?: number | null): CoverageResult {
+  const wave = resolveWave(full, chosenWave);
+  const project = scopeToWave(full, wave);
   const enabled = new Set(project.layers.filter((l) => l.enabled).map((l) => l.key));
   const ids = new Set(project.members.map((m) => m.id));
   const n = project.members.length;
@@ -52,7 +58,7 @@ export function computeCoverage(project: Project): CoverageResult {
   const declined = new Map<MemberId, number>();
   const notApplicable = new Map<MemberId, number>();
   for (const t of project.ties) {
-    if (t.wave !== DEFAULT_WAVE || !enabled.has(t.variable)) continue;
+    if (t.wave !== wave || !enabled.has(t.variable)) continue;
     if (t.rater_id === t.ratee_id || !ids.has(t.rater_id) || !ids.has(t.ratee_id)) continue;
     const bucket = t.not_applicable ? notApplicable : t.value === null ? declined : rated;
     bucket.set(t.rater_id, (bucket.get(t.rater_id) ?? 0) + 1);
@@ -89,5 +95,6 @@ export function computeCoverage(project: Project): CoverageResult {
     threshold,
     belowThreshold: Number.isFinite(rate) && totalRated > 0 && rate < threshold,
     layerCount: enabled.size,
+    wave,
   };
 }

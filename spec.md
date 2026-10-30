@@ -20,7 +20,8 @@ This document is the single source of truth for the build. Decisions made during
 - **Descriptive, not diagnostic.** The tool reports network structure; it does not evaluate individuals. No member is ever labelled good or bad.
 - **No backend.** All data is processed in the browser. No analytics, telemetry, or third-party requests at runtime; fonts are self-hosted. This applies to respondent mode too: survey links carry the survey, and responses return to the analyst as encrypted files or text blocks, not through a server.
 - **In scope: survey collection (section 15).** The analyst sets up a whole-network survey, issues personal links, and imports the encrypted responses. The response return step sits behind a transport interface so that a hosted collection service can replace it later without changing the survey experience; no server is built in v1.
-- **Out of scope for v1:** a hosted collection backend, and multi-wave comparison over time. The data model must allow both to be added later: ties carry a `wave` field, defaulting to 1, and surveys record the wave their responses belong to.
+- **In scope: several waves.** A project can hold ratings from repeated runs of the same survey. Ties carry a `wave` field, defaulting to 1, surveys record the wave their responses belong to, and the project records who was on each wave's roster. The analysis, coverage, insights, saved views, presentation and exports read one wave at a time, on that wave's roster (section 6). Showing what changed between two waves is planned as a separate comparison.
+- **Out of scope for v1:** a hosted collection backend.
 
 ## 3. Methodological basis
 
@@ -106,7 +107,7 @@ Optional layers (disabled by default). Each ships with the suggested question wo
 
 ### 4.3 Project file
 - A whole project is saved as a single JSON file with extension `.ona.json`.
-- It holds a `schema_version`, members, layer definitions, ties, attribute definitions, saved views, surveys and settings.
+- It holds a `schema_version`, members, layer definitions, ties, attribute definitions, saved views, surveys and settings, among them who was on each wave's roster. A wave with no roster recorded has every member on it.
 - Loading an older `schema_version` runs an explicit migration function. Unknown future versions are refused with a clear message.
 
 ### 4.4 Surveys
@@ -115,7 +116,8 @@ A project holds zero or more surveys (section 15). Each survey stores:
 - the analyst's public key, and the private key encrypted with the analyst's passphrase (section 15.2);
 - every respondent token issued, with the member, the version issued and the date;
 - a log of imports: accepted responses, replaced duplicates and rejected files, each with a reason and a receipt code;
-- the wave its responses belong to, its status (open or closed) and its settings (deadline, burden limit, link mode).
+- the wave its responses belong to, its status (open or closed) and its settings (deadline, burden limit, link mode);
+- when it repeats an earlier survey for a later wave, the survey it repeats.
 
 The passphrase and the decrypted private key are never stored.
 
@@ -197,6 +199,8 @@ For path-based metrics, weight is converted to distance as 1/w. The method notes
 - components;
 - reachability;
 - average path length.
+
+**Waves.** The analysis reads one wave: by default the latest wave with ratings, or the wave the analyst chooses. Only members on that wave's roster are analysed, and only ratings between them; coverage and the data-quality checks count the same roster, so a member who joined after a wave, or left before it, is not counted as not answering it. "Check the data" shows coverage for every wave, with how many joined and left since the wave before. The wave chosen is saved with views and named, when the project has more than one wave, in the top bar, the map legend, presentation mode and every export.
 
 **Data coverage.**
 - Response rate per rater and overall. Ratings marked "does not apply" are left out of the ratings that were possible.
@@ -383,6 +387,7 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
   - optional appendices: key metrics (with ties within and between groups by the grouping chosen in the Groups view, team by default), the insight rules with every observation, and the technical notes;
   - an ethics statement.
   The Export dialog chooses the views, the audience level and whether to include the appendices.
+- Every export shows one wave, the one analysed (section 6); each saved view in a report shows its own wave. When the project has more than one wave, the wave is named in the map legend, on the report's cover, in the network metrics and in every file name, and the report's survey response rates list that wave's surveys.
 - Every export respects the anonymisation and signed-layer exclusion settings, and the audience level (section 8). At board and leadership level the map export is the group map and the report's map page shows groups; member metrics, the formal–informal pairs and the metrics table are not offered; group rows below the minimum size are pooled or left out; the report lists group-level insights only, its summary is drafted from them, its view pages show groups, and for a leadership team it lists the roles between groups. A team workshop's exports hold its team only. A one-to-one offers the member's personal network card as a PDF and nothing else.
 - Survey administration files (the mail-merge list of links, the non-responder list and the key backup, section 15) are not analysis exports. They identify people by design, so anonymisation does not apply to them; each is labelled as containing personal data when saved.
 
@@ -498,6 +503,7 @@ The analyst runs a whole-network survey inside Graticule, with no backend. Each 
 - **Burden warning.** When the estimate exceeds a configurable limit, a warning states the estimate and the limit, and suggests including fewer layers or using nomination.
 - **Identity and versions.** Each survey has a random `id` and a version number, starting at 1. Changing the roster, the included layers, their wording or scales, or the entry method after links have been issued creates a new version; the texts and the deadline can change without one. Earlier links stay valid and answer their own version. The analyst can issue links for the new version (to everyone, or only to members who have no link yet). Responses record the version they answered.
 - **Wave.** Each survey states the wave its ratings are imported into (default 1).
+- **Repeat this survey.** Creates a survey for the next wave with the same questions, texts and settings and a new link for each person, on a roster the analyst confirms (by default everyone in the project; people who have left are unticked and keep their earlier waves). It uses the same key and passphrase as the survey it repeats. Repeating records the roster of the new wave and of every earlier wave; people added to the project afterwards join the latest wave only, and the Members tab shows and changes who is on each wave's roster. A survey's roster is its wave's roster.
 - **Design guidance.** Setup opens with guidance for a newcomer: relations suggested by purpose from the question bank (section 4.2), with the number of questions asked against a recommended three to five; what rating everyone and selecting first each record and how long each would take for this roster; and the response rate a whole-network design needs (the coverage threshold as a number of people, and the share of pairs reported from both sides at that rate).
 - **Context questions (optional).** The analyst can ask about the respondent's own situation from a fixed set: time in current role, where they usually work, usual working hours, and main site (whose answers the analyst lists, 2 to 8, defaulting to the project's locations, plus "Somewhere else"). Each has "Prefer not to say". The questions are on their own screen, after the ratings, behind an unticked consent box; without consent nothing is asked or sent. With consent, each answer is stored on import in a member attribute created for the question (section 4.1), and a later response from the same member replaces the earlier answers as a whole. Changing the context questions creates a new version.
 - **Boundary question (optional).** "Roughly how many people outside this list do you rely on to get your work done?", asked for each of 1 to 6 groups of people the analyst names (by default other parts of the organisation, customers or clients, suppliers or partners), answered None, 1 or 2, 3 to 5, 6 to 10 or More than 10; every group must be answered. The answers are stored with the response in the import log, not as attributes, and shown in "Check the data" (section 6). Changing the groups creates a new version.
@@ -561,6 +567,7 @@ The analyst runs a whole-network survey inside Graticule, with no backend. Each 
 
 ### 15.5 Collection dashboard (analyst)
 
+- **Waves:** once a project has more than one survey, the dashboard lists every survey by wave, with its status and responses, and opens any of them.
 - **Status per survey:** links issued; responses imported; response rate against the coverage threshold (section 6); non-responders; duplicates; rejected files with the reason for each.
 - **Import:** drag and drop of many files at once, a file chooser, and a paste box for text blocks (several blocks can be pasted together).
 - **Passphrase:** required to decrypt. It is held in memory for the session only and never persisted; closing or reloading the page forgets it.

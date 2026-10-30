@@ -17,6 +17,7 @@ import { effectiveWeights, weightsKey } from './presets';
 import { useAppStore, type AppState } from './store';
 import { refreshTools } from './tools';
 import { analysisOptions } from './remedies';
+import { analysedWave } from './waves';
 
 let client: EngineClient | null = null;
 let running: Operation<AnalysisResult> | null = null;
@@ -32,7 +33,7 @@ export function engineClient(): EngineClient {
 
 function baseKey(s: AppState): string {
   const m = s.map;
-  return `${String(s.data.revision)}:${m.view}:${m.symmetrise}:${m.nonRespondents}:${String(m.reconstruct)}:${m.standardise}`;
+  return `${String(s.data.revision)}:w${String(analysedWave(s))}:${m.view}:${m.symmetrise}:${m.nonRespondents}:${String(m.reconstruct)}:${m.standardise}`;
 }
 
 function keys(s: AppState) {

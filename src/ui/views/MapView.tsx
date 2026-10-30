@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import {
   useCallback,
   useEffect,
@@ -46,7 +47,7 @@ function groupLabel(model: MapModel, index: number): string {
 // keyboard and screen-reader use, the persistent legend, zoom controls and a
 // visually hidden table of the same content.
 export function MapView() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const results = useAppStore((s) => s.results);
   const data = useMapData();
   if (!project || project.members.length === 0) return <EmptyState />;

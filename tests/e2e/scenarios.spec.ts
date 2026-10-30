@@ -3,6 +3,9 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { MERGED_SCENARIOS } from '../../scripts/generate-merged-scenarios';
 import { SCENARIOS } from '../../scripts/generate-scenarios';
+import { WAVE_SCENARIOS } from '../../scripts/generate-wave-scenarios';
+import { parseProject } from '../../src/data/projectFile';
+import { latestRatedWave, waveRosterIds } from '../../src/data/waves';
 import { scenarioFile } from '../../scripts/scenario-kit';
 
 // The scenario projects (CLAUDE.md D138, D139) open through Project → Open in the
@@ -16,7 +19,7 @@ const nodes = (page: Page) =>
 
 test.use({ actionTimeout: 20_000 });
 
-for (const { slug } of [...SCENARIOS, ...MERGED_SCENARIOS]) {
+for (const { slug } of [...SCENARIOS, ...MERGED_SCENARIOS, ...WAVE_SCENARIOS]) {
   test(`scenario ${slug} opens and draws its map`, async ({ page }) => {
     test.setTimeout(90_000);
     const problems: string[] = [];
@@ -27,7 +30,9 @@ for (const { slug } of [...SCENARIOS, ...MERGED_SCENARIOS]) {
 
     const file = scenarioFile(slug);
     const text = readFileSync(join(import.meta.dirname, '..', '..', 'src', 'demo', file), 'utf8');
-    const members = (JSON.parse(text) as { members: unknown[] }).members.length;
+    // The map shows the latest wave with ratings, on its roster (build plan session 14).
+    const project = parseProject(text);
+    const members = waveRosterIds(project, latestRatedWave(project)).length;
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('./');

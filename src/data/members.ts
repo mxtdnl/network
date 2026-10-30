@@ -14,6 +14,7 @@
 //   any manager reference to them. Surveys keep their rosters as issued; the
 //   import reports a removed colleague as dropped (survey/collect.ts).
 
+import { addToLatestWave, removeFromWaves } from './waves';
 import type {
   AttributeDefinition,
   AttributeKey,
@@ -135,7 +136,12 @@ export function addMembers(project: Project, entries: NewMember[]): Project {
       attributes: { ...attributes, ...cleanAttributes(project, e.attributes, id) },
     };
   });
-  return withMembers(project, [...project.members, ...added]);
+  // Members who join a project with recorded waves join the latest recorded wave
+  // only, not the waves before it (build plan session 14).
+  return addToLatestWave(
+    withMembers(project, [...project.members, ...added]),
+    added.map((m) => m.id),
+  );
 }
 
 /** Changes a member's name or attributes. An empty name, an unknown member or
@@ -198,10 +204,12 @@ export function removeMembers(project: Project, ids: readonly MemberId[]): Proje
       for (const k of cleared) attributes[k] = null;
       return { ...m, attributes };
     });
-  return {
+  let out: Project = {
     ...withMembers(project, members),
     ties: project.ties.filter((t) => !gone.has(t.rater_id) && !gone.has(t.ratee_id)),
   };
+  for (const id of ids) out = removeFromWaves(out, id);
+  return out;
 }
 
 /** The key a new attribute would get: its label as an import header reads it

@@ -2,7 +2,10 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseProject } from '../../src/data/projectFile';
+import { parseProject, serialiseProject } from '../../src/data/projectFile';
+import { createSurveyKey } from '../../src/survey/keys';
+import { createSurvey, repeatSurvey } from '../../src/survey/model';
+import { draftFor } from '../fixtures/surveyProject';
 
 // Phase 6: insights, saved views, presentation mode and anonymisation.
 // Screenshots go to test-results/screenshots, or to SCREENSHOT_DIR when set
@@ -614,4 +617,93 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
       .getByText(DISPLAY_NAMES[0] ?? '', { exact: true })
       .first(),
   ).toBeVisible();
+});
+
+// Waves (build plan session 14): the wave setting, coverage and rosters by wave, the
+// survey dashboard's waves and the repeat dialog, on the demo with a second wave and a
+// survey, with names hidden.
+test('anonymisation: no display name in the views of waves', async ({ page }) => {
+  test.setTimeout(90_000);
+  const { key } = await createSurveyKey('correct horse battery', 1000);
+  const survey = createSurvey(
+    draftFor(demo, { entry: 'full' }),
+    demo,
+    key,
+    '2026-10-01T09:00:00.000Z',
+    'WAVE1survey',
+  );
+  const repeated = repeatSurvey(
+    survey,
+    { ...demo, surveys: [survey] },
+    demo.members.slice(0, -1).map((m) => m.id),
+    '2026-10-02T09:00:00.000Z',
+    'WAVE2survey',
+  ).project;
+  const twoWaves = {
+    ...repeated,
+    meta: { ...repeated.meta, title: `Survey with ${DISPLAY_NAMES[0] ?? ''}` },
+    ties: [
+      ...repeated.ties,
+      ...repeated.ties
+        .filter(
+          (t) => t.rater_id !== demo.members.at(-1)?.id && t.ratee_id !== demo.members.at(-1)?.id,
+        )
+        .map((t) => ({ ...t, wave: 2 })),
+    ],
+  };
+  await start(page);
+  await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
+  await page.getByRole('button', { name: 'Project' }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('menuitem', { name: 'Open project…' }).click();
+  await (
+    await chooser
+  ).setFiles({
+    name: 'waves.ona.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(serialiseProject(twoWaves)),
+  });
+  await expect(nodes(page)).toHaveCount(39, { timeout: 60_000 });
+  await drawnText(page);
+
+  const failures: string[] = [];
+  const check = async (where: string) => {
+    await page.waitForTimeout(150);
+    const text = await page.evaluate(() => {
+      const values = [
+        ...document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+          'input, textarea, select',
+        ),
+      ].map((el) => el.value);
+      const options = [...document.querySelectorAll('option')].map((o) => o.textContent);
+      return [document.documentElement.outerHTML, ...values, ...options, document.title].join('\n');
+    });
+    const drawn = (await drawnText(page)).join('\n');
+    for (const name of DISPLAY_NAMES) {
+      if (text.includes(name)) failures.push(`${where}: DOM contains ${name}`);
+      if (drawn.includes(name)) failures.push(`${where}: canvas draws ${name}`);
+    }
+  };
+
+  await settled(page);
+  await expect(page.locator('.top-bar__wave')).toHaveText('Wave 2 of 2');
+  await check('map, wave 2');
+  await page.getByLabel('Wave', { exact: true }).selectOption({ label: 'Wave 1' });
+  await expect(nodes(page)).toHaveCount(40);
+  await settled(page);
+  await check('map, wave 1');
+  await rightTab(page, 'Check the data').click();
+  await expect(right(page).getByRole('table', { name: 'Coverage by wave' })).toBeVisible();
+  await check('coverage by wave');
+  await centreTab(page, 'Members').click();
+  await expect(page.getByRole('table', { name: 'Rosters by wave' })).toBeVisible();
+  await check('rosters by wave');
+  await centreTab(page, 'Survey').click();
+  await expect(page.getByRole('table', { name: 'Surveys by wave' })).toBeVisible();
+  await check('survey waves');
+  await page.getByRole('button', { name: 'Repeat this survey' }).click();
+  await expect(page.getByRole('dialog', { name: 'Repeat this survey as wave 3' })).toBeVisible();
+  await check('repeat dialog');
+  await page.keyboard.press('Escape');
+  expect(failures).toEqual([]);
 });

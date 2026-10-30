@@ -237,6 +237,8 @@ export interface SavedMapSettings {
   reconstruct?: boolean;
   /** Rater standardisation of unsigned layers; absent means none. */
   standardise?: 'none' | 'rank';
+  /** The wave the view shows (build plan session 14); absent means the latest wave with ratings. */
+  wave?: number;
   layerToggles: Record<LayerKey, boolean>;
   hideOffLayers: boolean;
   filters: AttributeFilter[];
@@ -306,6 +308,16 @@ export interface ProjectSettings {
   /** The executive summary as the analyst edited it, one per audience level (build plan
    *  session 10); absent for a level means the draft. Schema 4 in place. */
   summaries?: Partial<Record<AudienceLevel, SavedSummary>>;
+  /** Who was on the roster of each wave (build plan session 14, data/waves.ts); a wave with no
+   *  record has every member on its roster. Schema 4 in place. */
+  waves?: WaveRecord[];
+}
+
+/** The members on one wave's roster (build plan session 14). */
+export interface WaveRecord {
+  wave: number;
+  /** Member ids in project order. */
+  roster: MemberId[];
 }
 
 /** One headline of an edited executive summary (build plan session 10). */
@@ -512,6 +524,8 @@ export interface Survey {
   versions: SurveyVersion[];
   respondents: SurveyRespondent[];
   log: SurveyLogEntry[];
+  /** The survey this one repeats for a later wave (build plan session 14). */
+  repeats?: SurveyId;
 }
 
 export interface Project {
