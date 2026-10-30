@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import { useId, useMemo, useState } from 'react';
 import type { RatingFlag } from '../../data/quality';
 import type { BootstrapMetric } from '../engineClient';
@@ -37,7 +38,7 @@ interface Row {
 // layer the map draws ties from, sortable by any column and exportable as
 // CSV. Selection and the subgroup are shared with the map and the matrix.
 export function TableView() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const mode = useAppStore((s) => s.ui.tableMode);
   const setMode = useAppStore((s) => s.setTableMode);
   const data = useMapData();

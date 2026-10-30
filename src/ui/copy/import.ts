@@ -140,7 +140,7 @@ export const importCopy = {
       case 'disabled_layer':
         return `${n(d.count ?? 0, 'rating is', 'ratings are')} for ${d.variable ?? ''}, a layer that is turned off. They are imported and used when you turn the layer on.`;
       case 'later_wave':
-        return `${n(d.count ?? 0, 'rating is', 'ratings are')} for wave 2 or later. They are stored; this version shows wave 1 only.`;
+        return `${n(d.count ?? 0, 'rating is', 'ratings are')} for wave 2 or later. They are stored in their wave; the analysis shows the latest wave with ratings, and another can be chosen under Wave, at the top of the left column.`;
       case 'other_sheets':
         return `Only the first sheet was read. ${n(d.sheets?.length ?? 0, 'other sheet was', 'other sheets were')} not read: ${(d.sheets ?? []).join(', ')}.`;
       case 'new_attribute':

@@ -6,6 +6,7 @@
 // re-run on its own, because it takes a while: its result is dropped with a
 // note asking the analyst to run it again.
 
+import { selectWaveProject } from './waves';
 import {
   EngineCancelledError,
   type AnalysisResult,
@@ -23,8 +24,9 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 /** The layer the map draws ties from, corrected to one the result has. */
 function currentRef(result: AnalysisResult): string | null {
   const s = useAppStore.getState();
-  if (!s.data.project) return null;
-  return effectiveSettings(s.data.project, result, s.map).layer;
+  const project = selectWaveProject(s);
+  if (!project) return null;
+  return effectiveSettings(project, result, s.map).layer;
 }
 
 function currentResult(): AnalysisResult | null {
@@ -108,7 +110,7 @@ let bootstrapOp: Operation<BootstrapResult> | null = null;
 export function runBootstrap(metric: BootstrapMetric): void {
   const result = currentResult();
   const s = useAppStore.getState();
-  const project = s.data.project;
+  const project = selectWaveProject(s);
   if (!result || !project) return;
   const ref = currentRef(result);
   if (!ref) return;

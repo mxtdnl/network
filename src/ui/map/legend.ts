@@ -7,6 +7,7 @@ import { formatScale, formatValue, formatWeight, mapCopy } from '../copy/map';
 import { metricCopy } from '../copy/metrics';
 import { compositeStatement } from '../copy/questions';
 import { remediesCopy } from '../copy/remedies';
+import { wavesCopy } from '../copy/waves';
 import type { EdgeStyle, MapModel } from './model';
 
 const L = mapCopy.legend;
@@ -174,6 +175,8 @@ export function legendSections(
         ? { width: r.edgeMin, label: L.notRatedOn(width.layerLabel) }
         : null,
     notes: [
+      // The wave, when there is more than one, so every map and export says which it shows.
+      ...(model.wave ? [wavesCopy.legend(model.wave.wave, model.wave.roster)] : []),
       // Ties from the composite: its weights are stated on the map and in every export.
       ...(model.composite ? [compositeStatement(model.composite)] : []),
       ...(width.kind === 'tiesFrom' ? [] : [L.tiesFrom(tiesFrom)]),

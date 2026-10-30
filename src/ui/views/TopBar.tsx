@@ -1,3 +1,5 @@
+import { wavesCopy } from '../copy/waves';
+import { useWaveInfo } from '../state/waves';
 import { lazy, Suspense, useRef, useState, type ReactNode } from 'react';
 import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
@@ -41,6 +43,7 @@ export function TopBar({ status }: TopBarProps) {
   const project = useAppStore((s) => s.data.project);
   const persistence = useAppStore((s) => s.data.persistence);
   const coverage = useCoverage();
+  const wave = useWaveInfo();
   const names = useMemberNames();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Pending>(null);
@@ -100,6 +103,10 @@ export function TopBar({ status }: TopBarProps) {
         </p>
       )}
       <div className="top-bar__actions">
+        {/* The wave every result shows, when there is more than one (build plan session 14). */}
+        {wave?.shown && (
+          <p className="top-bar__wave num">{wavesCopy.short(wave.wave, wave.waves.length)}</p>
+        )}
         {/* In the compact layout the coverage warning is here, in its short form (D125).
             Until the first rating, a neutral note takes its place (D140). */}
         {coverage && Number.isFinite(coverage.rate) && coverage.rated === 0 && (

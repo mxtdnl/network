@@ -618,6 +618,15 @@ test(
     await shot(page, 'survey-import-plan');
     await page.getByRole('button', { name: 'Import 1 response' }).click();
     await expect(page.getByText('Now delete the response files')).toBeVisible();
+
+    // Repeating the survey as wave 2 (build plan session 14), with the last member unticked.
+    await page.getByRole('button', { name: 'Repeat this survey' }).click();
+    const repeat = page.getByRole('dialog', { name: 'Repeat this survey as wave 2' });
+    await repeat.getByRole('checkbox').last().uncheck();
+    await expect(repeat.getByText('39 of 40 people ticked')).toBeVisible();
+    await shot(page, 'survey-repeat', repeat);
+    await repeat.getByRole('button', { name: 'Create wave' }).click();
+    await expect(page.getByRole('table', { name: 'Surveys by wave' })).toBeVisible();
     expect(problems).toEqual([]);
   },
 );

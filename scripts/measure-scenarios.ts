@@ -20,6 +20,8 @@ import type { SymmetriseRule, ViewKind } from '../src/engine/types';
 import { effectiveWeights, initialWeightState } from '../src/ui/state/presets';
 import { MERGED_SCENARIOS } from './generate-merged-scenarios';
 import { SCENARIOS } from './generate-scenarios';
+import { WAVE_SCENARIOS } from './generate-wave-scenarios';
+import { isMultiWave, scopeToWave, waveNumbers } from '../src/data/waves';
 import { scenarioFile } from './scenario-kit';
 
 const VIEWS: readonly [ViewKind, SymmetriseRule][] = [
@@ -32,7 +34,11 @@ const list = (ids: readonly string[]) =>
   ids.length > 8 ? `${String(ids.length)} members` : ids.join(', ');
 
 const only = process.argv.slice(2);
-for (const slug of ['demo', ...[...SCENARIOS, ...MERGED_SCENARIOS].map((s) => s.slug)]) {
+const slugs = [
+  'demo',
+  ...[...SCENARIOS, ...MERGED_SCENARIOS, ...WAVE_SCENARIOS].map((s) => s.slug),
+];
+for (const slug of slugs) {
   if (only.length > 0 && !only.includes(slug)) continue;
   const text = readFileSync(
     join(
@@ -45,60 +51,69 @@ for (const slug of ['demo', ...[...SCENARIOS, ...MERGED_SCENARIOS].map((s) => s.
     'utf8',
   );
   const project = parseProject(text);
-  const coverage = computeCoverage(project);
-  const silent = coverage.raters.filter((r) => r.rated === 0).map((r) => r.id);
-  const low = coverage.raters.filter((r) => r.rated > 0 && r.rate < coverage.threshold);
-  console.log(`\n# ${slug} (${String(project.members.length)} members)`);
-  console.log(
-    `coverage ${f(coverage.rate, 3)} (threshold ${f(coverage.threshold)}, warning ${String(coverage.belowThreshold)}); ` +
-      `gave no ratings: ${list(silent) || 'none'}; below threshold: ` +
-      `${low.map((r) => `${r.id} ${f(r.rate)}`).join(', ') || 'none'}; ` +
-      `declined ${String(coverage.declined)}, does not apply ${String(coverage.notApplicable)}`,
-  );
-  const q = computeQuality(project);
-  console.log(
-    `quality: few ratings ${list(q.fewRatings) || 'none'}; same answer ${list(q.sameAnswer) || 'none'}; ` +
-      `rates higher ${list(q.higher) || 'none'}; lower ${list(q.lower) || 'none'}; ` +
-      `many ties ${list(q.manyTies) || 'none'}; median tied ${f(q.medianTiedShare)}${q.denseReporting ? ' (dense reporting)' : ''}; ` +
-      `one-way ${String(q.oneWay)} of ${String(q.reportedTies)} (${f(q.oneWayShare)})`,
-  );
-  console.log(`statement: ${qualityStatement(q).join(' ')}`);
-  const weights = effectiveWeights(project, initialWeightState());
-  for (const [view, symmetrise] of VIEWS) {
-    const r = await analyse(buildAnalysisInput(project, { view, symmetrise, ...weights }, slug));
-    const composite = r.refs.composite;
-    if (!composite) continue;
-    const net = composite.network;
-    const c = composite.communities;
+  // A project with several waves is measured wave by wave, each on its roster (build plan session 14).
+  for (const wave of isMultiWave(project) ? waveNumbers(project) : [null]) {
+    const coverage = computeCoverage(project, wave);
+    const silent = coverage.raters.filter((r) => r.rated === 0).map((r) => r.id);
+    const low = coverage.raters.filter((r) => r.rated > 0 && r.rate < coverage.threshold);
+    const members =
+      wave === null ? project.members.length : scopeToWave(project, wave).members.length;
     console.log(
-      `## ${view}${view === 'symmetrised' ? ` (${symmetrise})` : ''}: density ${f(net.density)}, ` +
-        `tie reciprocity ${f(net.reciprocity.overall)}, communities ${String(c?.count ?? 0)} ` +
-        `(modularity ${f(c?.modularity ?? NaN, 3)})${r.warnings.length > 0 ? `, warnings ${JSON.stringify(r.warnings)}` : ''}`,
+      `\n# ${slug}${wave === null ? '' : `, wave ${String(wave)}`} (${String(members)} members)`,
     );
-    for (const o of r.insights) {
-      const detail =
-        o.status === 'unavailable'
-          ? o.reason
-          : o.observations
-              .map((ob) => {
-                const group = ob.group
-                  ? ` ${ob.group.value}${ob.group.other ? `/${ob.group.other}` : ''}`
-                  : '';
-                const evidence = Object.entries(ob.evidence)
-                  .map(([k, v]) => `${k} ${f(v)}`)
-                  .join(', ');
-                const groups = ob.groups
-                  ? ` by group ${ob.groups.map((g) => `${g.value}→${g.other} ${String(g.count)}`).join(', ')};`
-                  : '';
-                const shared = ob.shared
-                  ? ` shared ${ob.shared.map((x) => `${x.attribute}=${x.value} ${String(x.count)}/${String(ob.members.length)}`).join(', ')};`
-                  : '';
-                const silent = ob.noRatings ? ` no ratings ${ob.noRatings.join(', ')};` : '';
-                return `[${ob.ref}${group}: ${list(ob.members)};${groups}${shared}${silent} ${evidence}]`;
-              })
-              .join(' ');
-      const inSilo = o.inSilo ? ` (${String(o.inSilo)} named under silos)` : '';
-      console.log(`- ${o.rule}: ${o.status}${inSilo} ${detail ?? ''}`);
+    console.log(
+      `coverage ${f(coverage.rate, 3)} (threshold ${f(coverage.threshold)}, warning ${String(coverage.belowThreshold)}); ` +
+        `gave no ratings: ${list(silent) || 'none'}; below threshold: ` +
+        `${low.map((r) => `${r.id} ${f(r.rate)}`).join(', ') || 'none'}; ` +
+        `declined ${String(coverage.declined)}, does not apply ${String(coverage.notApplicable)}`,
+    );
+    const q = computeQuality(project, wave);
+    console.log(
+      `quality: few ratings ${list(q.fewRatings) || 'none'}; same answer ${list(q.sameAnswer) || 'none'}; ` +
+        `rates higher ${list(q.higher) || 'none'}; lower ${list(q.lower) || 'none'}; ` +
+        `many ties ${list(q.manyTies) || 'none'}; median tied ${f(q.medianTiedShare)}${q.denseReporting ? ' (dense reporting)' : ''}; ` +
+        `one-way ${String(q.oneWay)} of ${String(q.reportedTies)} (${f(q.oneWayShare)})`,
+    );
+    console.log(`statement: ${qualityStatement(q).join(' ')}`);
+    const weights = effectiveWeights(project, initialWeightState());
+    for (const [view, symmetrise] of VIEWS) {
+      const r = await analyse(
+        buildAnalysisInput(project, { view, symmetrise, ...weights, wave }, slug),
+      );
+      const composite = r.refs.composite;
+      if (!composite) continue;
+      const net = composite.network;
+      const c = composite.communities;
+      console.log(
+        `## ${view}${view === 'symmetrised' ? ` (${symmetrise})` : ''}: density ${f(net.density)}, ` +
+          `tie reciprocity ${f(net.reciprocity.overall)}, communities ${String(c?.count ?? 0)} ` +
+          `(modularity ${f(c?.modularity ?? NaN, 3)})${r.warnings.length > 0 ? `, warnings ${JSON.stringify(r.warnings)}` : ''}`,
+      );
+      for (const o of r.insights) {
+        const detail =
+          o.status === 'unavailable'
+            ? o.reason
+            : o.observations
+                .map((ob) => {
+                  const group = ob.group
+                    ? ` ${ob.group.value}${ob.group.other ? `/${ob.group.other}` : ''}`
+                    : '';
+                  const evidence = Object.entries(ob.evidence)
+                    .map(([k, v]) => `${k} ${f(v)}`)
+                    .join(', ');
+                  const groups = ob.groups
+                    ? ` by group ${ob.groups.map((g) => `${g.value}→${g.other} ${String(g.count)}`).join(', ')};`
+                    : '';
+                  const shared = ob.shared
+                    ? ` shared ${ob.shared.map((x) => `${x.attribute}=${x.value} ${String(x.count)}/${String(ob.members.length)}`).join(', ')};`
+                    : '';
+                  const silent = ob.noRatings ? ` no ratings ${ob.noRatings.join(', ')};` : '';
+                  return `[${ob.ref}${group}: ${list(ob.members)};${groups}${shared}${silent} ${evidence}]`;
+                })
+                .join(' ');
+        const inSilo = o.inSilo ? ` (${String(o.inSilo)} named under silos)` : '';
+        console.log(`- ${o.rule}: ${o.status}${inSilo} ${detail ?? ''}`);
+      }
     }
   }
 }

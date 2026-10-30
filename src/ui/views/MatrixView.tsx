@@ -1,3 +1,4 @@
+import { useWaveInfo, useWaveProject } from '../state/waves';
 import {
   useCallback,
   useEffect,
@@ -81,7 +82,9 @@ function inputText(tie: Tie | undefined): string {
 }
 
 export function MatrixView() {
-  const project = useAppStore((s) => s.data.project);
+  // Ratings are entered in the wave analysed, for the members on its roster (build plan session 14).
+  const project = useWaveProject();
+  const wave = useWaveInfo();
   const matrixLayer = useAppStore((s) => s.data.matrixLayer);
   const setMatrixLayer = useAppStore((s) => s.setMatrixLayer);
   const selectId = useId();
@@ -116,6 +119,7 @@ export function MatrixView() {
           </select>
         </div>
         <p className="matrix__question">{layer.question_wording}</p>
+        {wave?.shown && <p className="matrix__wave">{matrixCopy.wave(wave.wave)}</p>}
       </div>
       <MatrixKey layer={layer} />
       <p className="matrix__help" id={`${selectId}-help`}>
@@ -126,6 +130,7 @@ export function MatrixView() {
         layer={layer}
         members={project.members}
         ties={project.ties}
+        wave={wave?.wave ?? 1}
         helpId={`${selectId}-help`}
       />
     </div>
@@ -188,6 +193,7 @@ interface GridProps {
   layer: LayerDefinition;
   members: Member[];
   ties: Tie[];
+  wave: number;
   helpId: string;
 }
 
@@ -196,7 +202,7 @@ interface Editing {
   error: string | null;
 }
 
-function MatrixGrid({ layer, members, ties, helpId }: GridProps) {
+function MatrixGrid({ layer, members, ties, wave, helpId }: GridProps) {
   const names = useMemberNames();
   const applyRatings = useAppStore((s) => s.applyRatings);
   const baseId = useId();
@@ -211,7 +217,7 @@ function MatrixGrid({ layer, members, ties, helpId }: GridProps) {
 
   const n = members.length;
   // Rebuilt when the ties array changes; the store replaces it on every edit.
-  const index = useMemo(() => layerIndex(ties, layer.key), [ties, layer.key]);
+  const index = useMemo(() => layerIndex(ties, layer.key, wave), [ties, layer.key, wave]);
   const tieAt = useCallback(
     (r: number, c: number) => {
       const a = members[r];

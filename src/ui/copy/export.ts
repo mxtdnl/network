@@ -198,8 +198,14 @@ export const exportCopy = {
   noMember: 'Choose the member the card is for.',
   groupsOnly: 'For a board or leadership team the map shows groups, not members.',
   /** File-name suffix naming the export's settings, so files made under different settings differ. */
-  suffix: (anonymised: boolean, excluded: boolean, level: AudienceLevel = 'analyst') =>
-    `${LEVEL_SLUG[level]}${anonymised ? '-codes' : ''}${excluded ? '-no-signed' : ''}`,
+  suffix: (
+    anonymised: boolean,
+    excluded: boolean,
+    level: AudienceLevel = 'analyst',
+    /** The wave, named when the project has more than one (build plan session 14). */
+    wave: number | null = null,
+  ) =>
+    `${wave !== null ? `-wave-${String(wave)}` : ''}${LEVEL_SLUG[level]}${anonymised ? '-codes' : ''}${excluded ? '-no-signed' : ''}`,
 };
 
 const LEVEL_SLUG: Record<AudienceLevel, string> = {

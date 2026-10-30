@@ -3,9 +3,9 @@
 // generated from the label once and never changes, because ties, surveys,
 // saved views and imports name the layer by key.
 
+import { latestRatedWave } from './waves';
 import { builtinLayer, defaultLayers } from './defaults';
 import {
-  DEFAULT_WAVE,
   layerRole,
   MUTUAL_ROLES,
   type LayerDefinition,
@@ -280,7 +280,7 @@ export function layersWithRole(
 
 function rated(project: Pick<Project, 'ties'>, key: LayerKey): boolean {
   return project.ties.some(
-    (t) => t.variable === key && t.wave === DEFAULT_WAVE && typeof t.value === 'number',
+    (t) => t.variable === key && t.wave === latestRatedWave(project) && typeof t.value === 'number',
   );
 }
 

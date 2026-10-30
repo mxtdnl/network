@@ -6,8 +6,8 @@
 // own ratings, and sentences on where they sit in the network. It never shows
 // a rating someone else gave, except as a count.
 
+import { latestRatedWave } from '../../data/waves';
 import {
-  DEFAULT_WAVE,
   isCategorical,
   layerRole,
   NON_WORKING_ROLES,
@@ -73,7 +73,7 @@ export function buildCard(
     const gave = new Set<MemberId>();
     const received = new Set<MemberId>();
     for (const t of project.ties) {
-      if (t.wave !== DEFAULT_WAVE || t.variable !== l.key) continue;
+      if (t.wave !== latestRatedWave(project) || t.variable !== l.key) continue;
       if (typeof t.value !== 'number' || !(t.value > l.min)) continue;
       if (t.rater_id === id) gave.add(t.ratee_id);
       if (t.ratee_id === id) received.add(t.rater_id);
@@ -166,7 +166,7 @@ export function buildCard(
   const scaled = project.layers.filter((l) => l.enabled && !isCategorical(l));
   const given = new Map<MemberId, Map<string, string>>();
   for (const t of project.ties) {
-    if (t.wave !== DEFAULT_WAVE || t.rater_id !== id) continue;
+    if (t.wave !== latestRatedWave(project) || t.rater_id !== id) continue;
     if (!scaled.some((l) => l.key === t.variable)) continue;
     const text = t.not_applicable
       ? C.notApplicable

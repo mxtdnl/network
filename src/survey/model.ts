@@ -3,6 +3,7 @@
 // a project. Pure apart from randomness and hashing.
 
 import { isCategorical } from '../data/schema';
+import { nextWave, recordNewWave, waveRosterIds } from '../data/waves';
 import type {
   AttributeDefinition,
   ContextItemId,
@@ -153,19 +154,19 @@ function versionFrom(
     draft.context,
     earlier.flatMap((v) => v.context ?? []),
   );
+  // The roster is the wave's (build plan session 14): every member, unless the
+  // wave's roster is recorded, as it is once a survey has been repeated.
+  const roster = waveRosterIds(project, draft.wave);
   return {
     version,
     created_at: now,
-    roster: project.members.map((m) => m.id),
+    roster,
     layers: draft.layers.map((l) => ({ ...l })),
     entry: draft.entry,
     nomination_question: draft.nominationQuestion,
     shared_attributes: [...draft.sharedAttributes],
     // Only members on the roster, in roster order; meaningless for a full roster.
-    required:
-      draft.entry === 'nominate'
-        ? project.members.map((m) => m.id).filter((id) => draft.required.includes(id))
-        : [],
+    required: draft.entry === 'nominate' ? roster.filter((id) => draft.required.includes(id)) : [],
     ...(context.length > 0 ? { context } : {}),
     ...(draft.boundary !== null ? { boundary: [...draft.boundary] } : {}),
   };
@@ -231,7 +232,7 @@ export function draftFromSurvey(s: Survey): SurveyDraft {
 /** True when the draft changes what respondents are asked, or whom (spec §15.1). */
 export function needsNewVersion(s: Survey, draft: SurveyDraft, project: Project): boolean {
   const v = currentVersion(s);
-  const roster = project.members.map((m) => m.id);
+  const roster = waveRosterIds(project, draft.wave);
   const context = (v.context ?? []).map((q) => [q.id, q.options ?? null]);
   const drafted = draft.context.map((q) => [q.id, q.options ?? null]);
   return (
@@ -287,6 +288,68 @@ export function updateSurvey(
     }
   }
   return { ...base, versions: [...s.versions, version], respondents };
+}
+
+/**
+ * "Repeat this survey" (build plan session 14): a new survey for the next wave
+ * with the same questions, texts and settings, the roster chosen (by default
+ * every member of the project now), and new tokens, so new links. It keeps the
+ * key and passphrase of the survey it repeats, so the analyst has one key to
+ * keep; its responses are told apart by survey id and token. Context questions
+ * keep their attributes, so a later answer replaces an earlier one.
+ */
+export function repeatSurvey(
+  s: Survey,
+  project: Project,
+  roster: readonly MemberId[],
+  now: string,
+  id = newSurveyId(),
+): { survey: Survey; project: Project } {
+  const wave = nextWave(project);
+  const recorded = recordNewWave(project, wave, roster);
+  const ids = waveRosterIds(recorded, wave);
+  const v = currentVersion(s);
+  const version: SurveyVersion = {
+    version: 1,
+    created_at: now,
+    roster: ids,
+    layers: v.layers.map((l) => ({ ...l })),
+    entry: v.entry,
+    nomination_question: v.nomination_question,
+    shared_attributes: [...v.shared_attributes],
+    required: v.required.filter((m) => ids.includes(m)),
+    ...(v.context ? { context: v.context.map((q) => ({ ...q })) } : {}),
+    ...(v.boundary ? { boundary: [...v.boundary] } : {}),
+  };
+  const survey: Survey = {
+    id,
+    title: s.title,
+    created_at: now,
+    status: 'open',
+    wave,
+    texts: { ...s.texts },
+    // The earlier wave's deadline has passed; the analyst sets a new one.
+    deadline: null,
+    settings: { ...s.settings },
+    key: s.key,
+    versions: [version],
+    respondents: ids.map((member_id) => ({
+      member_id,
+      token: newToken(),
+      version: 1,
+      issued_at: now,
+    })),
+    log: [],
+    repeats: s.id,
+  };
+  return { survey, project: { ...recorded, surveys: [...recorded.surveys, survey] } };
+}
+
+/** Surveys in wave order, then creation order, for the dashboard's list of waves. */
+export function surveysByWave(project: Project): Survey[] {
+  return [...project.surveys].sort(
+    (a, b) => a.wave - b.wave || a.created_at.localeCompare(b.created_at),
+  );
 }
 
 /** The payload respondents of `version` receive. Names come from the project

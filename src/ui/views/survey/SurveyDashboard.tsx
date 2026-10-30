@@ -23,6 +23,12 @@ import { lockKey, setUnlockedKey, useUnlockedKey } from '../../state/surveyKeys'
 import { FileReportSection } from '../ValidationReport';
 import { downloadText } from './download';
 import { LaunchKit } from './LaunchKit';
+import { RepeatSurveyDialog, SurveyWaves } from './SurveyWaves';
+import { wavesCopy } from '../../copy/waves';
+import { isMultiWave } from '../../../data/waves';
+import { useReadOnly } from '../../state/layoutMode';
+
+const WC = wavesCopy.dashboard;
 
 const D = surveyCopy.dashboard;
 
@@ -31,10 +37,13 @@ export function SurveyDashboard({
   project,
   survey,
   onEdit,
+  onChoose,
 }: {
   project: Project;
   survey: Survey;
   onEdit: () => void;
+  /** Shows another survey's dashboard: another wave (build plan session 14). */
+  onChoose: (id: string) => void;
 }) {
   const updateProjectViews = useAppStore((s) => s.updateProjectViews);
   const setStatus = useAppStore((s) => s.setStatus);
@@ -42,19 +51,36 @@ export function SurveyDashboard({
   const status = surveyStatus(survey);
   const threshold = project.settings.coverage_threshold;
   const [confirmClose, setConfirmClose] = useState(false);
+  const [repeating, setRepeating] = useState(false);
   const version = currentVersion(survey);
+  const readOnly = useReadOnly();
 
   return (
     <div className="survey-dashboard">
       <div className="survey-dashboard__head">
         <h2 className="survey__heading">{survey.title}</h2>
         <p className="survey-dashboard__meta">
-          {D.status[survey.status]}, {D.version(version.version).toLowerCase()}
+          {isMultiWave(project)
+            ? `${WC.wave(survey.wave)}, ${D.status[survey.status].toLowerCase()}, `
+            : `${D.status[survey.status]}, `}
+          {D.version(version.version).toLowerCase()}
         </p>
         <div className="survey-dashboard__head-actions">
           <button type="button" className="button button--secondary" onClick={onEdit}>
             {D.edit}
           </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="button button--secondary"
+              title={WC.repeatHelp}
+              onClick={() => {
+                setRepeating(true);
+              }}
+            >
+              {WC.repeat}
+            </button>
+          )}
           <button
             type="button"
             className="button button--text"
@@ -97,6 +123,21 @@ export function SurveyDashboard({
           )}
         </div>
       </div>
+
+      <RepeatSurveyDialog
+        project={project}
+        survey={survey}
+        open={repeating}
+        onClose={() => {
+          setRepeating(false);
+        }}
+        onCreated={(id) => {
+          setRepeating(false);
+          onChoose(id);
+        }}
+      />
+
+      <SurveyWaves project={project} survey={survey} onChoose={onChoose} />
 
       <dl className="definition-list definition-list--wide survey-dashboard__status">
         <dt>{D.issued}</dt>

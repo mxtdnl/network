@@ -82,6 +82,9 @@ export interface AnalysisInput {
    * composite (plan §5 risk 4).
    */
   baseKey?: string;
+  /** The wave the ratings come from (build plan session 14); absent means wave 1. `memberIds`
+   *  is that wave's roster. */
+  wave?: number;
   memberIds: MemberId[];
   attributes: Record<AttributeKey, AttributeColumn>;
   /** Enabled, non-categorical layers. */
@@ -463,6 +466,8 @@ export interface AnalysisResult {
   inputKey: string;
   view: ViewKind;
   symmetrise: SymmetriseRule;
+  /** The wave analysed (build plan session 14); `memberIds` is its roster. */
+  wave: number;
   memberIds: MemberId[];
   refOrder: LayerRef[];
   refs: Record<LayerRef, RefResult>;

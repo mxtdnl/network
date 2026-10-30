@@ -15,6 +15,7 @@
 //                 both ways is one line, its two directions combined
 //   outlines    → optional: the communities on the selected layer
 
+import { latestRatedWave } from '../../data/waves';
 import { FI_CLASS, type AnalysisResult, type CompositeFormula } from '../engineClient';
 import { relationForRole } from '../../data/relations';
 import {
@@ -177,6 +178,8 @@ export interface MapModel {
   standardised: boolean;
   /** The composite's formula when ties come from it, so the legend states its weights (build plan session 8). */
   composite: CompositeFormula | null;
+  /** The wave analysed and its roster size, when the project has more than one wave (build plan session 14). */
+  wave: { wave: number; roster: number } | null;
 }
 
 export interface Radii {
@@ -199,7 +202,7 @@ export function signedColourLayers(project: Project): LayerDefinition[] {
 
 /**
  * Directed pairs (rater × n + rated) with a negative rating on any enabled
- * signed layer, wave 1; null when no signed layer is enabled.
+ * signed layer, in the wave analysed; null when no signed layer is enabled.
  */
 export function negativeRatings(project: Project): Uint8Array | null {
   const keys = new Set(signedColourLayers(project).map((l) => l.key));
@@ -208,7 +211,12 @@ export function negativeRatings(project: Project): Uint8Array | null {
   const index = new Map(project.members.map((m, i) => [m.id, i]));
   const out = new Uint8Array(n * n);
   for (const t of project.ties) {
-    if (!keys.has(t.variable) || t.wave !== 1 || typeof t.value !== 'number' || t.value >= 0)
+    if (
+      !keys.has(t.variable) ||
+      t.wave !== latestRatedWave(project) ||
+      typeof t.value !== 'number' ||
+      t.value >= 0
+    )
       continue;
     const i = index.get(t.rater_id);
     const j = index.get(t.ratee_id);
@@ -308,7 +316,12 @@ export function signedMatrix(
   const index = new Map(project.members.map((m, i) => [m.id, i]));
   const raw = new Float64Array(n * n).fill(NaN);
   for (const t of project.ties) {
-    if (t.variable !== layer.key || t.wave !== 1 || typeof t.value !== 'number') continue;
+    if (
+      t.variable !== layer.key ||
+      t.wave !== latestRatedWave(project) ||
+      typeof t.value !== 'number'
+    )
+      continue;
     const i = index.get(t.rater_id);
     const j = index.get(t.ratee_id);
     if (i === undefined || j === undefined || i === j) continue;
@@ -470,6 +483,8 @@ export interface ModelOptions {
   removed?: ReadonlySet<string>;
   /** The export left out the colour layer (signed-layer exclusion, D105), so the legend says so. */
   colourExcluded?: boolean;
+  /** The wave analysed, named in the legend when the project has more than one (build plan session 14). */
+  wave?: number | null;
 }
 
 /** Plain label of a layer reference: a layer, a signed sub-layer or the composite. */
@@ -814,6 +829,7 @@ export function buildMapModel(
     standardised: result.remedies.standardise === 'rank',
     composite:
       settings.layer === 'composite' || edgeLayer === 'composite' ? result.composite : null,
+    wave: options.wave != null ? { wave: options.wave, roster: n } : null,
   };
 }
 

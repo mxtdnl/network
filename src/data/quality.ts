@@ -2,7 +2,7 @@
 // Whether the ratings can bear a conclusion: coverage by group and by level,
 // who gave no ratings or few, each rater's style, and how many reported ties
 // the other side does not report. Like coverage (CLAUDE.md D29) it reads the
-// raw ratings of wave 1 on the enabled layers and runs on the main thread; it
+// raw ratings of one wave, on its roster, on the enabled layers and runs on the main thread; it
 // builds on computeCoverage, so the two always agree.
 //
 // Everything here is structure. The wording, including the data-quality
@@ -10,9 +10,9 @@
 // which the copy quotes, so the check shown is the check that ran.
 
 import { computeCoverage, type CoverageResult, type RaterCoverage } from './coverage';
+import { resolveWave, scopeToWave } from './waves';
 import {
   BOUNDARY_BAND_ORDER,
-  DEFAULT_WAVE,
   isCategorical,
   layerRole,
   NON_WORKING_ROLES,
@@ -147,8 +147,10 @@ function groupAttribute(project: Project): AttributeDefinition | null {
 const isTieLayer = (l: LayerDefinition) =>
   !l.signed && !isCategorical(l) && !QUALITY_RULES.excludedTieRoles.includes(layerRole(l));
 
-export function computeQuality(project: Project): QualityResult {
-  const coverage = computeCoverage(project);
+export function computeQuality(full: Project, chosenWave?: number | null): QualityResult {
+  const wave = resolveWave(full, chosenWave);
+  const project = scopeToWave(full, wave);
+  const coverage = computeCoverage(project, wave);
   const members = project.members;
   const n = members.length;
   const index = new Map(members.map((m, i) => [m.id, i]));
@@ -161,7 +163,7 @@ export function computeQuality(project: Project): QualityResult {
   const r = scaled.map(() => new Float64Array(n * n).fill(NaN));
   // Raw values per rater and layer, for the share of the scale used.
   for (const t of project.ties) {
-    if (t.wave !== DEFAULT_WAVE || typeof t.value !== 'number') continue;
+    if (t.wave !== wave || typeof t.value !== 'number') continue;
     const k = layerAt.get(t.variable);
     const i = index.get(t.rater_id);
     const j = index.get(t.ratee_id);

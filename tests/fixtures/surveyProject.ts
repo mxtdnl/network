@@ -17,7 +17,9 @@ import {
 } from '../../src/survey/model';
 
 export function demoProject(): Project {
-  return parseProject(readFileSync(join(__dirname, '../../src/demo/demo.ona.json'), 'utf8'));
+  return parseProject(
+    readFileSync(join(import.meta.dirname, '../../src/demo/demo.ona.json'), 'utf8'),
+  );
 }
 
 export function namedProject(n: number, seed = 20260926): Project {

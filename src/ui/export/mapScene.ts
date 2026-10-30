@@ -77,7 +77,10 @@ export function exportMap(
 ): ExportMap {
   const { project, result, settings, names } = ctx;
   const t = theme.map;
-  const options = { colourExcluded: ctx.colourExcluded };
+  const options = {
+    colourExcluded: ctx.colourExcluded,
+    wave: ctx.wave.shown ? ctx.wave.wave : null,
+  };
   const model = buildMapModel(project, result, settings, t, names.byIndex, options);
   // Over the formal hierarchy the map draws informal collaboration ties (D62).
   const informal = roleLayer(project, 'informal');

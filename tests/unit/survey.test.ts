@@ -23,9 +23,15 @@ import {
   linksCsv,
   payloadFor,
   surveyLayerFrom,
+  draftFromSurvey,
+  needsNewVersion,
+  repeatSurvey,
+  surveysByWave,
   surveyStatus,
   updateSurvey,
 } from '../../src/survey/model';
+import { addMembers } from '../../src/data/members';
+import { waveRosterIds } from '../../src/data/waves';
 import {
   LINK_BUDGET,
   PackageMismatchError,
@@ -709,5 +715,90 @@ describe('relations the analyst created (build plan session 11)', () => {
     expect(advice).toHaveLength(39);
     expect(advice[0]).toMatchObject({ rater_id: 'FIN01', source: 'self_report', wave: 1 });
     expect(parseProject(serialiseProject(next))).toStrictEqual(next);
+  });
+});
+
+describe('repeating a survey (build plan session 14)', () => {
+  it('creates the next wave with the same questions and key, new tokens and the roster chosen', async () => {
+    const { project, survey, privateKey } = await setup(demoProject(), { entry: 'full' });
+    const leaver = 'SAL07';
+    const roster = project.members.map((m) => m.id).filter((id) => id !== leaver);
+    const { survey: next, project: repeated } = repeatSurvey(
+      survey,
+      project,
+      roster,
+      NOW,
+      'WAVE2id',
+    );
+    expect(next.wave).toBe(2);
+    expect(next.repeats).toBe(survey.id);
+    expect(next.key).toStrictEqual(survey.key);
+    expect(next.status).toBe('open');
+    expect(next.deadline).toBeNull();
+    expect(next.log).toStrictEqual([]);
+    const v = currentVersion(next);
+    expect(v.version).toBe(1);
+    expect(v.layers).toStrictEqual(currentVersion(survey).layers);
+    expect(v.roster).toStrictEqual(roster);
+    // New tokens: none is reused from wave 1.
+    const old = new Set(survey.respondents.map((r) => r.token));
+    expect(next.respondents).toHaveLength(roster.length);
+    expect(next.respondents.some((r) => old.has(r.token))).toBe(false);
+    // Both waves are recorded: wave 1 as the survey asked it, wave 2 as chosen.
+    expect(repeated.settings.waves?.map((w) => [w.wave, w.roster.length])).toStrictEqual([
+      [1, 40],
+      [2, 39],
+    ]);
+    expect(repeated.surveys.map((s) => s.id)).toStrictEqual([survey.id, 'WAVE2id']);
+    expect(surveysByWave(repeated).map((s) => s.wave)).toStrictEqual([1, 2]);
+
+    // Links: every member of wave 2 gets one, and they differ from wave 1's.
+    const links1 = await buildLinks(survey, repeated, BASE);
+    const links2 = await buildLinks(next, repeated, BASE);
+    expect(links2.links).toHaveLength(39);
+    const first = new Set(links1.links.map((l) => l.url));
+    expect(links2.links.some((l) => first.has(l.url))).toBe(false);
+
+    // A wave 2 response imports into wave 2 with the same key; wave 1 is untouched.
+    const empty = { ...repeated, ties: [] };
+    const a = await envelopeText(
+      next,
+      bodyFor(next, 'FIN01', () => 3),
+    );
+    const plan = await importTexts(empty, next, privateKey, [a.text]);
+    expect(plan.rejected).toStrictEqual([]);
+    const imported = applyImport(empty, plan, NOW);
+    expect(new Set(imported.ties.map((t) => t.wave))).toStrictEqual(new Set([2]));
+    expect(imported.ties.some((t) => t.ratee_id === leaver)).toBe(false);
+    // Wave 2's coverage counts its own roster; wave 1 has no ratings.
+    expect(computeCoverage(imported, 2).raters).toHaveLength(39);
+    expect(computeCoverage(imported, 1).rated).toBe(0);
+    expect(computeCoverage(imported).wave).toBe(2);
+
+    // A wave 1 response offered to the wave 2 survey belongs to another survey.
+    const b = await envelopeText(
+      survey,
+      bodyFor(survey, 'FIN02', () => 2),
+    );
+    const wrong = await importTexts(imported, next, privateKey, [b.text]);
+    expect(wrong.rejected.map((r) => r.reason)).toStrictEqual(['other_survey']);
+  });
+
+  it('keeps a member who joins after the repeat off the earlier wave’s roster', async () => {
+    const { project, survey } = await setup(demoProject(), { entry: 'full' });
+    const ids = project.members.map((m) => m.id);
+    const { survey: next, project: repeated } = repeatSurvey(survey, project, ids, NOW, 'WAVE2id');
+    const joined = addMembers(repeated, [{ name: 'Wren Joiner' }]);
+    const newcomer = must(joined.members.at(-1)).id;
+    expect(waveRosterIds(joined, 1)).not.toContain(newcomer);
+    expect(waveRosterIds(joined, 2)).toContain(newcomer);
+    // The wave 2 survey's roster follows its wave: editing it issues a new version with the joiner.
+    const draft = draftFromSurvey(must(joined.surveys.find((s) => s.id === next.id)));
+    expect(needsNewVersion(next, draft, joined)).toBe(true);
+    const updated = updateSurvey(next, draft, joined, NOW, 'new');
+    expect(currentVersion(updated).roster).toContain(newcomer);
+    expect(currentVersion(updated).version).toBe(2);
+    // The wave 1 survey is unchanged by the joiner.
+    expect(needsNewVersion(survey, draftFromSurvey(survey), joined)).toBe(false);
   });
 });

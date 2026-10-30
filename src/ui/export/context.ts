@@ -4,10 +4,11 @@
 // settings are applied, so no export can skip either (spec §11).
 
 import type { Project } from '../../data/schema';
+import { isMultiWave, resolveWave, scopeToWave } from '../../data/waves';
 import type { AnalysisInput, AnalysisResult } from '../engineClient';
 import { buildAnalysisInput } from '../engineClient';
 import { effectiveSettings } from '../map/useMapModel';
-import type { MemberNames } from '../state/names';
+import { alignNames, type MemberNames } from '../state/names';
 import { effectiveWeights, type WeightState } from '../state/presets';
 import type { Grouping, MapSettings } from '../state/store';
 import { exclusionApplies, exportProject } from './scope';
@@ -23,7 +24,7 @@ import {
 export type Analyse = (input: AnalysisInput) => Promise<AnalysisResult>;
 
 export interface ExportRequest {
-  /** The open project. */
+  /** The open project, every wave; the export shows the wave `map.wave` chooses. */
   project: Project;
   /** The analysis on screen. */
   result: AnalysisResult;
@@ -38,8 +39,11 @@ export interface ExportRequest {
 }
 
 export interface ExportContext {
-  /** The open project, for figures the exclusion does not touch (survey response rates). */
+  /** The open project in the wave exported, for figures the exclusion does not touch (survey
+   *  response rates). */
   source: Project;
+  /** The wave exported (build plan session 14); `shown` when the project has more than one. */
+  wave: { wave: number; shown: boolean };
   /** The project the export shows: without the excluded layers when the exclusion applies. */
   project: Project;
   result: AnalysisResult;
@@ -67,7 +71,10 @@ export async function exportContext(
   request: ExportRequest,
   analyse: Analyse,
 ): Promise<ExportContext> {
-  const { project: source, anonymise, excludeSigned } = request;
+  const { project: full, anonymise, excludeSigned } = request;
+  // One wave is exported, on its roster (build plan session 14).
+  const wave = resolveWave(full, request.map.wave);
+  const source = scopeToWave(full, wave);
   const reanalysed = exclusionApplies(source, excludeSigned);
   const project = exportProject(source, excludeSigned);
   const weights = effectiveWeights(project, request.weights);
@@ -97,18 +104,21 @@ export async function exportContext(
     map = { ...map, highlight: [] };
   }
   // Codes and names depend only on the members, which the exclusion keeps.
+  // Codes are numbered over every member, so a member keeps one code in every wave.
   const policy = audiencePolicy(
-    source,
+    full,
     request.audience ?? { level: 'analyst', team: null, member: null },
     anonymise,
   );
   return {
     source,
+    wave: { wave, shown: isMultiWave(full) },
     project,
     result,
     // A team workshop shows the team only, without signed layers (build plan session 9).
     settings: workshopMap(effectiveSettings(project, result, map), policy),
-    names: policy.names,
+    // Names in the order of the exported wave's roster (build plan session 14).
+    names: alignNames(policy.names, project),
     anonymised: policy.codes,
     policy,
     excludeSigned,

@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import { useId, useMemo } from 'react';
 import { Icon } from '../components/Icon';
 import { mapCopy } from '../copy/map';
@@ -24,7 +25,7 @@ const SEE_ALSO: Partial<Record<QuestionId, { view: CentreView; on: CentreView[] 
 // number about the network. Every figure is the analysis's, counted over all
 // ties, whatever the map's range hides.
 export function QuestionHeader() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const result = useAppStore((s) => s.results.current);
   const raw = useAppStore((s) => s.map);
   const centreView = useAppStore((s) => s.ui.centreView);

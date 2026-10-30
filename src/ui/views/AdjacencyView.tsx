@@ -13,7 +13,7 @@ import { formatWeight, mapCopy } from '../copy/map';
 import { DIRECTED_METRICS, SYMMETRISED_METRICS, metricCopy } from '../copy/metrics';
 import { groupAttributes } from '../map/model';
 import { drawableLayers, memberGroups, type MapData } from '../map/useMapModel';
-import { useMemberNames } from '../state/names';
+import { alignNames, useMemberNames } from '../state/names';
 import { useAppStore, type SizeMetric } from '../state/store';
 
 const A = adjacencyCopy;
@@ -41,7 +41,8 @@ type SortKey = 'name' | 'community' | `attr:${string}` | `metric:${string}`;
 export function AdjacencyView({ data }: { data: MapData }) {
   const { project, result, settings, model } = data;
   const setMap = useAppStore((s) => s.setMap);
-  const names = useMemberNames();
+  // Names in the order of the wave's roster (build plan session 14).
+  const names = alignNames(useMemberNames(), data.project);
   const [sort, setSort] = useState<SortKey>(settings.groupBy ? `attr:${settings.groupBy}` : 'name');
   const ids = { layer: useId(), sort: useId(), help: useId() };
 
@@ -198,7 +199,8 @@ function AdjacencyGrid({ data, order, starts, weights, n, helpId, layer }: GridP
   const selectMember = useAppStore((s) => s.selectMember);
   const toggleGroupMember = useAppStore((s) => s.toggleGroupMember);
   const setRightPanel = useAppStore((s) => s.setRightPanel);
-  const names = useMemberNames();
+  // Names in the order of the wave's roster (build plan session 14).
+  const names = alignNames(useMemberNames(), data.project);
   const baseId = useId();
   const viewportRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);

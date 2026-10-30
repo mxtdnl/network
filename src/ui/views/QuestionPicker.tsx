@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import { useId, useState } from 'react';
 import { questionsCopy } from '../copy/questions';
 import {
@@ -18,7 +19,7 @@ const OWN = '__own';
 // column. A question sets the view and its title; one the project cannot
 // answer says why and changes nothing.
 export function QuestionPicker() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const map = useAppStore((s) => s.map);
   const setMap = useAppStore((s) => s.setMap);
   const [pending, setPending] = useState<QuestionId | null>(null);

@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react';
 import { memberCodes, replaceNames, type MemberCodes } from '../../data/anonymise';
-import type { MemberId, Project } from '../../data/schema';
+import type { Member, MemberId, Project } from '../../data/schema';
 import { namesCopy } from '../copy/names';
 import { audienceChoice, forcesCodes } from './audienceSettings';
 import { useAppStore, type AppState } from './store';
@@ -70,6 +70,30 @@ export function memberNames(project: Project | null, anonymise: boolean): Member
   const key = anonymise ? 'coded' : 'named';
   entry[key] ??= build(project, anonymise);
   return entry[key];
+}
+
+const aligned = new WeakMap<MemberNames, WeakMap<readonly Member[], MemberNames>>();
+
+/**
+ * The same names with `byIndex` in the order of `project`'s members. A wave's
+ * project (build plan session 14) holds only that wave's roster, so its member
+ * indexes differ from the whole project's; names and codes stay the whole
+ * project's, so a member keeps one code in every wave.
+ */
+export function alignNames(names: MemberNames, project: Project): MemberNames {
+  let byMembers = aligned.get(names);
+  const cached = byMembers?.get(project.members);
+  if (cached) return cached;
+  const byIndex = project.members.map((m) => names.of(m.id));
+  const same =
+    byIndex.length === names.byIndex.length && byIndex.every((n, i) => n === names.byIndex[i]);
+  const out = same ? names : { ...names, byIndex };
+  if (!byMembers) {
+    byMembers = new WeakMap();
+    aligned.set(names, byMembers);
+  }
+  byMembers.set(project.members, out);
+  return out;
 }
 
 /**

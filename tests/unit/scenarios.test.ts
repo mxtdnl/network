@@ -8,6 +8,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MERGED_SCENARIOS } from '../../scripts/generate-merged-scenarios';
 import { SCENARIOS } from '../../scripts/generate-scenarios';
+import { BROKER, WAVE_SCENARIOS } from '../../scripts/generate-wave-scenarios';
+import { scopeToWave, waveNumbers, waveRosterIds, waveSummaries } from '../../src/data/waves';
 import { scenarioFile } from '../../scripts/scenario-kit';
 import { computeCoverage } from '../../src/data/coverage';
 import { parseProject, serialiseProject } from '../../src/data/projectFile';
@@ -328,5 +330,54 @@ describe('scenario projects', () => {
     );
     expect(mutual).toEqual(['CLI03-CLI05']);
     expect(new Set(given(p, 'LAB07', 'connection_strength'))).toEqual(new Set([3]));
+  });
+
+  it('two waves: is deterministic, records both rosters and analyses each wave on its own', async () => {
+    const [{ slug, generate }] = WAVE_SCENARIOS as [(typeof WAVE_SCENARIOS)[number]];
+    const text = committed(slug);
+    expect(serialiseProject(generate())).toBe(text);
+    const p = parseProject(text);
+    expect(p.meta.notes).toContain('Fictional data');
+    expect(waveNumbers(p)).toEqual([1, 2]);
+    // BRI01 and SAL07 left; SUP09, SUP10 and SAL08 joined.
+    const one = waveRosterIds(p, 1);
+    const two = waveRosterIds(p, 2);
+    expect(one).toHaveLength(33);
+    expect(two).toHaveLength(34);
+    expect(one.filter((id) => !two.includes(id))).toEqual(
+      [BROKER, 'SAL07'].sort((a, b) => one.indexOf(a) - one.indexOf(b)),
+    );
+    expect(two.filter((id) => !one.includes(id))).toEqual(['SUP09', 'SUP10', 'SAL08']);
+    expect(waveSummaries(p).map((w) => [w.wave, w.joined, w.left])).toEqual([
+      [1, 0, 0],
+      [2, 3, 2],
+    ]);
+    // Every rating belongs to a member on that wave's roster.
+    for (const wave of [1, 2]) {
+      const on = new Set(waveRosterIds(p, wave));
+      const ties = p.ties.filter((t) => t.wave === wave);
+      expect(ties.every((t) => on.has(t.rater_id) && on.has(t.ratee_id))).toBe(true);
+      expect(scopeToWave(p, wave).ties).toHaveLength(ties.length);
+    }
+    // Coverage per wave, each on its own roster: joiners are not non-respondents in wave 1.
+    const c1 = computeCoverage(p, 1);
+    const c2 = computeCoverage(p, 2);
+    expect(c1.raters).toHaveLength(33);
+    expect(c1.raters.filter((r) => r.rated === 0).map((r) => r.id)).toEqual(['DES06']);
+    expect(c2.raters.filter((r) => r.rated === 0).map((r) => r.id)).toEqual(['SUP09']);
+    expect(computeCoverage(p).wave).toBe(2);
+    // The broker between Support and Sales is found in wave 1 only.
+    const weights = effectiveWeights(p, initialWeightState());
+    const brokers = async (wave: number) => {
+      const r = await analyse(
+        buildAnalysisInput(p, { view: 'symmetrised', symmetrise: 'mean', ...weights, wave }, 'w'),
+      );
+      expect(r.warnings).toEqual([]);
+      expect(r.wave).toBe(wave);
+      expect(r.memberIds).toEqual(wave === 1 ? one : two);
+      return r.insights.find((o) => o.rule === 'brokers')?.observations.flatMap((o) => o.members);
+    };
+    expect(await brokers(1)).toContain(BROKER);
+    expect(await brokers(2)).not.toContain(BROKER);
   });
 });

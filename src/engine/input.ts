@@ -1,24 +1,24 @@
 // Builds the engine's AnalysisInput from a project (plan §1.2). This is the only
 // place a missing rating (`null` or an absent tie) becomes NaN (CLAUDE.md D2);
-// a rating of 0 stays 0. Wave 1 only; categorical layers are not analysed.
+// a rating of 0 stays 0. One wave is read, on that wave's roster (build plan
+// session 14, data/waves.ts): the one chosen, else the latest with ratings.
+// Categorical layers are not analysed.
 // Coverage needs the declined / not-entered distinction, which NaN loses, so
 // it is computed here from the project (src/data/coverage.ts, D29).
 
 import { computeCoverage } from '../data/coverage';
-import {
-  DEFAULT_WAVE,
-  isCategorical,
-  isMutualLayer,
-  layerRole,
-  type Project,
-} from '../data/schema';
+import { resolveWave, scopeToWave } from '../data/waves';
+import { isCategorical, isMutualLayer, layerRole, type Project } from '../data/schema';
 import type { AnalysisInput, AttributeColumn, EngineLayer, EngineSettings } from './types';
 
 export type AnalysisOptions = Pick<
   EngineSettings,
   'view' | 'symmetrise' | 'weights' | 'signedTreatment'
 > &
-  Partial<Pick<EngineSettings, 'nonRespondents' | 'reconstruct' | 'standardise'>>;
+  Partial<Pick<EngineSettings, 'nonRespondents' | 'reconstruct' | 'standardise'>> & {
+    /** The wave to analyse; absent or null means the latest wave with ratings. */
+    wave?: number | null;
+  };
 
 export function engineSettings(project: Project, options: AnalysisOptions): EngineSettings {
   return {
@@ -39,10 +39,12 @@ export function engineSettings(project: Project, options: AnalysisOptions): Engi
 }
 
 export function buildAnalysisInput(
-  project: Project,
+  full: Project,
   options: AnalysisOptions,
   inputKey: string,
 ): AnalysisInput {
+  const wave = resolveWave(full, options.wave);
+  const project = scopeToWave(full, wave);
   const memberIds = project.members.map((m) => m.id);
   const n = memberIds.length;
   const index = new Map(memberIds.map((id, i) => [id, i]));
@@ -62,7 +64,7 @@ export function buildAnalysisInput(
   const ratings = defs.map(() => new Float64Array(n * n).fill(NaN));
 
   for (const t of project.ties) {
-    if (t.wave !== DEFAULT_WAVE || typeof t.value !== 'number') continue;
+    if (t.wave !== wave || typeof t.value !== 'number') continue;
     const k = layerIndex.get(t.variable);
     const i = index.get(t.rater_id);
     const j = index.get(t.ratee_id);
@@ -81,11 +83,12 @@ export function buildAnalysisInput(
 
   return {
     inputKey,
+    wave,
     memberIds,
     attributes,
     layers,
     ratings,
     settings: engineSettings(project, options),
-    coverage: computeCoverage(project),
+    coverage: computeCoverage(project, wave),
   };
 }

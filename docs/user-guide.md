@@ -231,6 +231,18 @@ Ratings from responses pass through the same validation report as a ties file, a
 
 Use Export non-responders for reminders. Close survey stops further imports until you reopen it. If you change who is asked or what they are asked after links have gone out, Graticule creates a new version; earlier links stay valid, and their responses are mapped to the new version by member and layer. The full import rules are in the [method notes](method-notes.md#survey-rules-and-limits).
 
+### Repeating a survey
+
+To see how a network changes, run the same survey again some months later as a new wave. On the survey's dashboard choose **Repeat this survey**. The dialog lists everyone in the project, all ticked: untick anyone who has left. They stay in the project with their earlier ratings, but are not asked again and are not counted in the new wave. People added since the last wave are marked "Joined since the last wave". **Create wave** makes a new survey with the same questions, texts and settings, and a new link for each person. Send the links as before (the launch kit's drafts are built afresh for it). The new survey uses the same key and passphrase as the one it repeats, so no new key backup is needed, and earlier links still answer their own wave. Set a deadline for the new wave under Edit survey.
+
+![The dialog that repeats a survey as wave 2, with a leaver unticked](user-guide/survey-repeat.jpg)
+
+Once a project has more than one survey, the dashboard lists them under **Waves**, each with its status and responses; choose one to see its dashboard.
+
+Each wave has its own roster. Repeating a survey records who was on the roster of every wave, and people you add to the project afterwards join the latest wave only. **Rosters by wave** on the Members tab shows and changes who was on each wave's roster, for example to take off someone who left before a wave was run. Taking someone off a roster keeps their ratings in the file; removing them from the project deletes their ratings in every wave.
+
+**Which wave is shown.** Every result shows one wave: by default the latest wave with ratings, so new responses appear as soon as they are imported. Choose another under **Wave** at the top of the left column. Only members on that wave's roster are analysed and counted in its coverage, so a newcomer is not counted as not answering a wave they were never asked in. The top bar says which wave is shown ("Wave 2 of 2"), and so do the map legend, presentation mode and every export. **Check the data** lists coverage for every wave, with how many people joined and left since the wave before. A saved view keeps the wave it showed. Ratings entered in the matrix go into the wave shown. Comparing two waves side by side is not built yet; for now, save a view of each wave and step between them. The rules are in the [method notes](method-notes.md#22-waves).
+
 ## Importing and validation
 
 Choose Import survey data (empty workspace or Project menu). Choose a members file and, if you have one, a ties file (in long format, or a survey tool's export: see [Importing a survey tool's export](#importing-a-survey-tools-export)), then Check files. Importing a members file starts a new project; a ties file on its own is added to the open project, whose members it must name.

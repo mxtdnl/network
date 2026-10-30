@@ -3,6 +3,10 @@ import { surveyCopy } from '../../copy/survey';
 import { useAppStore } from '../../state/store';
 import { SurveyDashboard } from './SurveyDashboard';
 import { SurveySetup } from './SurveySetup';
+import { isMultiWave } from '../../../data/waves';
+import { surveysByWave } from '../../../survey/model';
+import { wavesCopy } from '../../copy/waves';
+import { useMemberNames } from '../../state/names';
 
 type Mode = { kind: 'dashboard' } | { kind: 'create' } | { kind: 'edit' };
 
@@ -14,6 +18,7 @@ export function SurveyTab() {
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>({ kind: 'dashboard' });
   const chooseId = useId();
+  const names = useMemberNames();
 
   if (!project || project.members.length < 2) {
     return (
@@ -45,6 +50,7 @@ export function SurveyTab() {
   }
 
   const surveys = project.surveys;
+  const multiWave = isMultiWave(project);
   const survey = surveys.find((s) => s.id === selected) ?? surveys.at(-1) ?? null;
 
   if (mode.kind === 'create' || !survey) {
@@ -101,9 +107,11 @@ export function SurveyTab() {
               setMode({ kind: 'dashboard' });
             }}
           >
-            {surveys.map((s) => (
+            {surveysByWave(project).map((s) => (
               <option key={s.id} value={s.id}>
-                {s.title}
+                {multiWave
+                  ? wavesCopy.dashboard.chooser(s.wave, names.text(s.title))
+                  : names.text(s.title)}
               </option>
             ))}
           </select>
@@ -128,6 +136,10 @@ export function SurveyTab() {
             survey={survey}
             onEdit={() => {
               setMode({ kind: 'edit' });
+            }}
+            onChoose={(id) => {
+              setSelected(id);
+              setMode({ kind: 'dashboard' });
             }}
           />
           <button

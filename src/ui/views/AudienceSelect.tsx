@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import { useId, useMemo } from 'react';
 import { MIN_GROUP_SIZE_FLOOR, type AudienceLevel, AUDIENCE_LEVELS } from '../../data/schema';
 import { audienceCopy as A } from '../copy/audience';
@@ -30,6 +31,7 @@ import { useAppStore } from '../state/store';
  */
 export function AudienceSelect({ variant = 'full' }: { variant?: 'full' | 'presentation' }) {
   const project = useAppStore((s) => s.data.project);
+  const scoped = useWaveProject();
   const chosen = useAppStore((s) => s.ui.audience);
   const setAudience = useAppStore((s) => s.setAudience);
   const insights = useAppStore((s) => s.results.current?.insights);
@@ -132,7 +134,8 @@ export function AudienceSelect({ variant = 'full' }: { variant?: 'full' | 'prese
               setAudience({ member: e.currentTarget.value });
             }}
           >
-            {project.members.map((m) => (
+            {/* The card reads the wave analysed, so the members on its roster (build plan session 14). */}
+            {(scoped ?? project).members.map((m) => (
               <option key={m.id} value={m.id}>
                 {names.of(m.id)}
               </option>

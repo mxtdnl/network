@@ -1,3 +1,4 @@
+import { useWaveProject } from '../state/waves';
 import { useId, useMemo, useState } from 'react';
 import { FI_CLASS, OVERLAP, tieOverlap } from '../engineClient';
 import { compareCopy } from '../copy/compare';
@@ -23,7 +24,7 @@ const MODES: readonly CompareMode[] = ['layers', 'formalInformal'];
 // (spec §6): small maps on the map's own positions, with the counts beside
 // them. Selection, hover and the subgroup are shared with every view.
 export function CompareView() {
-  const project = useAppStore((s) => s.data.project);
+  const project = useWaveProject();
   const mode = useAppStore((s) => s.ui.compareMode);
   const setMode = useAppStore((s) => s.setCompareMode);
   const data = useMapData();

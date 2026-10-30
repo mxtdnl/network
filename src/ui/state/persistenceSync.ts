@@ -2,6 +2,7 @@
 // has turned persistence on (spec §5). Off by default: until it is turned on,
 // nothing is written to the browser.
 
+import { titleOf } from './projectActions';
 import {
   clearLocalData,
   deleteLocalProject,
@@ -104,7 +105,7 @@ export async function restoreLocalProject(): Promise<void> {
   try {
     const project = await loadLocalProject();
     if (project) {
-      setProject(project, { text: persistenceCopy.restored(project.meta.title), tone: 'info' });
+      setProject(project, { text: persistenceCopy.restored(titleOf(project)), tone: 'info' });
     }
     setPersistence('saved');
   } catch (e) {

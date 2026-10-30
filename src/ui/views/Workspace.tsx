@@ -22,6 +22,7 @@ import { TopBar } from './TopBar';
 import { WeightPanel } from './WeightPanel';
 import { QuestionHeader } from './QuestionHeader';
 import { QuestionPicker } from './QuestionPicker';
+import { WaveSelect } from './WaveSelect';
 import { questionsCopy } from '../copy/questions';
 import { exploreCopy } from '../copy/explore';
 import { savedViewsCopy } from '../copy/savedViews';
@@ -170,6 +171,7 @@ export function Workspace() {
           <h2 id="question-heading" className="panel-heading">
             {questionsCopy.heading}
           </h2>
+          <WaveSelect />
           <QuestionPicker />
         </section>
       )}
