@@ -17,6 +17,8 @@ interface TabsProps<K extends string> {
    * is left out while `collapsed`.
    */
   vertical?: { panelsId: string; collapsed: boolean };
+  /** Controls shown in the row of the tab list, before it (the engagement steps, session 16). */
+  before?: ReactNode;
 }
 
 // WAI-ARIA tabs with automatic activation and a roving tab stop.
@@ -26,6 +28,7 @@ export function Tabs<K extends string>({
   selected,
   onSelect,
   vertical,
+  before,
 }: TabsProps<K>) {
   const baseId = useId();
   const tabRefs = useRef(new Map<K, HTMLButtonElement>());
@@ -122,7 +125,14 @@ export function Tabs<K extends string>({
 
   return (
     <div className="tabs">
-      {list}
+      {before ? (
+        <div className="tabs__bar">
+          {before}
+          {list}
+        </div>
+      ) : (
+        list
+      )}
       {panels}
     </div>
   );

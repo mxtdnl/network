@@ -421,6 +421,104 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   expect(problems).toEqual([]);
 });
 
+// The engagement guide (build plan session 16): the guided first run, Plan with its checklist,
+// the assessment against expectations, Explain this view and the action log.
+test('screenshots of the engagement guide, names hidden', NIGHTLY, async ({ page }) => {
+  test.setTimeout(180_000);
+  const problems = await start(page);
+  const hideNames = page.getByRole('banner').getByRole('switch', { name: 'Hide names' });
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Take the guided first run' }).click();
+  await expect(nodes(page)).toHaveCount(40, { timeout: 60_000 });
+  await hideNames.click();
+  await settled(page);
+  const tour = page.getByRole('region', { name: /Guided first run/ });
+  await expect(tour).toContainText('Task 1 of 3');
+  await expectNoNames(page);
+  await shot(page, 'first-run');
+  await tour.getByRole('button', { name: 'Skip the first run' }).click();
+
+  // The record is filled in with names shown (free text cannot be edited while they are
+  // hidden), and none of it names a member; every screenshot is taken with names hidden.
+  await hideNames.click();
+  const steps = page.getByRole('navigation', { name: 'Engagement steps' });
+  await steps.getByRole('button', { name: 'Plan' }).click();
+  await page
+    .getByLabel('Business question', { exact: true })
+    .fill('Why do handovers between Finance and the rest of the business stall?');
+  await page.getByLabel('Sponsor', { exact: true }).fill('Chief operating officer');
+  await page
+    .getByLabel('Who is on the roster and why', { exact: true })
+    .fill('All 40 people at headquarters, because handovers cross every team.');
+  await page.getByLabel('Delete the data by', { exact: true }).fill('2027-06-30');
+  await page.getByRole('button', { name: 'Add an expectation' }).click();
+  await page
+    .getByLabel('Expectation 1', { exact: true })
+    .fill('Finance works closely with Operations every week.');
+  await page
+    .getByLabel('Check expectation 1 against', { exact: true })
+    .selectOption({ label: 'Ties between Finance and Operations' });
+  for (const [a, b, level] of [
+    ['Finance', 'Operations', 'regular'],
+    ['Finance', 'Sales', 'occasional'],
+    ['Product', 'Sales', 'close'],
+    ['People', 'Product', 'occasional'],
+  ] as const)
+    await page.getByLabel(`Expected between ${a} and ${b}`, { exact: true }).selectOption(level);
+
+  await steps.getByRole('button', { name: 'Understand' }).click();
+  await page
+    .getByRole('complementary', { name: 'Member, insights and coverage' })
+    .getByRole('tab', { name: 'Insights' })
+    .click();
+  await page
+    .getByRole('button', { name: /^Add an action for Silos/ })
+    .first()
+    .click();
+  await page.keyboard.press('Escape');
+  await steps.getByRole('button', { name: 'Act' }).click();
+  await page
+    .getByLabel('Action 1', { exact: true })
+    .fill('Monthly joint planning between Finance and Operations');
+  await page.getByLabel('Owner of action 1', { exact: true }).fill('Head of Finance');
+  await page.getByLabel('Due date of action 1', { exact: true }).fill('2027-01-15');
+  await page.getByLabel('Status of action 1', { exact: true }).selectOption('agreed');
+  await page.getByLabel('Notes on action 1', { exact: true }).focus();
+  await hideNames.click();
+
+  await steps.getByRole('button', { name: 'Plan' }).click();
+  await page.getByText('Checklist:').click();
+  await page.locator('.engagement').evaluate((e) => {
+    e.scrollTop = 0;
+  });
+  await expectNoNames(page);
+  await shot(page, 'engagement-plan');
+  await page.getByText('Checklist:').click();
+
+  await steps.getByRole('button', { name: 'Understand' }).click();
+  await page.getByRole('main').getByRole('tab', { name: 'Engagement' }).click();
+  await expect(page.locator('.engagement__table')).toContainText('Below the expected range');
+  await page.locator('.engagement__table').scrollIntoViewIfNeeded();
+  await expectNoNames(page);
+  await shot(page, 'assessment');
+
+  await page.getByRole('main').getByRole('tab', { name: 'Map' }).click();
+  await settled(page);
+  await page.getByRole('button', { name: 'Explain this view' }).click();
+  await expect(page.locator('.explain')).toContainText('What these terms mean');
+  await expectNoNames(page);
+  await shot(page, 'explain-view');
+  await page.getByRole('button', { name: 'Explain this view' }).click();
+
+  await steps.getByRole('button', { name: 'Act' }).click();
+  await page.getByRole('main').getByRole('tab', { name: 'Engagement' }).click();
+  await expect(page.getByLabel('Action 1', { exact: true })).toHaveValue(/Monthly joint planning/);
+  await expectNoNames(page);
+  await shot(page, 'action-log');
+  await expectNoAxeViolations(page, 'action log');
+  expect(problems).toEqual([]);
+});
+
 async function openProject(page: Page, project: Project) {
   const file = join(work, 'survey.ona.json');
   writeFileSync(file, serialiseProject(project));
@@ -677,6 +775,7 @@ test(
       'Help for respondents',
       'Licence',
       'Data and consent notice',
+      'Guided first run',
     ]);
     await page.keyboard.press('Escape');
 

@@ -72,6 +72,14 @@ export type QuestionReadout =
 
 export type Readout = NetworkReadout | QuestionReadout;
 
+/** Readout kinds that describe one member: left out for every audience but the analyst. */
+export const MEMBER_READOUTS: ReadonlySet<Readout['kind']> = new Set([
+  'topBroker',
+  'cutPoints',
+  'asked',
+  'centralisation',
+]);
+
 /** Pairs of groups need this many working ties before their informal-only share is quoted. */
 export const MIN_PAIR_TIES = 5;
 

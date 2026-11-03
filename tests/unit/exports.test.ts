@@ -59,6 +59,15 @@ import {
   tokensCss,
 } from './exportHarness';
 import { CUSTOM_KEYS, withCustomRelations } from '../fixtures/customRelations';
+import {
+  addAction,
+  addExpectation,
+  addOutcome,
+  emptyEngagement,
+  setExpectedPair,
+} from '../../src/data/engagement';
+import { actionLogCsv } from '../../src/ui/export/engagement';
+import { engagementCopy } from '../../src/ui/copy/engagement';
 
 const project = sensitiveProject();
 const NAMES = project.members.map((m) => m.display_name);
@@ -1158,5 +1167,161 @@ describe('change between waves in exports (build plan session 15)', () => {
     expect(changeCsv(ctx)).toBeNull();
     const report = buildReport(ctx, { notes: methodNotes(), now: deps.now, layerName: '' });
     expect(report.sections.some((s) => s.title.startsWith('What changed'))).toBe(false);
+  });
+});
+
+describe('the engagement record in exports (build plan session 16)', () => {
+  const first = NAMES[0] ?? '';
+  const second = NAMES[1] ?? '';
+  let e = emptyEngagement('act');
+  e = {
+    ...e,
+    question: `Why does work stall around ${first}?`,
+    sponsor: second,
+    boundary: 'Everyone at headquarters',
+    governance: {
+      audiences: { analyst: 'The project team', board: 'The board' },
+      retention_date: '2027-06-30',
+    },
+  };
+  e = addExpectation(e, `Finance works closely with Operations, says ${first}`);
+  e = addExpectation(e, 'People rarely rate each other negatively');
+  e = {
+    ...e,
+    expectations: e.expectations.map((x, i) => ({
+      ...x,
+      link:
+        i === 0
+          ? { kind: 'pair' as const, attribute: 'team', a: 'Finance', b: 'Operations' }
+          : { kind: 'question' as const, id: 'negative' },
+      notes: i === 0 ? `Checked with ${second}` : '',
+    })),
+  };
+  e = setExpectedPair(e, 'team', 'Finance', 'Operations', 'regular');
+  e = setExpectedPair(e, 'team', 'Product', 'Sales', 'close');
+  e = addAction(
+    e,
+    {
+      text: `Monthly joint review led by ${first}`,
+      link: {
+        kind: 'observation',
+        key: 'silo:composite:team=Finance:',
+        text: 'What keeps Finance’s ties within Finance?',
+        wave: 1,
+        rule: 'silo',
+      },
+      owner: second,
+      due: '2027-01-15',
+      status: 'agreed',
+    },
+    '2026-11-03T09:00:00.000Z',
+  );
+  e = addAction(
+    e,
+    {
+      text: 'Facilitated conversation in Sales',
+      link: {
+        kind: 'observation',
+        key: 'negativeCluster:valence-::',
+        text: 'What lies behind the negative ratings among these members?',
+        wave: 1,
+        rule: 'negativeCluster',
+      },
+      owner: 'Head of Sales',
+      due: null,
+      status: 'proposed',
+    },
+    '2026-11-03T09:00:00.000Z',
+  );
+  e = addAction(
+    e,
+    { text: 'Pair new joiners across teams', link: { kind: 'expectation', id: 'e2' } },
+    '2026-11-03T09:00:00.000Z',
+  );
+  e = {
+    ...addOutcome(e, 'Support across groups', 1),
+    outcomes: [
+      {
+        id: 'o1',
+        criterion: 'Support across groups',
+        assessment: `More joint work, reported by ${second}`,
+        wave: 1,
+        date: '2027-03-01',
+      },
+    ],
+  };
+  const withRecord: Project = { ...project, engagement: e };
+  const now = new Date('2026-11-03T10:00:00.000Z');
+
+  describe.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])('names hidden %s, signed layers left out %s', (anonymise, excludeSigned) => {
+    it('carries the brief, expectations, actions and outcomes', async () => {
+      const ctx = await contextFor(withRecord, { anonymise, excludeSigned, weights: HEALTH });
+      const csv = actionLogCsv(ctx, now);
+      if (!csv) throw new Error('no action log');
+      expect(csv.fileName).toBe(
+        `graticule-action-log-2026-11-03${anonymise ? '-codes' : ''}${excludeSigned ? '-no-signed' : ''}.csv`,
+      );
+      const model = buildReport(ctx, { notes: methodNotes(), now, layerName: 'x' });
+      const text = reportText(model).join('\n');
+      const titles = model.sections.map((s) => s.title);
+      expect(titles).toContain(engagementCopy.sections.assessment);
+      expect(titles).toContain(engagementCopy.export.actionsHeading);
+      expect(titles).toContain(engagementCopy.sections.outcomes);
+      expect(model.cover.some((l) => l.startsWith('Business question:'))).toBe(true);
+      expect(model.cover).toContain(engagementCopy.export.retention('2027-06-30'));
+      expect(text).toContain('Finance and Operations');
+      expect(csv.text).toContain('Monthly joint review');
+      const negativeAction = 'Facilitated conversation in Sales';
+      const negativeExpectation = 'People rarely rate each other negatively';
+      if (excludeSigned) {
+        expect(csv.text).not.toContain(negativeAction);
+        expect(text).not.toContain(negativeAction);
+        // The action answering a negative-ratings expectation goes with it.
+        expect(csv.text).not.toContain('Pair new joiners');
+        expect(text).not.toContain(negativeExpectation);
+        expect(csv.text).toContain(engagementCopy.export.leftOut(2));
+        expect(text).toContain(engagementCopy.export.leftOut(2));
+      } else {
+        expect(csv.text).toContain(negativeAction);
+        expect(text).toContain(negativeExpectation);
+        expect(csv.text).not.toContain('left out of this export');
+      }
+      const found = NAMES.filter((x) => csv.text.includes(x) || text.includes(x));
+      if (anonymise) expect(found).toEqual([]);
+      else expect(found).toEqual(expect.arrayContaining([first, second]));
+    }, 60_000);
+  });
+
+  it('names no member at board level, and offers the log at every level but one-to-one', async () => {
+    const board = await contextFor(withRecord, {
+      anonymise: false,
+      excludeSigned: false,
+      audience: { level: 'board', team: null, member: null },
+    });
+    const csv = actionLogCsv(board, now);
+    const model = buildReport(board, { notes: methodNotes(), now, layerName: 'x' });
+    const text = [csv?.text ?? '', ...reportText(model)].join('\n');
+    expect(NAMES.filter((x) => text.includes(x))).toEqual([]);
+    expect(csv?.fileName).toContain('-board');
+    expect(model.cover).toContain(engagementCopy.export.seenBy('a board', 'The board'));
+    const one = await contextFor(withRecord, {
+      anonymise: false,
+      excludeSigned: false,
+      audience: { level: 'oneToOne', team: null, member: project.members[0]?.id ?? null },
+    });
+    expect(() => actionLogCsv(one, now)).toThrow();
+  }, 60_000);
+
+  it('leaves the report as before without an engagement record', async () => {
+    const ctx = await contextFor(project, { anonymise: false, excludeSigned: false });
+    expect(actionLogCsv(ctx, now)).toBeNull();
+    const model = buildReport(ctx, { notes: methodNotes(), now, layerName: 'x' });
+    expect(model.sections.map((s) => s.title)).not.toContain(engagementCopy.export.actionsHeading);
+    expect(model.cover.some((l) => l.startsWith('Business question:'))).toBe(false);
   });
 });

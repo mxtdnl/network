@@ -11,6 +11,7 @@ import {
   writePersistenceEnabled,
 } from '../../src/data/persistence';
 import { NOTICE_SEEN_KEY } from '../../src/ui/state/noticeStorage';
+import { readTour, TOUR_KEY, writeTour } from '../../src/ui/state/tourStorage';
 
 function memoryStorage() {
   const map = new Map<string, string>();
@@ -80,6 +81,9 @@ describe('local persistence', () => {
     await saveLocalProject(project(), factory);
     writePersistenceEnabled(true, storage);
     storage.setItem(NOTICE_SEEN_KEY, 'true');
+    // The guided first run's progress (build plan session 16).
+    writeTour({ status: 'active', task: 1 }, storage);
+    expect(readTour(storage)).toEqual({ status: 'active', task: 1 });
     storage.setItem('another-app', 'keep');
 
     await clearLocalData(factory, storage);
@@ -88,6 +92,8 @@ describe('local persistence', () => {
     expect(await loadLocalProject(factory)).toBeNull();
     expect(storage.getItem(PERSISTENCE_KEY)).toBeNull();
     expect(storage.getItem(NOTICE_SEEN_KEY)).toBeNull();
+    expect(storage.getItem(TOUR_KEY)).toBeNull();
+    expect(readTour(storage)).toBeNull();
     expect(storage.getItem('another-app')).toBe('keep');
   });
 });

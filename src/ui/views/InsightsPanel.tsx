@@ -17,6 +17,8 @@ import { focusMapMember } from '../map/focus';
 import { refLabel } from '../map/model';
 import { groupingAttributes, insightGroup } from '../state/insightGroup';
 import { saveInsightAsView, showInsight } from '../state/insights';
+import { addActionForObservation } from '../state/engagement';
+import { engagementCopy } from '../copy/engagement';
 import { useReadOnly } from '../state/layoutMode';
 import { useMemberNames } from '../state/names';
 import { useAppStore } from '../state/store';
@@ -176,6 +178,8 @@ function ObservationItem({
   const readOnly = useReadOnly();
   const selectMember = useAppStore((s) => s.selectMember);
   const setRightPanel = useAppStore((s) => s.setRightPanel);
+  const setStatus = useAppStore((s) => s.setStatus);
+  const wave = useAppStore((s) => s.results.current?.wave ?? 1);
   const listId = useId();
   const silent = new Set(o.noRatings ?? []);
   const members = o.members.map((id) => ({ id, name: names.of(id), silent: silent.has(id) }));
@@ -229,6 +233,19 @@ function ObservationItem({
             }}
           >
             {I.saveView}
+          </button>
+        )}
+        {!readOnly && (
+          <button
+            type="button"
+            className="button button--text"
+            aria-label={engagementCopy.actions.addFromInsightLabel(label)}
+            onClick={() => {
+              addActionForObservation(o, questionText(o, ctx), wave);
+              setStatus({ text: engagementCopy.actions.added, tone: 'info' });
+            }}
+          >
+            {engagementCopy.actions.addFromInsight}
           </button>
         )}
       </div>

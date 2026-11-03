@@ -5,6 +5,7 @@
 // refused as a whole, with the problems listed: nothing is dropped, merged or
 // repaired on load.
 
+import { checkEngagement } from './engagement';
 import { migrate, ProjectFileError } from './migrations';
 import { relationScale, roleAllows } from './relations';
 import {
@@ -403,6 +404,9 @@ export function checkProject(file: Obj): string[] {
       );
     }
   }
+
+  // The engagement record (build plan session 16), schema 4 in place.
+  if (file.engagement !== undefined) problems.push(...checkEngagement(file.engagement));
 
   return problems;
 }

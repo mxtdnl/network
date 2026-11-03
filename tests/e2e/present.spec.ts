@@ -619,6 +619,94 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   ).toBeVisible();
 });
 
+// The engagement guide (build plan session 16): the record names members in its free text (the
+// question, an expectation, an action and its owner, an outcome), which must show as codes with
+// names hidden, in every step, the assessment, "Explain this view" and the guided first run.
+test('anonymisation: no display name in the engagement guide', async ({ page }) => {
+  test.setTimeout(90_000);
+  await start(page);
+  await loadDemo(page);
+  const first = DISPLAY_NAMES[0] ?? '';
+  const second = DISPLAY_NAMES[1] ?? '';
+  const steps = page.getByRole('navigation', { name: 'Engagement steps' });
+  await steps.getByRole('button', { name: 'Plan' }).click();
+  await page
+    .getByLabel('Business question', { exact: true })
+    .fill(`Why does work stall around ${first}?`);
+  await page.getByLabel('Sponsor', { exact: true }).fill(second);
+  await page.getByRole('button', { name: 'Add an expectation' }).click();
+  await page.getByLabel('Expectation 1', { exact: true }).fill(`${first} links Finance and Sales`);
+  await page
+    .getByLabel('Check expectation 1 against', { exact: true })
+    .selectOption({ label: 'Ties between Finance and Sales' });
+  await page
+    .getByLabel('Expected between Finance and Sales', { exact: true })
+    .selectOption('regular');
+  await steps.getByRole('button', { name: 'Understand' }).click();
+  await rightTab(page, 'Insights').click();
+  await right(page)
+    .getByRole('button', { name: /^Add an action for Potential brokers/ })
+    .first()
+    .click();
+  await steps.getByRole('button', { name: 'Act' }).click();
+  await page.getByLabel('Action 1', { exact: true }).fill(`Ask ${first} to host a briefing`);
+  await page.getByLabel('Owner of action 1', { exact: true }).fill(second);
+  await steps.getByRole('button', { name: 'Re-measure' }).click();
+  await page.getByRole('button', { name: 'Record an outcome' }).click();
+  await page
+    .getByLabel('What was seen for outcome 1', { exact: true })
+    .fill(`${second} reports more contact`);
+  await page.getByLabel('Criterion of outcome 1', { exact: true }).focus();
+  await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
+  await expect(page.getByText(/Names hidden/)).toBeVisible();
+
+  const failures: string[] = [];
+  const check = async (where: string) => {
+    await page.waitForTimeout(150);
+    const text = await page.evaluate(() => {
+      const values = [
+        ...document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+          'input, textarea, select',
+        ),
+      ].map((el) => el.value);
+      const options = [...document.querySelectorAll('option')].map((o) => o.textContent);
+      return [document.documentElement.outerHTML, ...values, ...options, document.title].join('\n');
+    });
+    for (const name of DISPLAY_NAMES)
+      if (text.includes(name)) failures.push(`${where}: DOM contains ${name}`);
+  };
+  for (const step of ['Plan', 'Collect', 'Check', 'Understand', 'Discuss', 'Act', 'Re-measure']) {
+    await steps.getByRole('button', { name: step }).click();
+    await page.getByRole('button', { name: 'Advanced: show every tab' }).click();
+    await centreTab(page, 'Engagement').click();
+    // Every section open.
+    const closed = page.locator('.engagement__section:not([open]) > summary');
+    while ((await closed.count()) > 0) await closed.first().click();
+    await check(`engagement at ${step}`);
+  }
+  await page.keyboard.press('Escape');
+  await steps.getByRole('button', { name: 'All tools' }).click();
+  await centreTab(page, 'Map').click();
+  await settled(page);
+  await page.getByRole('button', { name: 'Explain this view' }).click();
+  await expect(page.locator('.explain')).toContainText('The map shows');
+  await check('explain this view');
+  // The guided first run loads the demo again; names stay hidden.
+  await page.getByRole('button', { name: 'Help' }).click();
+  await page.getByRole('menuitem', { name: 'Guided first run' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Start the first run' }).click();
+  const tour = page.getByRole('region', { name: /Guided first run/ });
+  await expect(tour).toContainText('Task 1 of 3');
+  await settled(page);
+  await tour.getByRole('button', { name: 'Show me' }).click();
+  await expect(tour.getByRole('status')).toHaveText('Task done');
+  await check('first run task 1');
+  await tour.getByRole('button', { name: 'Next task' }).click();
+  await tour.getByRole('button', { name: 'Show me' }).click();
+  await check('first run task 2');
+  expect(failures).toEqual([]);
+});
+
 // Waves (build plan session 14): the wave setting, coverage and rosters by wave, the
 // survey dashboard's waves and the repeat dialog, on the demo with a second wave and a
 // survey, with names hidden.

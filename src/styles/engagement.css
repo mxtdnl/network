@@ -1,0 +1,335 @@
+/* The engagement guide (build plan session 16): the steps in the row of the
+   centre tabs, the chosen step's details above it, the Engagement tab, the guided first run and "Explain this view".
+   Every value comes from tokens.css; the accent marks the current step only,
+   as it marks the selected tab, never data. */
+
+.stepper {
+  /* A row of its own in the bar, under the steps and above the tabs. */
+  order: 1;
+  flex: 1 0 100%;
+  padding: var(--s-1) var(--s-5) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.tabs__bar > .tabs__list {
+  order: 2;
+}
+
+/* The steps share the centre tabs' row, so the guide costs the map no height. */
+.tabs__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: var(--s-2);
+}
+
+.tabs__bar > .tabs__list {
+  flex: 0 1 auto;
+}
+
+.stepper__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-1) var(--s-3);
+  padding: var(--s-3) var(--s-3) 0 var(--s-5);
+  border-inline-end: var(--line-width) solid var(--stone);
+  padding-inline-end: var(--s-4);
+}
+
+.stepper__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+}
+
+.stepper__step {
+  min-height: var(--control-height);
+  padding: 0 var(--s-1);
+  border: none;
+  border-bottom: var(--indicator-width) solid transparent;
+  background: none;
+  color: var(--graphite);
+  font: inherit;
+  cursor: pointer;
+}
+
+.stepper__step:hover {
+  color: var(--ink);
+}
+
+.stepper__step[aria-current='step'] {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  border-bottom-color: var(--accent);
+}
+
+.stepper__all {
+  margin-inline-start: var(--s-1);
+}
+
+.stepper__detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-4);
+}
+
+.stepper__purpose {
+  /* Controls stay at the start of the row: the compact drawer covers its far end. */
+  flex: 0 1 auto;
+  color: var(--graphite);
+}
+
+.stepper__checklist {
+  flex: none;
+}
+
+.stepper__checklist[open] {
+  flex: 1 0 100%;
+}
+
+.stepper__summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  color: var(--ink);
+}
+
+.stepper__items {
+  list-style: none;
+  margin: var(--s-1) 0 var(--s-2);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.stepper__output-label {
+  color: var(--graphite);
+}
+
+.stepper__output {
+  color: var(--graphite);
+  margin-bottom: var(--s-2);
+}
+
+.stepper__advanced[aria-pressed='true'] {
+  font-weight: var(--weight-medium);
+}
+
+.stepper__retention {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  max-width: var(--measure-wide);
+}
+
+/* The Engagement tab */
+.engagement {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  max-width: var(--measure-wide);
+}
+
+.engagement > * {
+  flex-shrink: 0;
+}
+
+.engagement__section {
+  border-bottom: var(--line-width) solid var(--stone);
+  padding-bottom: var(--s-3);
+}
+
+.engagement__summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+/* Buttons keep their own width in the stacked sections. */
+.engagement .button {
+  align-self: flex-start;
+}
+
+.engagement__heading {
+  display: inline;
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+  font-weight: var(--weight-semibold);
+}
+
+.engagement__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding-top: var(--s-2);
+}
+
+.engagement__intro,
+.engagement__sentence {
+  max-width: var(--measure);
+}
+
+.engagement__input,
+.engagement__select {
+  max-width: var(--field-max-width);
+  width: 100%;
+}
+
+.engagement__fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.engagement__list {
+  margin: 0;
+  padding-inline-start: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.engagement__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.engagement__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+}
+
+.engagement__pairs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.engagement__pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+}
+
+.engagement__pair-label {
+  flex: 1 1 var(--field-max-width);
+}
+
+.engagement__pair .engagement__select {
+  flex: 0 1 var(--field-max-width);
+}
+
+.engagement__data {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.engagement__scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.engagement__few {
+  color: var(--graphite);
+}
+
+.engagement__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+}
+
+.engagement__audience {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+/* "Explain this view" under the centre column's title */
+.explain {
+  max-width: var(--measure-wide);
+  margin-top: var(--s-1);
+}
+
+.explain__list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--s-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.explain__heading {
+  font-weight: var(--weight-medium);
+  margin-top: var(--s-2);
+}
+
+.explain__term {
+  font-weight: var(--weight-medium);
+}
+
+/* The guided first run: a panel at the foot of the centre column, not a dialog,
+   so the page around it stays usable. */
+.tour {
+  flex: none;
+  padding: var(--s-3) var(--s-5);
+  border-top: var(--line-width) solid var(--stone);
+  background: var(--field);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.tour__title {
+  font-size: var(--t-1-size);
+  line-height: var(--t-1-line);
+  font-weight: var(--weight-semibold);
+}
+
+.tour__task {
+  font-weight: var(--weight-medium);
+}
+
+.tour__hint {
+  max-width: var(--measure);
+}
+
+.tour__status {
+  color: var(--graphite);
+}
+
+.tour__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+}
+
+/* Compact layout: tighter padding, as the other panels (D125). */
+:root[data-layout='compact'] .stepper,
+:root[data-layout='compact'] .stepper__nav,
+:root[data-layout='compact'] .tour {
+  padding-inline: var(--s-4);
+}

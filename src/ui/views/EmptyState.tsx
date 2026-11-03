@@ -1,4 +1,7 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
+import { engagementCopy } from '../copy/engagement';
+import { startTour } from '../state/tour';
+import { readTour } from '../state/tourStorage';
 import { shellCopy } from '../copy/shell';
 import { loadDemo } from '../state/projectActions';
 import { useReadOnly } from '../state/layoutMode';
@@ -9,6 +12,12 @@ import { startNewProject } from './MembersView';
 // the user the next action).
 export function EmptyState() {
   const headingId = useId();
+  const tourHelpId = useId();
+  // Offered until the first run has been finished or skipped; Help starts it again (session 16).
+  const [offerTour] = useState(() => {
+    const record = readTour();
+    return record?.status !== 'done' && record?.status !== 'skipped';
+  });
   const setImportOpen = useAppStore((s) => s.setImportOpen);
   const setCentreView = useAppStore((s) => s.setCentreView);
   const hasProject = useAppStore((s) => s.data.project !== null);
@@ -65,6 +74,23 @@ export function EmptyState() {
           {copy.loadDemo}
         </button>
       </div>
+      {!readOnly && offerTour && (
+        <div className="empty-state__tour">
+          <button
+            type="button"
+            className="button button--text"
+            aria-describedby={tourHelpId}
+            onClick={() => {
+              void startTour();
+            }}
+          >
+            {engagementCopy.tour.offer}
+          </button>
+          <p id={tourHelpId} className="field__help">
+            {engagementCopy.tour.offerHelp}
+          </p>
+        </div>
+      )}
       <p className="empty-state__note">{copy.privacy}</p>
     </section>
   );

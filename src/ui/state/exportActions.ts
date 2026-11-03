@@ -7,6 +7,7 @@ import { selectWaveProject } from './waves';
 import { EngineClient, type AnalysisInput } from '../engineClient';
 import { exportCopy } from '../copy/export';
 import { changeCsv } from '../export/change';
+import { actionLogCsv } from '../export/engagement';
 import { exportContext, type ExportContext, type ExportRequest } from '../export/context';
 import type { FontRole, Measure } from '../export/document';
 import { browserInflate } from '../export/fonts';
@@ -33,7 +34,7 @@ import type { AudienceLevel, Project, SavedSummary } from '../../data/schema';
 
 export type MapFormat = 'png' | 'svg';
 export type Resolution = 'x1' | 'x2' | 'print';
-export type TableKind = 'members' | 'network' | 'formalInformal' | 'change';
+export type TableKind = 'members' | 'network' | 'formalInformal' | 'change' | 'actions';
 
 /** The export settings saved in the project: the signed-layer exclusion (spec §10). */
 export function setExcludeSigned(on: boolean): void {
@@ -183,18 +184,22 @@ export async function exportTableFile(kind: TableKind): Promise<string | null> {
   try {
     const ctx = await context();
     const file =
-      kind === 'members'
-        ? memberMetricsCsv(ctx)
-        : kind === 'network'
-          ? networkMetricsCsv(ctx)
-          : kind === 'change'
-            ? changeCsv(ctx)
-            : formalInformalCsv(ctx);
+      kind === 'actions'
+        ? actionLogCsv(ctx, new Date())
+        : kind === 'members'
+          ? memberMetricsCsv(ctx)
+          : kind === 'network'
+            ? networkMetricsCsv(ctx)
+            : kind === 'change'
+              ? changeCsv(ctx)
+              : formalInformalCsv(ctx);
     if (!file)
       throw new Error(
         kind === 'change'
           ? exportCopy.tables.changeUnavailable
-          : exportCopy.tables.formalInformalUnavailable,
+          : kind === 'actions'
+            ? exportCopy.tables.actionsUnavailable
+            : exportCopy.tables.formalInformalUnavailable,
       );
     downloadCsv(file);
     status(exportCopy.tables.exported(kind, file.fileName));
@@ -204,6 +209,9 @@ export async function exportTableFile(kind: TableKind): Promise<string | null> {
     return null;
   }
 }
+
+/** The action log (build plan session 16), from the Engagement tab or the Export dialog. */
+export const exportActionLog = () => exportTableFile('actions');
 
 /** The metrics table view's own export (D66), under the export settings. */
 export async function exportMetricsTable(spec: TableSpec): Promise<string | null> {

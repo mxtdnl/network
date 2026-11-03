@@ -517,3 +517,27 @@ describe('change wording is neutral (build plan session 15)', () => {
     expect(texts.flatMap((t) => findBanned(t, words).map((w) => `${w}: ${t}`))).toEqual([]);
   }, 60_000);
 });
+
+describe('engagement guide wording (build plan session 16)', () => {
+  it('uses no banned word in any string of the guide, the first run or Explain this view', async () => {
+    const { engagementCopy } = await import('../../src/ui/copy/engagement');
+    const texts: string[] = [];
+    // Every string, and every function called with sample arguments of each kind.
+    const walk = (v: unknown) => {
+      if (typeof v === 'string') texts.push(v);
+      else if (typeof v === 'function') {
+        for (const arg of ['X', 1, 0.25, 'below', 'regular'])
+          try {
+            const out = (v as (...a: unknown[]) => unknown)(arg, arg, arg, arg, arg);
+            if (typeof out === 'string') texts.push(out);
+          } catch {
+            // A function whose arguments are of another kind.
+          }
+      } else if (Array.isArray(v)) v.forEach(walk);
+      else if (v && typeof v === 'object') Object.values(v).forEach(walk);
+    };
+    walk(engagementCopy);
+    expect(texts.length).toBeGreaterThan(150);
+    expect(texts.flatMap((t) => findBanned(t, words).map((w) => `${w}: ${t}`))).toEqual([]);
+  });
+});

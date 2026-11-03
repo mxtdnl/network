@@ -44,7 +44,12 @@ export const projectCopy = {
   replaceBody:
     'The open project will be closed. Changes since you last saved it will be lost unless you save it first.',
   // The confirmation repeats the verb of the action that asked for it.
-  replaceConfirm: { new: 'New project', open: 'Open project', demo: 'Load demo' },
+  replaceConfirm: {
+    new: 'New project',
+    open: 'Open project',
+    demo: 'Load demo',
+    tour: 'Start the first run',
+  },
   cancel: 'Cancel',
   noMembers:
     'This project has no members yet. Add them in the Members tab, or import a members file.',
