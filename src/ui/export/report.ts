@@ -40,11 +40,12 @@ import { subgroupDensity } from '../engineClient';
 import { questionsCopy } from '../copy/questions';
 import { isQuestionId } from '../state/questions';
 import { readoutSentence } from '../copy/readouts';
-import { networkReadouts, questionReadouts, type Readout } from '../state/readouts';
+import { MEMBER_READOUTS, networkReadouts, questionReadouts } from '../state/readouts';
 import { reportSummary, type SummaryText } from './summary';
 import { readerNotes } from './methodNotes';
 import { summaryCopy } from '../copy/summary';
 import { changeSection } from './change';
+import { actionsSection, briefLines, expectationsSection, outcomesSection } from './engagement';
 
 export type Block =
   | { kind: 'heading'; text: string }
@@ -582,14 +583,6 @@ function methodBriefSection(ctx: ExportContext, notes: string, appendices: boole
   return blocks;
 }
 
-/** Readout kinds that describe one member: left out for every audience but the analyst. */
-const MEMBER_READOUTS: ReadonlySet<Readout['kind']> = new Set([
-  'topBroker',
-  'cutPoints',
-  'asked',
-  'centralisation',
-]);
-
 /** A view's page: the question, the caption and the sentences that read out its figures. */
 function viewPage(input: ReportViewInput): ReportView {
   const { ctx } = input;
@@ -628,6 +621,8 @@ export function buildReport(ctx: ExportContext, options: ReportOptions): ReportM
       ? R.cover.directed
       : R.cover.symmetrised(exportCopy.csv.rules[result.symmetrise]);
   const cover = [
+    // The engagement brief (build plan session 16), as the analyst wrote it.
+    ...briefLines(ctx),
     // The wave, when there is more than one: its roster is the members counted (build plan session 14).
     ...(ctx.wave.shown
       ? [wavesCopy.cover(ctx.wave.wave, waveNumbers(ctx.source).length, project.members.length)]
@@ -661,8 +656,13 @@ export function buildReport(ctx: ExportContext, options: ReportOptions): ReportM
   const S = R.sections;
   // What changed since the wave before (build plan session 15), after the views.
   const change = changeSection(ctx);
+  // The engagement record (build plan session 16): expectations, actions and outcomes.
+  const engagement = [expectationsSection(ctx), actionsSection(ctx), outcomesSection(ctx)].filter(
+    (x): x is ReportSection => x !== null,
+  );
   const sections: ReportSection[] = [
     ...(change ? [change] : []),
+    ...engagement,
     ...(ctx.policy.level === 'workshop'
       ? [{ title: audienceCopy.workshop.teamTies, blocks: teamSection(ctx) }]
       : []),

@@ -9,6 +9,8 @@ import { coverageCopy, coveragePercent, percent, persistenceCopy, projectCopy } 
 import { shellCopy } from '../copy/shell';
 import { clearAllLocalData, setPersistenceOn } from '../state/persistenceSync';
 import { loadDemo, openProjectFile, saveProjectFile } from '../state/projectActions';
+import { startTour } from '../state/tour';
+import { engagementCopy } from '../copy/engagement';
 import {
   setLayoutPreference,
   useLayoutPreference,
@@ -28,7 +30,7 @@ import { startNewProject } from './MembersView';
 // The help documents are loaded with the dialog, on first use.
 const HelpDialog = lazy(() => import('./HelpDialog').then((m) => ({ default: m.HelpDialog })));
 
-type Pending = 'new' | 'open' | 'demo' | null;
+type Pending = 'new' | 'open' | 'demo' | 'tour' | null;
 
 interface TopBarProps {
   /** The compact layout's status line, inline in the bar (D125). */
@@ -198,6 +200,19 @@ export function TopBar({ status }: TopBarProps) {
                 },
               })),
               { key: 'notice', label: shellCopy.helpMenu.notice, onSelect: openNotice },
+              // The guided first run loads the demo (build plan session 16).
+              ...(phone
+                ? []
+                : [
+                    {
+                      key: 'tour',
+                      label: engagementCopy.tour.menu,
+                      onSelect: () => {
+                        if (hasData) setPending('tour');
+                        else void startTour();
+                      },
+                    },
+                  ]),
               // Applies at desktop widths; tablet and phone follow the width (D125).
               ...(['auto', 'compact', 'full'] as const satisfies readonly LayoutPreference[]).map(
                 (pref) => ({
@@ -242,6 +257,7 @@ export function TopBar({ status }: TopBarProps) {
           if (action === 'new') startNewProject();
           else if (action === 'open') chooseProjectFile();
           else if (action === 'demo') void loadDemo();
+          else if (action === 'tour') void startTour();
         }}
       />
       {help !== null && (

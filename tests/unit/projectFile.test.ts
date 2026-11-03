@@ -3,6 +3,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../../src/data/defaults';
 import {
+  addAction,
+  addExpectation,
+  emptyEngagement,
+  setExpectedPair,
+} from '../../src/data/engagement';
+import {
   migrate,
   MIGRATIONS,
   ProjectFileError,
@@ -562,5 +568,34 @@ describe('relations the analyst created (build plan session 11)', () => {
   it('reads a built-in layer without a role by its key, as before', () => {
     const back = parseProject(serialiseProject(withCustomRelations()));
     expect(back.layers.find((l) => l.key === 'conflict_task')?.role).toBeUndefined();
+  });
+});
+
+describe('the engagement record (build plan session 16)', () => {
+  const demo = () =>
+    parseProject(readFileSync(join(import.meta.dirname, '../../src/demo/demo.ona.json'), 'utf8'));
+
+  it('round-trips with schema 4 unchanged, and is absent from a project without one', () => {
+    let e = emptyEngagement('act');
+    e = addExpectation({ ...e, question: 'Why?' }, 'Close ties');
+    e = setExpectedPair(e, 'team', 'Sales', 'Finance', 'occasional');
+    e = addAction(e, { text: 'Joint review', due: '2027-01-15', status: 'agreed' }, 'now');
+    const project: Project = { ...demo(), engagement: e };
+    const text = serialiseProject(project);
+    expect(JSON.parse(text)).toMatchObject({ schema_version: SCHEMA_VERSION });
+    expect(parseProject(text)).toStrictEqual(project);
+    expect(serialiseProject(demo())).not.toContain('"engagement"');
+  });
+
+  it('refuses a damaged record as a whole', () => {
+    const file = JSON.parse(serialiseProject(demo())) as Record<string, unknown>;
+    file.engagement = {
+      ...emptyEngagement(),
+      intent: {
+        layer: null,
+        pairs: [{ attribute: 'team', a: 'Sales', b: 'Finance', level: 'close' }],
+      },
+    };
+    expect(() => parseProject(JSON.stringify(file))).toThrow(/engagement\.intent/);
   });
 });

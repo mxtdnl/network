@@ -9,6 +9,8 @@ import { useMemberNames } from '../state/names';
 import { activeQuestion, type QuestionId } from '../state/questions';
 import { networkReadouts, questionReadouts } from '../state/readouts';
 import { useAppStore, type CentreView } from '../state/store';
+import { engagementCopy } from '../copy/engagement';
+import { ExplainView } from './ExplainView';
 
 const Q = questionsCopy;
 
@@ -38,6 +40,9 @@ export function QuestionHeader() {
   const aboutId = useId();
   const aboutOpen = useAppStore((s) => s.ui.aboutOpen);
   const setAboutOpen = useAppStore((s) => s.setAboutOpen);
+  const explainOpen = useAppStore((s) => s.ui.explainOpen);
+  const setStepUi = useAppStore((s) => s.setStepUi);
+  const explainId = useId();
 
   const content = useMemo(() => {
     if (!project || !result || result.memberIds.length !== project.members.length) return null;
@@ -89,6 +94,20 @@ export function QuestionHeader() {
           <Icon name={aboutOpen ? 'collapse' : 'expand'} />
           {Q.aboutNetwork}
         </button>
+        {centreView === 'map' && (
+          <button
+            type="button"
+            className="button button--text question-header__toggle"
+            aria-expanded={explainOpen}
+            aria-controls={explainOpen ? explainId : undefined}
+            onClick={() => {
+              setStepUi({ explainOpen: !explainOpen });
+            }}
+          >
+            <Icon name={explainOpen ? 'collapse' : 'expand'} />
+            {engagementCopy.explain.button}
+          </button>
+        )}
         {also && alsoLabel && also.on.includes(centreView) && (
           <button
             type="button"
@@ -106,6 +125,7 @@ export function QuestionHeader() {
           </button>
         )}
       </div>
+      {centreView === 'map' && explainOpen && <ExplainView id={explainId} />}
       <div id={aboutId} hidden={!aboutOpen}>
         <ul className="question-header__list">
           {network.map((s) => (

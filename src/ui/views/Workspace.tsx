@@ -23,6 +23,10 @@ import { WeightPanel } from './WeightPanel';
 import { QuestionHeader } from './QuestionHeader';
 import { QuestionPicker } from './QuestionPicker';
 import { WaveSelect } from './WaveSelect';
+import { EngagementStepper, EngagementSteps } from './EngagementStepper';
+import { EngagementView } from './EngagementView';
+import { FirstRun } from './tour/FirstRun';
+import { centreShown, rightShown, useStep } from '../state/engagement';
 import { questionsCopy } from '../copy/questions';
 import { exploreCopy } from '../copy/explore';
 import { savedViewsCopy } from '../copy/savedViews';
@@ -51,6 +55,11 @@ const centreItems: readonly TabItem<CentreView>[] = [
       </Suspense>
     ),
   },
+  {
+    key: 'engagement',
+    label: shellCopy.centreTabs.engagement,
+    panel: <EngagementView />,
+  },
 ];
 
 const rightItems: readonly TabItem<RightPanel>[] = [
@@ -78,6 +87,7 @@ export function Workspace() {
   const closeNotice = useAppStore((s) => s.closeNotice);
   const hasProject = useAppStore((s) => (s.data.project?.members.length ?? 0) > 0);
   const mode = useLayoutMode();
+  const step = useStep();
   const readOnly = mode === 'phone';
   const compact = mode === 'compact';
   const drawerOpen = compact && ui.rightOpen;
@@ -146,11 +156,21 @@ export function Workspace() {
   // The roster editor and the survey tools change the project, so the read-only
   // phone layout leaves them out.
   const editing = (key: CentreView) => key === 'members' || key === 'survey';
-  const centre = readOnly ? centreItems.filter((item) => !editing(item.key)) : centreItems;
-  const centreView = readOnly && editing(ui.centreView) ? 'map' : ui.centreView;
+  // The engagement step shows the tabs it needs; the rest wait under Advanced (build plan session 16).
+  const byStep = centreItems.filter((item) => centreShown(step, ui.stepAdvanced, item.key));
+  const centre = readOnly ? byStep.filter((item) => !editing(item.key)) : byStep;
+  const visible = centre.length > 0 ? centre : centreItems.filter((item) => item.key === 'map');
+  const centreView = visible.some((item) => item.key === ui.centreView)
+    ? ui.centreView
+    : (visible[0]?.key ?? 'map');
+  const right = rightItems.filter((item) => rightShown(step, ui.stepAdvanced, item.key));
+  const rightPanel = right.some((item) => item.key === ui.rightPanel)
+    ? ui.rightPanel
+    : (right[0]?.key ?? 'member');
   const showMapControls = hasProject && centreView === 'map';
-  // Building the roster or a survey needs the layers, not the analysis settings.
-  const showWeights = hasProject && !editing(centreView);
+  // Building the roster or a survey, and the engagement record, need the layers, not the
+  // analysis settings.
+  const showWeights = hasProject && !editing(centreView) && centreView !== 'engagement';
 
   if (ui.presentation) {
     return (
@@ -296,8 +316,8 @@ export function Workspace() {
       </button>
       <Tabs
         label={shellCopy.regions.right}
-        items={rightItems}
-        selected={ui.rightPanel}
+        items={right}
+        selected={rightPanel}
         onSelect={setRightPanel}
         vertical={{ panelsId: DRAWER_ID, collapsed: !drawerOpen }}
       />
@@ -306,8 +326,8 @@ export function Workspace() {
     <aside className="workspace__right" aria-label={shellCopy.regions.right}>
       <Tabs
         label={shellCopy.regions.right}
-        items={rightItems}
-        selected={ui.rightPanel}
+        items={right}
+        selected={rightPanel}
         onSelect={setRightPanel}
       />
     </aside>
@@ -322,13 +342,24 @@ export function Workspace() {
           {leftColumn}
           <main className="workspace__centre" aria-label={shellCopy.regions.centre}>
             {readOnly && <p className="workspace__read-only">{shellCopy.phone.readOnly}</p>}
-            {hasProject && !editing(centreView) && <QuestionHeader />}
+            {hasProject && !editing(centreView) && centreView !== 'engagement' && (
+              <QuestionHeader />
+            )}
             <Tabs
               label={shellCopy.regions.centre}
-              items={centre}
+              items={visible}
               selected={centreView}
               onSelect={setCentreView}
+              before={
+                hasProject ? (
+                  <>
+                    <EngagementSteps />
+                    <EngagementStepper />
+                  </>
+                ) : undefined
+              }
             />
+            <FirstRun />
           </main>
           {rightColumn}
           <ImportDialog />

@@ -4,34 +4,11 @@ Graticule maps working relationships in a team or organisation of about 5 to 250
 
 It describes the structure of a network. It does not evaluate anyone, and its results should not be used to assess individual performance. Everything happens in your browser: there is no server, and the page is blocked from sending data anywhere.
 
+The guide follows the seven steps of an engagement, as Graticule's engagement guide does (see [The engagement guide](#the-engagement-guide)): Plan, Collect, Check, Understand, Discuss, Act and Re-measure.
+
 This guide is also in Graticule, under Help → User guide. The definition of every measure, rule and threshold is in the [method notes](method-notes.md). A one-page guide you can send to participants is in [Help for respondents](respondent-help.md).
 
 Every screenshot here uses the fictional demo, with names hidden.
-
-## Start with a question
-
-Graticule starts from a question your client asks, not from a method. Choose one under "What do you want to know?" at the top of the left column, and Graticule sets the map, or the view that answers it best, for you: which relationship the ties come from, what the size of each person shows, the layout and the colours. The question becomes the title above the view, and sentences under it read out what the figures show.
-
-![The question picker at the top of the left column, and the question "Who is connected to whom?" as the title above the map, with sentences describing the network](user-guide/question.jpg)
-
-| Question | What it uses | What it shows |
-|---|---|---|
-| Who is connected to whom? | Connection strength | The map, with larger members named by more colleagues and colour by team. The map opens on this question. |
-| How does information reach people? | Advice | The map, with larger members asked by more colleagues; "Show incoming advice ties" ranks them. |
-| Where do teams connect, and where not? | Connection strength | The Groups tab: how many ties stay within each team and how many cross to each other team. |
-| Who links groups that otherwise rarely meet? | Informal collaboration | The map, with clusters outlined and larger members on more of the shortest routes between colleagues. |
-| Whose time do others depend on? | Workflow dependency | The Table's incoming ties, most first, and how much of the demand the busiest tenth receives. |
-| Where does work happen outside the formal structure? | Formal and informal collaboration | The map in the formal and informal line styles, over the formal hierarchy when managers are recorded. |
-| Where does the network rely on a single route? | Connection strength | The map with bridge ties marked, and the members whose absence would cut others off highlighted. |
-| Where are relationships rated negatively, and is that returned? | Valence | The map with negative ratings coloured and drawn however weak the tie. |
-
-If a project does not have the relationship a question needs, or it is switched off or not rated yet, the question says so in the list ("needs advice and information seeking") and, when chosen, explains how to add it. It changes nothing: Graticule never answers with a different relationship under the same title. The demo rates the four core relationships only, so its advice and dependency questions say they need those ratings; the post-merger scenario project (`src/demo/scenario-post-merger.ona.json`) answers all eight.
-
-**Every number has a sentence.** Under the question's title, its figures are read out in words: for example "On connection strength, 546 of the 1,560 possible ties are present (35%), counting each direction separately." "About this network" adds, in the same way, the six network measures (density, reciprocity, separate parts, communities, centralisation and the E-I index) that the question has not already read out. In the member panel each measure has a sentence beside its rank, comparing the person with their colleagues and with their team's median: "Lies on more of the shortest routes between colleagues than any of their 39 colleagues." Every figure counts all ties, including any the map hides.
-
-**From a question to a saved view.** Choose a question, read the sentences, adjust the map if you need to (the range, filters and layout keep the question), and save it in the Views tab: the question becomes the view's caption, ready for a presentation. Choosing another relationship under Ties from is your own analysis rather than the question's, so the title then names the relationship instead.
-
-**Combining layers is advanced.** Several relationships can be combined into one weighted set of ties, the composite, under "Advanced: combine layers" below the map settings. It is closed until you open it, because the weights are a statement of priorities you make, not a measurement (see [Composite weighting](#composite-weighting)).
 
 ## Getting started
 
@@ -41,11 +18,11 @@ The first time you open Graticule it shows a notice about data and consent. Read
 
 ![The first-run notice, "Before you start", listing four points about data, consent, evaluation and data protection, and four more for surveys](user-guide/first-run-notice.jpg)
 
-The empty workspace offers four ways in: run a survey, add members by hand (see [Building a roster in Graticule](#building-a-roster-in-graticule)), import survey data you already hold, or load the demo. The demo is a fictional organisation of 40 people in five teams, built to contain a broker between teams, a team that keeps to itself, a pocket of reciprocated negative ratings and a clear mismatch between formal and informal ties. It is the quickest way to learn the tool.
+The empty workspace offers four ways in: run a survey, add members by hand (see [Building a roster in Graticule](#building-a-roster-in-graticule)), import survey data you already hold, or load the demo. Below them, **Take the guided first run** walks you through the demo (see [The guided first run](#the-guided-first-run)). The demo is a fictional organisation of 40 people in five teams, built to contain a broker between teams, a team that keeps to itself, a pocket of reciprocated negative ratings and a clear mismatch between formal and informal ties. It is the quickest way to learn the tool.
 
 ![The empty workspace with the buttons Run a survey, Add members, Import survey data and Load demo](user-guide/empty-workspace.jpg)
 
-The workspace has three columns: settings on the left (the question, map settings, "Advanced: combine layers" and layers), views in the centre under the question's title (Map, Matrix, Table, Compare, Members and Survey), and details on the right (Member, Explore, Insights, Views and Check the data). While the Members or Survey tab is open, the left column holds the layers only; the weights and map settings are on the Map tab. The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
+The workspace has three columns: settings on the left (the question, map settings, "Advanced: combine layers" and layers), views in the centre under the question's title, with the engagement guide's steps beside the tabs (Map, Matrix, Table, Groups, Compare, Members, Survey and Engagement), and details on the right (Member, Explore, Insights, Views and Check the data). While the Members or Survey tab is open, the left column holds the layers only; the weights and map settings are on the Map tab. The top bar holds the coverage figure, the Hide names switch, Present, Export, the Project menu and Help.
 
 ### Compact and full layouts
 
@@ -61,7 +38,67 @@ A project is saved as a single file ending in `.ona.json`, which holds the membe
 
 Graticule does not keep anything in the browser unless you ask it to. Project → Keep a copy in this browser stores the open project on this device, and the top bar says "Kept in this browser" while it is on. Project → Clear local data… deletes everything Graticule has stored in this browser, including that copy and your preferences.
 
-## Building a roster in Graticule
+### The guided first run
+
+If you are new to Graticule, choose **Take the guided first run** on the empty workspace, or Help → Guided first run at any time. It loads the demo (replacing the open project, after asking) and gives you three tasks, about ten minutes in all:
+
+1. **Find the team that keeps to itself.** Open the Groups tab and choose the team whose ties stay mostly within it, or show the Silos observation on the map.
+2. **Who links Finance to the rest?** Show the "Only routes between groups" observation, or open the member panel of a member it names.
+3. **What would you ask that team?** In Insights, save an observation as a view: its question becomes the caption you would put to the client.
+
+The panel at the foot of the centre column says when a task is done; **Show me** does it for you, and **Next task** moves on. You can skip at any time. Graticule remembers in this browser where you got to, and whether you finished or skipped; Clear local data forgets it.
+
+![The guided first run's panel under the map, on its first task](user-guide/first-run.jpg)
+## The engagement guide
+
+An analysis is part of an engagement with a client: it starts from a question they ask and should end in something they decide to do, and in a second survey that shows whether it worked. The guide, in the row of the centre tabs, follows seven steps:
+
+| Step | What it is for | What it produces |
+|---|---|---|
+| Plan | Agree why the organisation wants to know, whom the survey covers and under what rules | The engagement brief, printed in the report |
+| Collect | Gather the ratings, by survey or from files | Imported ratings and response rates |
+| Check | Know what the data can support before reading anything into it | The data-quality statement |
+| Understand | Find the patterns that bear on the business question | Saved views and the assessment against expectations |
+| Discuss | Put the patterns to the client as questions, at the level each audience may see | The report and the presentation |
+| Act | Agree what to do, who does it and by when | The action log |
+| Re-measure | Run the survey again, see what changed and record the outcomes | The change between waves and the outcomes |
+
+Choose a step and the workspace shows only the tabs that step needs; the others wait under **Advanced: show every tab**. **All tools** shows every tab, as in earlier versions; a project without an engagement record opens there, and a new project opens at Plan. The step you are on is saved with the project.
+
+A chosen step shows a row under the steps with its **checklist** (open it to see the step's output), Advanced and its purpose. Items the project already shows done (a business question written, a survey created, coverage above the threshold, an action recorded) are ticked for you and cannot be unticked; tick the others yourself. The checklist guides; it never stops you from doing anything.
+
+![The engagement guide at Plan: the steps, the checklist open, and the engagement brief in the Engagement tab](user-guide/engagement-plan.jpg)
+
+The **Engagement** tab holds the record: the brief, the client's expectations, the collaboration expected between groups, the assessment against them, the action log and the outcomes. Each step opens the sections it needs. On a phone the record can be read but not changed.
+## Plan
+
+### The engagement brief
+
+Write down, in the Engagement tab:
+
+- **Business question**: what the organisation wants to understand, in its own words. It is printed on the report's cover.
+- **Sponsor**: who commissioned the work.
+- **Who is on the roster and why**: the boundary of the survey. A network analysis only sees ties between the people on the roster.
+- **Who sees the outputs at each audience level**: for example "The board" for board outputs, "Finance and its manager" for a team workshop. The default audience level is the one the Export dialog and presentations start from (see [Who the output is for](#who-the-output-is-for)).
+- **Delete the data by**: the retention date agreed. Once it has passed, the guide says so beside the steps until you change it or delete the data.
+
+### The client's expectations
+
+Before the client sees any result, record what they expect the network to show, in their words: "Finance works closely with Operations", "New joiners find their way to the experts". Each expectation can be checked against something in the data: the ties between a pair of groups, a group's ties inside and with everyone else, or one of the questions (see [Start with a question](#start-with-a-question)). Under Understand, Graticule writes what the data show beside each one, and you add your own notes. Recording expectations first keeps the discussion honest: the data can confirm or surprise, but cannot be read to fit.
+
+### Collaboration expected between groups
+
+For each pair of groups (by team, or the attribute chosen under Group members by in Insights), say how much the client expects them to work together:
+
+| Expected | Share of possible pairs of members tied |
+|---|---|
+| Little or none | below 5 % |
+| Occasional | 5 % to 15 % |
+| Regular | 15 % to 40 % |
+| Close | 40 % or more |
+
+A pair of members counts as tied when their tie reaches 0.30 on the layer chosen (connection strength by default; either direction in the directed view). The bands are wide on purpose: they record intent, not a target. Leave a pair "Not set" when the client has no view.
+### Building a roster in Graticule
 
 You do not need a spreadsheet to start. The Members tab builds the list of people a project is about, and keeps it up to date as people join or leave. Choose Add members in the empty workspace, or Project → New project, which starts an empty project and opens the tab. On a phone the tab is not shown, because a project cannot be changed there.
 
@@ -75,7 +112,7 @@ While names are hidden, the tab shows codes instead of names and leaves out ids 
 
 With two or more people on the list, set up a survey from the Survey tab or enter ratings yourself in the matrix (see [Entering ratings by hand](#entering-ratings-by-hand)). A members file can still be imported instead, and is quicker for a large organisation whose list already exists in a spreadsheet.
 
-## Preparing data from the templates
+### Preparing data from the templates
 
 If your ratings were collected outside Graticule, prepare two files. Templates in CSV and XLSX are linked from the Import survey data dialog, under "Download a template".
 
@@ -111,7 +148,7 @@ Three rules matter most:
 
 Save spreadsheets as CSV (UTF-8) or XLSX. Graticule reads the first sheet of an XLSX file and the values stored in cells, not their display format.
 
-### Layers
+#### Layers
 
 Each relationship you rate is a layer. Four core layers are turned on in a new project: connection strength, valence, informal collaboration and formal collaboration. Twelve optional layers can be turned on in the Layers section of the left column, including advice seeking, two kinds of trust, energy, workflow dependency, interpersonal safety and two kinds of conflict. Edit a layer to change its label or question wording. The full list, with scales and suggested wording, is in the [method notes](method-notes.md#10-relationship-layers).
 
@@ -128,19 +165,22 @@ The built-in layers describe working relationships in general. To ask about your
 
 Your relations are listed under "Relations you added". Deleting one deletes its ratings; the confirmation says how many, and how many saved views and surveys use it. The roles and the full bank are in the [method notes](method-notes.md#10-relationship-layers).
 
-## Running a roster survey
+## Collect
+
+Gather the ratings by running a survey in Graticule, or import them from files or a survey tool.
+### Running a roster survey
 
 Graticule can run the survey itself. Each person receives a personal link, answers on their phone or computer, and sends you back an encrypted response by email or as a file. You import all the responses at once. Nothing passes through a server.
 
 The design is a whole-network (roster) survey: every person is asked about their colleagues on the roster. It works only if most people respond, so plan for a high response rate (80 % or more) before you start.
 
-### Before you start
+#### Before you start
 
 1. List everyone who will take part: add them in the Members tab (see [Building a roster in Graticule](#building-a-roster-in-graticule)), or import a members file (Project → Import survey data…). Add an email column if you want a mail-merge list of links.
 2. Turn on the layers you want to ask about, and check their wording in the Layers section. To ask about your client's issue, create relations or add them from the question bank (see [Your own relations and the question bank](#your-own-relations-and-the-question-bank)); both are also offered under the questions in survey setup, where an added relation is included in the survey at once.
 3. Agree the purpose, who will see the results and how long the data will be kept, and take data protection advice (see [Ethics and consent](#ethics-and-consent)).
 
-### Setting up
+#### Setting up
 
 Open the Survey tab and choose Set up a survey.
 
@@ -185,7 +225,7 @@ Open the Survey tab and choose Set up a survey.
 
 **Links.** A link carries the whole survey and works on its own up to 2,000 characters. Longer surveys use a shared survey file with a short personal link. Choose "Always use a survey file with short links" if your organisation's email rewrites links for security scanning.
 
-### Protecting the responses
+#### Protecting the responses
 
 Responses are encrypted to a key that only this survey holds. Choose a passphrase of at least 12 characters (a few unrelated words work well), then Create the key. Download the key backup, keep it somewhere safe apart from the project file, and open it again with Choose the backup file to prove the file and passphrase work. Only then can you create the survey.
 
@@ -193,7 +233,7 @@ Responses are encrypted to a key that only this survey holds. Choose a passphras
 
 If the key and its backup are lost, or the passphrase is forgotten, nobody can read the responses, including you.
 
-### Sending links
+#### Sending links
 
 The survey dashboard shows links issued, responses imported, the response rate against the coverage threshold, duplicates and rejected files.
 
@@ -205,7 +245,7 @@ Under Links, copy each person's link, or use Export links for mail merge to save
 
 ![The launch kit: seven drafts, each with a download button and its text](user-guide/survey-launch-kit.jpg)
 
-### What respondents see
+#### What respondents see
 
 Respondents see a welcome screen with your introduction, the estimated time, the deadline and your confidentiality statement, then a consent step, then a check that the link is theirs. They select colleagues (if you chose selection), answer every question, answer the questions about people outside the list and about their own work if the survey asks them, check their answers, and encrypt them. Their progress is saved on their own device until they send the response.
 
@@ -221,7 +261,7 @@ Respondents see a welcome screen with your introduction, the estimated time, the
 
 The response is a small text file (named like `graticule-response-7KQ2M4XD.txt`) or a block of text to paste into an email. Each has a receipt code the respondent can quote. [Help for respondents](respondent-help.md) is a one-page explanation you can send with the links.
 
-### Importing responses
+#### Importing responses
 
 On the dashboard, Unlock with the passphrase (it is kept in memory only until you reload or close the page). Drop the response files onto the import area, choose them, or paste response text from emails; several can go at once. Read responses shows a plan before anything changes: responses to import, duplicates, files already imported, rejected files with reasons, how many responses include answers about the respondent's work, and any mapping from an earlier version.
 
@@ -231,19 +271,7 @@ Ratings from responses pass through the same validation report as a ties file, a
 
 Use Export non-responders for reminders. Close survey stops further imports until you reopen it. If you change who is asked or what they are asked after links have gone out, Graticule creates a new version; earlier links stay valid, and their responses are mapped to the new version by member and layer. The full import rules are in the [method notes](method-notes.md#survey-rules-and-limits).
 
-### Repeating a survey
-
-To see how a network changes, run the same survey again some months later as a new wave. On the survey's dashboard choose **Repeat this survey**. The dialog lists everyone in the project, all ticked: untick anyone who has left. They stay in the project with their earlier ratings, but are not asked again and are not counted in the new wave. People added since the last wave are marked "Joined since the last wave". **Create wave** makes a new survey with the same questions, texts and settings, and a new link for each person. Send the links as before (the launch kit's drafts are built afresh for it). The new survey uses the same key and passphrase as the one it repeats, so no new key backup is needed, and earlier links still answer their own wave. Set a deadline for the new wave under Edit survey.
-
-![The dialog that repeats a survey as wave 2, with a leaver unticked](user-guide/survey-repeat.jpg)
-
-Once a project has more than one survey, the dashboard lists them under **Waves**, each with its status and responses; choose one to see its dashboard.
-
-Each wave has its own roster. Repeating a survey records who was on the roster of every wave, and people you add to the project afterwards join the latest wave only. **Rosters by wave** on the Members tab shows and changes who was on each wave's roster, for example to take off someone who left before a wave was run. Taking someone off a roster keeps their ratings in the file; removing them from the project deletes their ratings in every wave.
-
-**Which wave is shown.** Every result shows one wave: by default the latest wave with ratings, so new responses appear as soon as they are imported. Choose another under **Wave** at the top of the left column. Only members on that wave's roster are analysed and counted in its coverage, so a newcomer is not counted as not answering a wave they were never asked in. The top bar says which wave is shown ("Wave 2 of 2"), and so do the map legend, presentation mode and every export. **Check the data** lists coverage for every wave, with how many people joined and left since the wave before. A saved view keeps the wave it showed. Ratings entered in the matrix go into the wave shown. To see what changed between two waves, use Compare → **Two waves** (see [Comparing two waves](#comparing-two-waves)). The rules are in the [method notes](method-notes.md#22-waves).
-
-## Importing and validation
+### Importing and validation
 
 Choose Import survey data (empty workspace or Project menu). Choose a members file and, if you have one, a ties file (in long format, or a survey tool's export: see [Importing a survey tool's export](#importing-a-survey-tools-export)), then Check files. Importing a members file starts a new project; a ties file on its own is added to the open project, whose members it must name.
 
@@ -264,7 +292,7 @@ Nothing is changed silently. Fix the rows in your file and check it again, or im
 
 If a members file has values that differ only in case or spacing, such as "Finance" and "finance" in the team column, the report lists them under "Spellings to reconcile". Tick the ones to write one way (the most common spelling is kept); nothing changes unless you tick it.
 
-### Importing a survey tool's export
+#### Importing a survey tool's export
 
 Most survey tools export one row per respondent, with a column for each colleague and question. Choose that file as the ties file, with a members file or with a project open: Graticule recognises the layout and opens a wizard in four steps.
 
@@ -277,13 +305,67 @@ Check ratings opens the usual validation report, with each problem at its row an
 
 ![The import wizard's People step: a suggested match for Zoe Hart and a name shared by two members, each with a choice of member](user-guide/import-wizard.jpg)
 
-### Entering ratings by hand
+#### Entering ratings by hand
 
 The Matrix tab has two modes. Tie strength shows the adjacency matrix. Enter ratings is a grid for one layer, with raters in rows and the people they rate in columns. Move with the arrow keys, type a value and press Enter, press Delete to clear a cell, type `n/a` where the question does not apply, or paste a block copied from a spreadsheet. Self-pairs cannot be edited, and pasted cells that are invalid are skipped and reported.
 
 ![Rating entry: a grid of ratings with a cell key](user-guide/matrix-entry.jpg)
 
-## The map
+## Check
+
+Before reading anything into the results, check what the data can support.
+### Check the data
+
+Read this tab before the insights. It says whether the data can bear a conclusion, and its first section is the **data-quality statement**, a few sentences written from the checks below that name no one. The same statement opens a presentation, appears in the Export dialog and is printed on the report's cover.
+
+- **Coverage**: the share of possible ratings that were given, overall and per rater, and where the ratings came from (survey responses, imported files or matrix entry). Below the threshold, 80 % by default, a warning stays under the top bar: whole-network metrics may be unreliable, because a missing rating looks like a missing tie. You can change the threshold here if a lower rate is expected. Near the threshold the figure keeps one decimal place, so 79.6 % is never shown as 80 %. Until the project has its first rating, for example while a survey is being set up, the top bar says "No ratings yet" instead of giving a warning. Ratings saved without a record of where they came from, such as the demo's, are listed as "Not recorded".
+- **Coverage by group and by level**: coverage for each team (or the attribute chosen under Group members by in the Insights tab) and each level, with how many people gave ratings and the share of their ties not reported back. Overall coverage can pass the threshold while one group is mostly silent, such as a night shift.
+- **People who gave no ratings or few**: named here for you only. Their results rest largely on other people's reports. Fewer than half of the ratings possible counts as few.
+- **How each person rates**: each person's mean rating (every rating rescaled to 0 to 1), its spread, how much of each scale they used and the share of colleagues they report a tie with. A note marks someone who gave everyone the same answer, who rates higher or lower than most (0.15 or more from the median), or who reports ties with many more colleagues than most. These describe rating habits, which carry into given strength and into averaged ties; someone who really is closer to more people also rates higher, so read them as a prompt, not a finding.
+- **Ties reported by one side only**: of the ties someone reported, where the other person also answered, how many were not reported back.
+
+The checks change no figure. The definitions and thresholds are in the [method notes](method-notes.md#13-data-quality-checks).
+
+**Adjust the analysis**, at the end of the tab, offers four options for what the checks show. Each changes the whole analysis (map, tables, insights and exports), is saved with views, and is stated in exports. All are off until you switch them on.
+
+- **Count a tie only when both report it**: the Direction rule "Both report a tie" (above).
+- **Leave out people who gave no ratings**: their values that depend on their own ratings show as not defined, and the rules on brokers, peripheral members and possible overload neither name nor count them. Otherwise those values are shown and marked *.
+- **Reconstruct their ties from colleagues' ratings**: on relations both people share (connection strength and formal and informal collaboration, unless you change "Mutual by nature" when editing a layer), someone who gave no ratings is given each colleague's rating of them as their own. Reconstructed ratings are labelled in the member panel, the legend and the member metrics export.
+- **Compare each person's ratings with their own**: on unsigned layers, each person's ratings are replaced by their rank among their own ties, so someone who rates everyone high and someone who rates everyone low count alike. Which ties exist does not change.
+
+**Preview the effect on the insights** runs the analysis again with each option switched, without changing the screen, and lists the observations each would change (for example a broker no longer named, or a silo found), with the composite's tie count when it changes. Options that cannot change anything, such as leaving out non-respondents when everyone answered, say so. The methods are in the [method notes](method-notes.md#14-data-remedies).
+
+![The Check the data tab: the data-quality statement, then coverage overall and by group](user-guide/coverage.jpg)
+
+## Understand
+
+Find the patterns that bear on the business question: start from a question, read the map and its sentences, the metrics and the insights, and compare what you see with the client's expectations.
+### Start with a question
+
+Graticule starts from a question your client asks, not from a method. Choose one under "What do you want to know?" at the top of the left column, and Graticule sets the map, or the view that answers it best, for you: which relationship the ties come from, what the size of each person shows, the layout and the colours. The question becomes the title above the view, and sentences under it read out what the figures show.
+
+![The question picker at the top of the left column, and the question "Who is connected to whom?" as the title above the map, with sentences describing the network](user-guide/question.jpg)
+
+| Question | What it uses | What it shows |
+|---|---|---|
+| Who is connected to whom? | Connection strength | The map, with larger members named by more colleagues and colour by team. The map opens on this question. |
+| How does information reach people? | Advice | The map, with larger members asked by more colleagues; "Show incoming advice ties" ranks them. |
+| Where do teams connect, and where not? | Connection strength | The Groups tab: how many ties stay within each team and how many cross to each other team. |
+| Who links groups that otherwise rarely meet? | Informal collaboration | The map, with clusters outlined and larger members on more of the shortest routes between colleagues. |
+| Whose time do others depend on? | Workflow dependency | The Table's incoming ties, most first, and how much of the demand the busiest tenth receives. |
+| Where does work happen outside the formal structure? | Formal and informal collaboration | The map in the formal and informal line styles, over the formal hierarchy when managers are recorded. |
+| Where does the network rely on a single route? | Connection strength | The map with bridge ties marked, and the members whose absence would cut others off highlighted. |
+| Where are relationships rated negatively, and is that returned? | Valence | The map with negative ratings coloured and drawn however weak the tie. |
+
+If a project does not have the relationship a question needs, or it is switched off or not rated yet, the question says so in the list ("needs advice and information seeking") and, when chosen, explains how to add it. It changes nothing: Graticule never answers with a different relationship under the same title. The demo rates the four core relationships only, so its advice and dependency questions say they need those ratings; the post-merger scenario project (`src/demo/scenario-post-merger.ona.json`) answers all eight.
+
+**Every number has a sentence.** Under the question's title, its figures are read out in words: for example "On connection strength, 546 of the 1,560 possible ties are present (35%), counting each direction separately." "About this network" adds, in the same way, the six network measures (density, reciprocity, separate parts, communities, centralisation and the E-I index) that the question has not already read out. In the member panel each measure has a sentence beside its rank, comparing the person with their colleagues and with their team's median: "Lies on more of the shortest routes between colleagues than any of their 39 colleagues." Every figure counts all ties, including any the map hides.
+
+**From a question to a saved view.** Choose a question, read the sentences, adjust the map if you need to (the range, filters and layout keep the question), and save it in the Views tab: the question becomes the view's caption, ready for a presentation. Choosing another relationship under Ties from is your own analysis rather than the question's, so the title then names the relationship instead.
+
+**Combining layers is advanced.** Several relationships can be combined into one weighted set of ties, the composite, under "Advanced: combine layers" below the map settings. It is closed until you open it, because the weights are a statement of priorities you make, not a measurement (see [Composite weighting](#composite-weighting)).
+
+### The map
 
 Once a project has ratings, the Map tab draws the network: each person is a node, and each tie a line.
 
@@ -325,7 +407,7 @@ The legend shows:
 
 **Keyboard.** Tab to the map, then use the arrow keys to move to the nearest connected member in that direction. Enter opens the member panel and Escape closes it; Shift and Enter adds a member to the subgroup; plus and minus zoom; 0 fits the map. A table of the members and ties shown is available to screen readers.
 
-### Linked views
+#### Linked views
 
 Selecting a member, a subgroup, a filter or an ego view applies to every view.
 
@@ -345,23 +427,7 @@ Selecting a member, a subgroup, a filter or an ego view applies to every view.
 
 ![Formal and informal ties compared: three small maps and a table of counts](user-guide/compare-formal-informal.jpg)
 
-### Comparing two waves
-
-Once a project has ratings from two waves, Compare offers **Two waves**. It compares the wave shown with the wave before it; choose others under Earlier wave and Later wave. The comparison uses the map's "Ties from" layer, direction and weights.
-
-- **Maps.** Members sit in the same place on both maps. The earlier wave's map marks ties lost since then in ochre; the later wave's marks ties gained in teal. Ties that strengthened or weakened by two points or more on a 0 to 5 scale are dashed in the same colours. Members who left or joined appear on their own wave's map only.
-- **What changed.** Sentences give coverage in each wave, who was on both rosters, who left and who joined, and the ties gained, lost, strengthened and weakened among people on both rosters. Ties of people who left or joined are counted apart, never as lost or gained. Each change large enough to note becomes a question, such as "What brought Build closer to Support between the waves?". A pair of groups is noted when the share of possible ties between them moved by 10 percentage points or more.
-- **Coverage first.** If either wave's coverage is below the project's threshold (80 % by default), the figures are shown but no change is described, because a difference could come from who answered. A group below the threshold in either wave is left out of the questions.
-- **Change in ties between groups** is a matrix of the change in the share of possible ties, in percentage points, shaded on the diverging scale.
-- **Tables** give each wave's members, coverage, ties, density, E-I index, load and bridges, the count of each kind of change, and (under Show change per member) each member's ties received and given and their changes; choose a name to open their panel.
-
-Read change with care. Different people may have answered each wave. Ratings also vary from one survey to the next, so a tie rated unusually high one time tends to be rated nearer the usual the next. Look for changes shared by many ties between the same groups. The [method notes](method-notes.md#23-change-between-two-waves) explain the rules.
-
-The change also appears in presentation's opening step, on a one-to-one's network card ("Since wave 1"), in the report ("What changed between wave 1 and wave 2") and as a CSV (Export → Export change between waves). A board or leadership team sees groups only; a workshop sees its own team.
-
-![Two waves compared: the earlier wave's map with lost ties marked, the later wave's with gained ties marked, and the key](user-guide/two-waves.jpg)
-
-### Explore
+#### Explore
 
 The Explore tab (right column) holds four tools, all using the ties from the layer the map draws:
 
@@ -372,7 +438,12 @@ The Explore tab (right column) holds four tools, all using the ties from the lay
 
 ![A shortest path drawn on the map, with its route listed in the Explore tab](user-guide/shortest-path.jpg)
 
-## Reading each metric
+### Explain this view
+
+**Explain this view**, under the question's title, describes the map on screen in plain sentences: how many members and ties it draws, what a line, its width and colour mean, what the size and colour of a circle show, what the layout means, and anything hidden by the tie-strength range, a filter or an ego view. Below, "What these terms mean" gives the notes for readers from the method notes for the terms the view uses. It describes exactly what the legend encodes, so it is a good check before you show a view to someone new to network maps.
+
+![Explain this view open under the question's title](user-guide/explain-view.jpg)
+### Reading each metric
 
 Open a member's panel to see their position in the network: each metric's value and rank (1 is the highest), for the layer you choose, with a sentence under it that compares the person with their colleagues ("Is named by fewer colleagues than 32 of their 39 colleagues") and gives their team's median. Constraint reads the other way: a low value is a more open network, so the sentence says "a more open network than …". The information button beside each metric gives its meaning, caveats and technical name. The formulas are in the [method notes](method-notes.md#3-node-metrics).
 
@@ -397,29 +468,6 @@ A value marked * rests on other people's reports, because the member gave no rat
 
 **Ranks are not scores.** A rank orders positions in this network, on this layer, from these answers. Positions have many causes (role, tenure, location, workload, who answered the survey), and a small change in ties can change a rank. Run Rank stability in the Table to see how much each rank depends on exactly who took part; a wide range means the ranking should not be read precisely.
 
-### Check the data
-
-Read this tab before the insights. It says whether the data can bear a conclusion, and its first section is the **data-quality statement**, a few sentences written from the checks below that name no one. The same statement opens a presentation, appears in the Export dialog and is printed on the report's cover.
-
-- **Coverage**: the share of possible ratings that were given, overall and per rater, and where the ratings came from (survey responses, imported files or matrix entry). Below the threshold, 80 % by default, a warning stays under the top bar: whole-network metrics may be unreliable, because a missing rating looks like a missing tie. You can change the threshold here if a lower rate is expected. Near the threshold the figure keeps one decimal place, so 79.6 % is never shown as 80 %. Until the project has its first rating, for example while a survey is being set up, the top bar says "No ratings yet" instead of giving a warning. Ratings saved without a record of where they came from, such as the demo's, are listed as "Not recorded".
-- **Coverage by group and by level**: coverage for each team (or the attribute chosen under Group members by in the Insights tab) and each level, with how many people gave ratings and the share of their ties not reported back. Overall coverage can pass the threshold while one group is mostly silent, such as a night shift.
-- **People who gave no ratings or few**: named here for you only. Their results rest largely on other people's reports. Fewer than half of the ratings possible counts as few.
-- **How each person rates**: each person's mean rating (every rating rescaled to 0 to 1), its spread, how much of each scale they used and the share of colleagues they report a tie with. A note marks someone who gave everyone the same answer, who rates higher or lower than most (0.15 or more from the median), or who reports ties with many more colleagues than most. These describe rating habits, which carry into given strength and into averaged ties; someone who really is closer to more people also rates higher, so read them as a prompt, not a finding.
-- **Ties reported by one side only**: of the ties someone reported, where the other person also answered, how many were not reported back.
-
-The checks change no figure. The definitions and thresholds are in the [method notes](method-notes.md#13-data-quality-checks).
-
-**Adjust the analysis**, at the end of the tab, offers four options for what the checks show. Each changes the whole analysis (map, tables, insights and exports), is saved with views, and is stated in exports. All are off until you switch them on.
-
-- **Count a tie only when both report it**: the Direction rule "Both report a tie" (above).
-- **Leave out people who gave no ratings**: their values that depend on their own ratings show as not defined, and the rules on brokers, peripheral members and possible overload neither name nor count them. Otherwise those values are shown and marked *.
-- **Reconstruct their ties from colleagues' ratings**: on relations both people share (connection strength and formal and informal collaboration, unless you change "Mutual by nature" when editing a layer), someone who gave no ratings is given each colleague's rating of them as their own. Reconstructed ratings are labelled in the member panel, the legend and the member metrics export.
-- **Compare each person's ratings with their own**: on unsigned layers, each person's ratings are replaced by their rank among their own ties, so someone who rates everyone high and someone who rates everyone low count alike. Which ties exist does not change.
-
-**Preview the effect on the insights** runs the analysis again with each option switched, without changing the screen, and lists the observations each would change (for example a broker no longer named, or a silo found), with the composite's tie count when it changes. Options that cannot change anything, such as leaving out non-respondents when everyone answered, say so. The methods are in the [method notes](method-notes.md#14-data-remedies).
-
-![The Check the data tab: the data-quality statement, then coverage overall and by group](user-guide/coverage.jpg)
-
 ### Insights
 
 The Insights tab lists rule-based observations: potential brokers, only routes between groups, peripheral members, possible overload, concentrated demand, silos, negative clusters, negative ratings not returned, and formal ties with no informal counterpart (and the reverse). Each is written as a question to explore with the people involved, never as a finding about anyone, and each shows the rule and thresholds that produced it. Under the members named, an observation says what most of them have in common when it is more common among them than in the project as a whole, for example "Three of the five share tenure band Under 1 year", and marks anyone named who gave no ratings. Show on the map sets the map up to show the observation; Save as view keeps it for a presentation. The rules are in the [method notes](method-notes.md#8-insight-rules).
@@ -441,7 +489,14 @@ The conflict layers have weight 0 in the composite by default, so frequent confl
 
 ![An insight shown on the map: the members involved highlighted, everyone else faded](user-guide/insight-on-map.jpg)
 
-## Composite weighting
+### Against expectations
+
+In the Engagement tab, **Against expectations** compares the ties observed between each pair of groups with the collaboration the client expected: below, within or above the expected range, with the number of pairs tied out of those possible. A pair with fewer than ten possible pairs of members is marked, because one tie moves its share a long way. It is read from the wave and view on screen, and a group with no member in the wave is said to have no pairs.
+
+![Against expectations: each pair of groups with the collaboration expected, the share of pairs tied and how they compare](user-guide/assessment.jpg)
+
+Read it as a starting point for discussion. A pair below the expected range may work through a few people, through channels the survey did not ask about, or less than the client thought; a pair above it may have found its own way to work together. The method is in the [method notes](method-notes.md#24-engagement-and-intent).
+### Composite weighting
 
 Different questions need different relationships, and the questions above each use one. The weight panel, under "Advanced: combine layers" in the left column, combines several layers into one composite score per pair, which then drives the layout, edge width, node size and all rankings when Ties from is set to the composite. Open the section and choose "Draw ties from the combined layers" to use it. While it is used, its weights are stated above the map and in the legend, and so in every export of the map: for example "Combined layers: Connection strength 33%, Informal collaboration 33%, Formal collaboration 33%; Valence adjusts each tie."
 
@@ -454,7 +509,10 @@ Different questions need different relationships, and the questions above each u
 
 When the weights change, members move smoothly to their new positions so you can see what moved (unless your system asks for reduced motion). The composite is a statement of priorities, not a measurement: say which weights you used whenever you show it. The formula is in the [method notes](method-notes.md#composite).
 
-## Saved views and presentations
+## Discuss
+
+Put what you found to the client as questions, prepared for the audience that will see it.
+### Saved views and presentations
 
 A saved view keeps the map as it is: the weights, filters, layout, node positions and pins, selection and encodings. Set up the map, then in the Views tab type a name and Save view. A view saved while a question is chosen keeps the question, and takes it as its caption. Add or edit a caption for each view: it is shown under the map when presenting, and about 60 characters per line reads well from the back of a room. Use Show to restore a view, Update to replace it with the map as it is now, and the arrows to change the order.
 
@@ -470,7 +528,7 @@ Choose Present (top bar or Views tab) to show the views full screen, with the ti
 
 **Hide names** (top bar, presentation controls and Export dialog) replaces every name with a code made from the team, level and a number, for example FIN-L3-02, in every view and export. Codes of small teams can still identify someone; Graticule says how many codes belong to a team and level with fewer than three members.
 
-### Who the output is for
+#### Who the output is for
 
 **Prepared for** (in the Views tab, on the presentation's control bar and at the top of the Export dialog) sets how fine-grained a presentation and every export are. The choice is saved with the project as its default. Your workspace is never restricted; only what you show or export changes.
 
@@ -488,7 +546,7 @@ Captions and view names follow the level: anyone the audience may not see become
 
 ![A personal network card in a one-to-one presentation](user-guide/network-card.jpg)
 
-## Exports
+### Exports
 
 Export (top bar) opens the export dialog. Under its settings it shows the data-quality statement as the exports carry it; the report prints it on its cover. Every export follows its two settings:
 
@@ -508,7 +566,7 @@ Export (top bar) opens the export dialog. Under its settings it shows the data-q
 
 The dialog follows **Prepared for** (above): at board or leadership level the map export is the group map and the report shows groups, with roles for a leadership team; a team workshop's files hold its team only; a one-to-one offers **Export network card** (PDF) and nothing else. Exports a level does not offer are disabled with the reason.
 
-### The report
+#### The report
 
 The report is written for the people you present to, with the technical material at the back. In order:
 
@@ -520,6 +578,8 @@ The report is written for the people you present to, with the technical material
 6. **Appendices**, if chosen: A, key network metrics; B, the insight rules with every observation; C, the technical notes (definitions and caveats). For a signed layer's negative ratings, the metrics table gives ties, density and reciprocity, but not separate parts, communities, modularity or the centralisation of bridging, which describe how a network holds together.
 7. **Ethics statement**.
 
+With an engagement record, the cover also gives the business question, the sponsor, who the survey covered, who sees outputs at the level chosen and the retention date, and after the views the report adds **Against expectations**, **Agreed actions** and **Outcomes** (see [The engagement guide](#the-engagement-guide)).
+
 Under **Report** in the Export dialog, choose the saved views to include (all, by default), whether to **Include the appendices**, and the audience under **Prepared for**. Each view is calculated with its own weights and settings, drawn at its saved positions, and follows the dialog's settings and audience: for a board or a leadership team each view is its group picture, and a team workshop's view shows the team only.
 
 **The executive summary** is drafted from the insight rules by fixed templates: no text leaves the browser. Groups whose ties stay mostly inside them come first, then the largest formal-only and informal-only gaps between groups, negative ratings not returned and, for you and a team workshop, routes and demand that run through a few people (counted, never named). When the rules find fewer than three patterns, the draft adds how ties fall within and between groups, pairs of groups with no tie and the split of formal and informal ties, or, for a workshop, the team's ties with each other group; if it still has fewer than three, it says so rather than inventing one. Negative clusters, which concern a few people, are never drafted; at your own level the editor lists them under "Not drafted as a headline", so you can decide.
@@ -530,6 +590,49 @@ Select **Edit summary** to change the draft before exporting. You can edit the o
 
 In CSV files an empty cell means not defined or not rated. File names end in `-board`, `-leadership`, `-workshop` or `-one-to-one` for an audience, `-codes` when names are hidden and `-no-signed` when those layers were left out. Exports are ordinary files: store and share them as personal data unless names are hidden and you are sure no code identifies anyone.
 
+## Act
+
+### The action log
+
+Record what the client agrees to do in the **Action log** (Engagement tab, at Act). Each action has what was agreed, what it answers, an owner, a due date, a status (proposed, agreed, in progress, done, dropped) and notes. **Add action** under any observation in Insights starts an action that answers it; the observation's question and wave are kept with the action, so it still reads clearly when a later wave no longer shows the pattern. An action can also answer one of the client's expectations or a pair of groups.
+
+![The action log: an action answering an observation, with its owner, due date and status](user-guide/action-log.jpg)
+
+**Export action log** (here or in the Export dialog) saves it as a CSV file, and the report prints it under "Agreed actions". Owners and free text go through Hide names and the audience level like captions; with the signed-layer exclusion, actions about negative ratings are left out and the export says how many.
+## Re-measure
+
+Some months after the actions, run the survey again and compare the two waves.
+### Repeating a survey
+
+To see how a network changes, run the same survey again some months later as a new wave. On the survey's dashboard choose **Repeat this survey**. The dialog lists everyone in the project, all ticked: untick anyone who has left. They stay in the project with their earlier ratings, but are not asked again and are not counted in the new wave. People added since the last wave are marked "Joined since the last wave". **Create wave** makes a new survey with the same questions, texts and settings, and a new link for each person. Send the links as before (the launch kit's drafts are built afresh for it). The new survey uses the same key and passphrase as the one it repeats, so no new key backup is needed, and earlier links still answer their own wave. Set a deadline for the new wave under Edit survey.
+
+![The dialog that repeats a survey as wave 2, with a leaver unticked](user-guide/survey-repeat.jpg)
+
+Once a project has more than one survey, the dashboard lists them under **Waves**, each with its status and responses; choose one to see its dashboard.
+
+Each wave has its own roster. Repeating a survey records who was on the roster of every wave, and people you add to the project afterwards join the latest wave only. **Rosters by wave** on the Members tab shows and changes who was on each wave's roster, for example to take off someone who left before a wave was run. Taking someone off a roster keeps their ratings in the file; removing them from the project deletes their ratings in every wave.
+
+**Which wave is shown.** Every result shows one wave: by default the latest wave with ratings, so new responses appear as soon as they are imported. Choose another under **Wave** at the top of the left column. Only members on that wave's roster are analysed and counted in its coverage, so a newcomer is not counted as not answering a wave they were never asked in. The top bar says which wave is shown ("Wave 2 of 2"), and so do the map legend, presentation mode and every export. **Check the data** lists coverage for every wave, with how many people joined and left since the wave before. A saved view keeps the wave it showed. Ratings entered in the matrix go into the wave shown. To see what changed between two waves, use Compare → **Two waves** (see [Comparing two waves](#comparing-two-waves)). The rules are in the [method notes](method-notes.md#22-waves).
+
+### Comparing two waves
+
+Once a project has ratings from two waves, Compare offers **Two waves**. It compares the wave shown with the wave before it; choose others under Earlier wave and Later wave. The comparison uses the map's "Ties from" layer, direction and weights.
+
+- **Maps.** Members sit in the same place on both maps. The earlier wave's map marks ties lost since then in ochre; the later wave's marks ties gained in teal. Ties that strengthened or weakened by two points or more on a 0 to 5 scale are dashed in the same colours. Members who left or joined appear on their own wave's map only.
+- **What changed.** Sentences give coverage in each wave, who was on both rosters, who left and who joined, and the ties gained, lost, strengthened and weakened among people on both rosters. Ties of people who left or joined are counted apart, never as lost or gained. Each change large enough to note becomes a question, such as "What brought Build closer to Support between the waves?". A pair of groups is noted when the share of possible ties between them moved by 10 percentage points or more.
+- **Coverage first.** If either wave's coverage is below the project's threshold (80 % by default), the figures are shown but no change is described, because a difference could come from who answered. A group below the threshold in either wave is left out of the questions.
+- **Change in ties between groups** is a matrix of the change in the share of possible ties, in percentage points, shaded on the diverging scale.
+- **Tables** give each wave's members, coverage, ties, density, E-I index, load and bridges, the count of each kind of change, and (under Show change per member) each member's ties received and given and their changes; choose a name to open their panel.
+
+Read change with care. Different people may have answered each wave. Ratings also vary from one survey to the next, so a tie rated unusually high one time tends to be rated nearer the usual the next. Look for changes shared by many ties between the same groups. The [method notes](method-notes.md#23-change-between-two-waves) explain the rules.
+
+The change also appears in presentation's opening step, on a one-to-one's network card ("Since wave 1"), in the report ("What changed between wave 1 and wave 2") and as a CSV (Export → Export change between waves). A board or leadership team sees groups only; a workshop sees its own team.
+
+![Two waves compared: the earlier wave's map with lost ties marked, the later wave's with gained ties marked, and the key](user-guide/two-waves.jpg)
+
+### Outcomes
+
+Under Re-measure, record how the client judges what the engagement achieved. Start from the suggested criteria (value to managers, changes to how work is organised, resources moved to where they are needed, changes to roles or functions, support across groups) or replace them with the client's own, one per line. **Record an outcome** adds one: the criterion, what was seen, the wave it was judged on and the date. Update each action's status at the same time. Outcomes are printed in the report under "Outcomes".
 ## Ethics and consent
 
 Network data about named colleagues is sensitive. Before collecting or loading any:

@@ -128,7 +128,13 @@ test('build a roster, edit it, analyse it and save it', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'People (3)' })).toBeFocused();
   await expect(page.getByLabel('Formal manager of Bram Contour')).toHaveValue('');
 
-  // The map analyses the roster, and the survey can be set up from it.
+  // The map analyses the roster, and the survey can be set up from it. A new project starts
+  // its engagement at Plan (build plan session 16), whose tabs are the record and the roster.
+  await expect(page.getByRole('tab', { name: 'Map' })).toHaveCount(0);
+  await page
+    .getByRole('navigation', { name: 'Engagement steps' })
+    .getByRole('button', { name: 'All tools' })
+    .click();
   await page.getByRole('tab', { name: 'Map' }).click();
   await expect(page.locator('canvas[data-transition]')).toBeVisible();
   await page.getByRole('tab', { name: 'Members' }).click();

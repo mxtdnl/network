@@ -8,13 +8,15 @@ const num = (value: number) => value.toLocaleString('en-GB');
 const count = (value: number, one: string, many: string) =>
   `${num(value)} ${value === 1 ? one : many}`;
 
-export type TableExportKind = 'members' | 'network' | 'formalInformal' | 'table' | 'change';
+export type TableExportKind =
+  'members' | 'network' | 'formalInformal' | 'table' | 'change' | 'actions';
 const tableNoun: Record<TableExportKind, string> = {
   members: 'Member metrics',
   network: 'Network metrics',
   formalInformal: 'Formal and informal ties',
   table: 'Table',
   change: 'Change between waves',
+  actions: 'Action log',
 };
 
 export const exportCopy = {
@@ -72,6 +74,10 @@ export const exportCopy = {
     changeHelp:
       'What changed between the wave exported and the wave before it (or the waves chosen in Compare): the network, each pair of groups, and each tie and member as the audience allows.',
     changeUnavailable: 'Needs two waves with ratings. Repeat the survey to collect a second wave.',
+    actions: 'Export action log',
+    actionsHelp:
+      'The actions agreed, what each answers, its owner, due date and status (build them under Engagement → Act).',
+    actionsUnavailable: 'No action recorded yet. Add actions under Engagement.',
     // The status names what its button exported: "Export member metrics" → "Member metrics exported".
     exported: (kind: TableExportKind, file: string) => `${tableNoun[kind]} exported as ${file}.`,
     failed: (kind: TableExportKind, reason: string) =>
@@ -201,6 +207,7 @@ export const exportCopy = {
     card: (date: string) => `graticule-network-card-${date}.pdf`,
     change: (before: number, after: number, view: string) =>
       `graticule-change-wave-${String(before)}-to-${String(after)}-${view}.csv`,
+    actions: (date: string, suffix: string) => `graticule-action-log-${date}${suffix}.csv`,
   },
   noMember: 'Choose the member the card is for.',
   groupsOnly: 'For a board or leadership team the map shows groups, not members.',

@@ -4,6 +4,7 @@ import { applyRatingChanges, type RatingChange } from '../../data/ratings';
 import { addRelation, defaultColourLayer, relationForRole } from '../../data/relations';
 import type {
   AttributeFilter,
+  EngagementStep,
   AttributeKey,
   EdgeColourChoice,
   EdgeWidthChoice,
@@ -28,7 +29,8 @@ import {
   type WeightState,
 } from './presets';
 
-export type CentreView = 'map' | 'matrix' | 'table' | 'groups' | 'compare' | 'members' | 'survey';
+export type CentreView =
+  'map' | 'matrix' | 'table' | 'groups' | 'compare' | 'members' | 'survey' | 'engagement';
 export type RightPanel = 'member' | 'explore' | 'insights' | 'views' | 'coverage';
 export type MatrixMode = 'explore' | 'enter';
 /** 'waves': what changed between two waves (build plan session 15). */
@@ -71,6 +73,16 @@ export interface UiState {
   /** What the PDF report holds (build plan session 10): saved views by id (null: every view, in
    *  presentation order) and whether the appendices are printed. View state, not saved. */
   report: { views: string[] | null; appendices: boolean };
+  /** The engagement step shown (build plan session 16); null follows the project's record. Set
+   *  without saving in the read-only phone layout. */
+  step: EngagementStep | 'all' | null;
+  /** The step's hidden tabs are shown ("Advanced: show every tab"). */
+  stepAdvanced: boolean;
+  /** "Explain this view" is open under the centre column's title. */
+  explainOpen: boolean;
+  /** The guided first run's panel is open, on this task (0-based), with the number of saved
+   *  views when the task started; null when closed. */
+  tour: { task: number; views: number } | null;
 }
 
 export type LegendMode = 'full' | 'condensed' | 'beside';
@@ -223,6 +235,9 @@ interface Actions {
   setAdvancedOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
   setAudience: (patch: Partial<UiState['audience']>) => void;
+  setStepUi: (
+    patch: Partial<Pick<UiState, 'step' | 'stepAdvanced' | 'explainOpen' | 'tour'>>,
+  ) => void;
   setAnonymise: (on: boolean) => void;
   openNotice: () => void;
   closeNotice: () => void;
@@ -412,6 +427,10 @@ export function initialUiState(noticeSeen: boolean): UiState {
     aboutOpen: false,
     audience: { team: null, member: null },
     report: { views: null, appendices: true },
+    step: null,
+    stepAdvanced: false,
+    explainOpen: false,
+    tour: null,
   };
 }
 
@@ -493,6 +512,9 @@ export const useAppStore = create<AppState>()((set, get) => {
     setAudience: (patch) => {
       setUi({ audience: { ...get().ui.audience, ...patch } });
     },
+    setStepUi: (patch) => {
+      setUi(patch);
+    },
     setAboutOpen: (aboutOpen) => {
       setUi({ aboutOpen });
     },
@@ -535,6 +557,8 @@ export const useAppStore = create<AppState>()((set, get) => {
       // selection name members and categories of the old one.
       // A project saved with names hidden opens with names hidden.
       if (project?.settings.anonymise) setUi({ anonymise: true });
+      // The step follows the new project's engagement record (build plan session 16).
+      setUi({ step: null, stepAdvanced: false });
       set({
         map: openingMapSettings(project),
         selection: { member: null, hovered: null, group: [] },

@@ -21,6 +21,7 @@ This document is the single source of truth for the build. Decisions made during
 - **No backend.** All data is processed in the browser. No analytics, telemetry, or third-party requests at runtime; fonts are self-hosted. This applies to respondent mode too: survey links carry the survey, and responses return to the analyst as encrypted files or text blocks, not through a server.
 - **In scope: survey collection (section 15).** The analyst sets up a whole-network survey, issues personal links, and imports the encrypted responses. The response return step sits behind a transport interface so that a hosted collection service can replace it later without changing the survey experience; no server is built in v1.
 - **In scope: several waves.** A project can hold ratings from repeated runs of the same survey. Ties carry a `wave` field, defaulting to 1, surveys record the wave their responses belong to, and the project records who was on each wave's roster. The analysis, coverage, insights, saved views, presentation and exports read one wave at a time, on that wave's roster (section 6). What changed between two waves is shown by a separate comparison (sections 6, 8 and 11).
+- **In scope: the engagement around the analysis.** A project can hold an engagement record (section 4.5): the business question, who sees what, the client's expectations, the actions agreed and the outcomes. A guide takes the analyst through seven steps, Plan, Collect, Check, Understand, Discuss, Act and Re-measure, and the analysis can be read against the collaboration the client expected between groups. This keeps the tool descriptive: the record holds what the client said and decided, and the tool compares observed ties with the client's own expectations without judging either.
 - **Out of scope for v1:** a hosted collection backend.
 
 ## 3. Methodological basis
@@ -107,7 +108,7 @@ Optional layers (disabled by default). Each ships with the suggested question wo
 
 ### 4.3 Project file
 - A whole project is saved as a single JSON file with extension `.ona.json`.
-- It holds a `schema_version`, members, layer definitions, ties, attribute definitions, saved views, surveys and settings, among them who was on each wave's roster. A wave with no roster recorded has every member on it.
+- It holds a `schema_version`, members, layer definitions, ties, attribute definitions, saved views, surveys, settings (among them who was on each wave's roster; a wave with no roster recorded has every member on it) and, optionally, the engagement record (section 4.5).
 - Loading an older `schema_version` runs an explicit migration function. Unknown future versions are refused with a clear message.
 
 ### 4.4 Surveys
@@ -120,6 +121,19 @@ A project holds zero or more surveys (section 15). Each survey stores:
 - when it repeats an earlier survey for a later wave, the survey it repeats.
 
 The passphrase and the decrypted private key are never stored.
+
+### 4.5 Engagement record
+A project may hold one engagement record, which stores:
+- the step of the engagement guide the workspace shows (Plan, Collect, Check, Understand, Discuss, Act, Re-measure, or every tool);
+- the business question, the sponsor and the roster boundary (who is on the roster and why), as text;
+- governance: who sees the outputs prepared for each audience level (section 8), and the date by which the data is to be deleted;
+- the client's prior expectations, each as text, optionally linked to a pair of groups, a group or a question (section 8), with the analyst's notes on what the data show;
+- the collaboration expected between pairs of groups, on a four-point scale: little or none (below 5 % of the possible pairs of members tied), occasional (5 % to 15 %), regular (15 % to 40 %) and close (40 % or more); a pair counts as tied at a tie strength of 0.30 or more on a chosen layer (connection strength by default);
+- actions: what was agreed, what it answers (an insight observation, with its wording and wave kept, an expectation or a pair of groups), an owner, a due date and a status (proposed, agreed, in progress, done, dropped);
+- the client's criteria for outcomes, and the outcomes recorded against them, each with a wave and a date;
+- the checklist items the analyst ticked.
+
+The default audience level is the existing audience setting. A project without a record behaves as before.
 
 ## 5. Input
 
@@ -375,6 +389,7 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
 - **Signed-layer exclusion.** An option, "Leave out how people feel about each other and friction", excludes every signed layer and every layer whose role is affect or friction (valence, energy, conflict, and any such relation the analyst created) from all exports.
 - **Anonymisation.** Available in one click from any view.
 - **Audience levels (section 8).** Outputs for a board, a leadership team, a team workshop or a one-to-one show only what that audience may see: no individual and no group below a minimum size for a board; roles between groups named only with the member's agreement for a leadership team; one team's own network, named only with the team's agreement, for a workshop; one person's own card for a one-to-one. Who agreed is recorded in the project.
+- **Retention.** The engagement record holds the date by which the data is to be deleted; once it has passed, the workspace says so until the date is changed or the data deleted.
 - **Content Security Policy.** Set via a `<meta>` tag, because GitHub Pages cannot set headers. The policy restricts `connect-src` to `'self'`, so the claim that data stays in the browser is enforced rather than asserted.
 
 ## 11. Exports
@@ -389,10 +404,12 @@ Wording is neutral and framed as questions for inquiry, never as verdicts on ind
   - the method in brief: one or two plain sentences per measure, from the method notes' notes for readers;
   - optional appendices: key metrics (with ties within and between groups by the grouping chosen in the Groups view, team by default), the insight rules with every observation, and the technical notes;
   - an ethics statement.
+  With an engagement record (section 4.5), the cover adds the business question, sponsor, roster boundary, who sees outputs at the level chosen and the retention date, and after the views the report adds "Against expectations" (each expectation with what the data show, and the collaboration expected between groups against what was observed), "Agreed actions" and "Outcomes".
   The Export dialog chooses the views, the audience level and whether to include the appendices.
 - With two waves, the report adds "What changed between wave n and wave m" after the views (sentences, the change observations and the change between pairs of groups), and a change CSV gives the network, each pair of groups and, as the audience allows, each tie and member, before and after (section 6). A board or leadership team sees the network and pairs of groups that reach the minimum size in both waves; a team workshop its own team.
 - Every export shows one wave, the one analysed (section 6); each saved view in a report shows its own wave. When the project has more than one wave, the wave is named in the map legend, on the report's cover, in the network metrics and in every file name, and the report's survey response rates list that wave's surveys.
 - Every export respects the anonymisation and signed-layer exclusion settings, and the audience level (section 8). At board and leadership level the map export is the group map and the report's map page shows groups; member metrics, the formal–informal pairs and the metrics table are not offered; group rows below the minimum size are pooled or left out; the report lists group-level insights only, its summary is drafted from them, its view pages show groups, and for a leadership team it lists the roles between groups. A team workshop's exports hold its team only. A one-to-one offers the member's personal network card as a PDF and nothing else.
+- The action log as a CSV (action, what it answers, owner, due date, status, notes, date recorded), offered at every level but a one-to-one. Free text goes through the names layer under the audience level; under the signed-layer exclusion, actions about negative ratings are left out and the file says how many.
 - Survey administration files (the mail-merge list of links, the non-responder list and the key backup, section 15) are not analysis exports. They identify people by design, so anonymisation does not apply to them; each is labelled as containing personal data when saved.
 
 ## 12. Design language
@@ -409,6 +426,7 @@ The approved token system lives in `docs/design-system.md` and `src/styles/token
 - **Motion:** only in response to user action, such as layout transitions and panels opening. UI transitions are 250 ms or less, and `prefers-reduced-motion` is respected.
 - **Data-ink discipline:** no 3D, no shadows or gradients on data marks, no decorative gridlines.
 - **Accessibility:** WCAG 2.2 AA. The map is fully keyboard-operable: nodes are focusable, and arrow keys move between neighbours. A tabular alternative is available for screen readers.
+- **Progressive disclosure:** the engagement guide's steps show only the tabs each step needs; the others wait under "Advanced", and "All tools" shows everything. A guided first run on the demo, kept as a browser preference, takes a newcomer through three tasks, and "Explain this view" describes the map on screen in plain sentences.
 - **Screen sizes:** the analyst workspace and presentation mode are desktop-first (1280–2560 px) and projector-legible, usable on tablet and read-only on phone. On smaller laptop screens (narrower or shorter than a large desktop monitor) a compact layout lets the side panels collapse and the legend condense, so the map keeps most of the screen; the user can also choose the compact or full layout. The collection dashboard follows the analyst rules. Respondent mode (section 15.4) is designed mobile-first and must be fully usable from 320 px wide phones to desktop, in portrait and landscape, with touch targets of at least 48 × 48 CSS px (which meets both Apple's 44 pt and Material's 48 dp guidance) and no horizontal scrolling.
 
 **Avoid.** These are common signs of a generated interface:

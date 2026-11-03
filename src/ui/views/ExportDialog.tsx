@@ -46,6 +46,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const anonymise = useAppStore((s) => s.ui.anonymise);
   // What changed between two waves (build plan session 15).
   const twoWaves = useAppStore((s) => canCompareWaves(s.data.project));
+  const hasActions = useAppStore((s) => (s.data.project?.engagement?.actions.length ?? 0) > 0);
   const hasFormalInformal = useAppStore(
     (s) => s.results.current?.multiplex?.formalInformal != null,
   );
@@ -263,6 +264,12 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           E.tables.change,
           twoWaves ? E.tables.changeHelp : E.tables.changeUnavailable,
           !twoWaves,
+        )}
+        {tableButton(
+          'actions',
+          E.tables.actions,
+          hasActions ? E.tables.actionsHelp : E.tables.actionsUnavailable,
+          !hasActions,
         )}
       </section>
 

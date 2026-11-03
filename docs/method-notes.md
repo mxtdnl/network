@@ -1069,3 +1069,26 @@ In the directed view a pair is each direction; in the mutual view, the pair comb
 
 **Where change appears.** The Compare tab's "Two waves" mode (before and after maps on the same positions, ties gained and strengthened in teal, lost and weakened in ochre, strengthened and weakened dashed; the change in the group matrix on the diverging scale; sentences; tables), presentation's opening step, the personal network card, the report's section "What changed between wave n and wave m", and the change CSV. Exports compare the waves of the project after the signed-layer exclusion, so a removed layer changes nothing in them.
 
+
+## 24. Engagement and intent
+
+An engagement record (spec §4.5, build plan session 16) holds the business question, the sponsor, the roster boundary, governance (who sees the outputs at each audience level, and the date by which the data is to be deleted), the client's expectations, the collaboration expected between groups, the actions agreed and the outcomes recorded. It is the client's and the analyst's own text: Graticule stores it, prints it in the report and reads none of it into the analysis. The seven steps of the guide (Plan, Collect, Check, Understand, Discuss, Act, Re-measure) follow the cycle of gathering data, feedback, analysis, action planning, action and evaluation that organisational network analyses commonly run through; the checklists are Graticule's guidance, not a validated protocol.
+
+**Collaboration expected between groups.** For each pair of groups of the insight rules' grouping attribute (team by default, section 8), the client may set an expected level. The assessment counts, among the pairs of members with one member in each group, those tied at a weight of at least 0.30 (the map's default lower bound, D129) on the chosen layer, connection strength by default, in the view and wave analysed: in the directed view a pair counts as tied when either direction reaches 0.30; in the mutual view the two directions are first combined by the rule chosen (section 1.3). The share tied is compared with the level's band:
+
+| Expected | Band of the share tied |
+|---|---|
+| Little or none | below 0.05 |
+| Occasional | 0.05 to below 0.15 |
+| Regular | 0.15 to below 0.40 |
+| Close | 0.40 or more |
+
+A share below the band's lower edge is "below the expected range", at or above its upper edge "above"; edges carry a tolerance of 1e-9. A pair with fewer than 10 possible pairs of members is marked, because one tie moves its share by a tenth or more. A pair whose groups have no member in the wave has no possible pairs and is not assessed.
+
+**Why 0.30.** Measured on the demo and the scenarios when the scale was chosen (owner, build plan session 16): counting every tie above 0, the shares between groups crowd together (on the demo 47 % to 66 % for every pair of teams without Finance; 57 % to 100 % in the post-merger and matrix scenarios), so the bands would not separate them; at 0.30 they spread from 0 % (Finance with most teams) through 3 % to 19 % (the other pairs of the demo's teams) to 63 % to 73 % (the post-merger Integration Office with each team). The bands are wide on purpose: an expected level records intent, not a target, and a pair outside its band is a question for discussion.
+
+**Caveats.** The share counts pairs tied on one layer and says nothing about how strong or useful the ties are; a pair of groups may work through a few people, a channel the survey did not ask about, or another layer. Below the coverage threshold (section 11) a missing rating looks like a missing tie, so a share can fall below its band because people did not answer. The assessment never judges whether an expectation was right to hold.
+
+**Expectations.** An expectation may be linked to a pair of groups (the assessment's sentence, and the comparison with the expected level when one is set), a group (the share of possible pairs tied within it and between it and everyone else, members without a value left out), or a question (the question's readouts, section 17). Readouts about one member are left out for every audience but the analyst's.
+
+**Actions and outcomes.** An action linked to an insight observation keeps the observation's question, its rule and the wave it came from, with a key made of the rule, layer, group and members, so it still reads when a later wave no longer shows the pattern. Exports follow the audience level (names in free text replaced as in captions, pairs of groups below the minimum size not named at board and leadership level, a workshop seeing pairs involving its team) and the signed-layer exclusion (actions answering an observation of a rule on negative ratings, or an expectation linked to the question on negative ratings, are left out and counted). The suggested outcome criteria (value to managers, changes to how work is organised, resources moved to where they are needed, changes to roles or functions, support across groups) are a starting point for the client's own.

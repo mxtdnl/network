@@ -40,6 +40,7 @@ export const shellCopy = {
     compare: 'Compare',
     members: 'Members',
     survey: 'Survey',
+    engagement: 'Engagement',
   },
   rightTabs: {
     member: 'Member',

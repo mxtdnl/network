@@ -10,6 +10,7 @@ import { useCallback, useId, useRef, useState } from 'react';
 import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
 import { createProject } from '../../data/defaults';
+import { emptyEngagement } from '../../data/engagement';
 import {
   addAttribute,
   addMembers,
@@ -33,10 +34,15 @@ export function startNewProject(): void {
   const { setProject, setCentreView } = useAppStore.getState();
   // Moving to a view clears the status line, so the view changes first.
   setCentreView('members');
-  setProject(createProject(C.defaultTitle, new Date().toISOString()), {
-    text: C.created,
-    tone: 'info',
-  });
+  // A new project starts its engagement at Plan (build plan session 16).
+  const project = createProject(C.defaultTitle, new Date().toISOString());
+  setProject(
+    { ...project, engagement: emptyEngagement('plan') },
+    {
+      text: C.created,
+      tone: 'info',
+    },
+  );
 }
 
 // The Members tab (CLAUDE.md D124): build and edit the roster in Graticule

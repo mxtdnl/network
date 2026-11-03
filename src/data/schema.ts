@@ -539,6 +539,107 @@ export interface Project {
   saved_views: SavedView[];
   surveys: Survey[];
   settings: ProjectSettings;
+  /** The engagement the analysis serves (build plan session 16, data/engagement.ts); absent until
+   *  the analyst starts one. Schema 4 in place. */
+  engagement?: Engagement;
+}
+
+/** The steps of an engagement (build plan session 16), in order. */
+export const ENGAGEMENT_STEPS = [
+  'plan',
+  'collect',
+  'check',
+  'understand',
+  'discuss',
+  'act',
+  'remeasure',
+] as const;
+export type EngagementStep = (typeof ENGAGEMENT_STEPS)[number];
+
+/** Collaboration expected between two groups, least first (data/intent.ts gives the bands). */
+export const EXPECTED_LEVELS = ['none', 'occasional', 'regular', 'close'] as const;
+export type ExpectedLevel = (typeof EXPECTED_LEVELS)[number];
+
+export const ACTION_STATUSES = ['proposed', 'agreed', 'inProgress', 'done', 'dropped'] as const;
+export type ActionStatus = (typeof ACTION_STATUSES)[number];
+
+/** What an expectation is checked against. */
+export type ExpectationLink =
+  | { kind: 'pair'; attribute: AttributeKey; a: string; b: string }
+  | { kind: 'group'; attribute: AttributeKey; value: string }
+  | { kind: 'question'; id: string };
+
+export interface Expectation {
+  id: string;
+  /** The client's expectation in their own words. */
+  text: string;
+  link: ExpectationLink | null;
+  /** The analyst's notes on what the data show. */
+  notes: string;
+}
+
+/** What an action answers. An observation keeps its wording and wave, so the action still reads
+ *  when a later wave no longer shows it. */
+export type ActionLink =
+  | { kind: 'observation'; key: string; text: string; wave: number; rule: string }
+  | { kind: 'expectation'; id: string }
+  | { kind: 'pair'; attribute: AttributeKey; a: string; b: string };
+
+export interface EngagementAction {
+  id: string;
+  text: string;
+  link: ActionLink | null;
+  /** A person or role, as the client named them. */
+  owner: string;
+  /** YYYY-MM-DD, or null. */
+  due: string | null;
+  status: ActionStatus;
+  notes: string;
+  created_at: ISODateTime;
+}
+
+export interface EngagementOutcome {
+  id: string;
+  criterion: string;
+  assessment: string;
+  /** The wave the outcome was judged on, or null. */
+  wave: number | null;
+  /** YYYY-MM-DD, or null. */
+  date: string | null;
+}
+
+/** Expected collaboration between one pair of groups; `a` sorts before `b`. */
+export interface ExpectedPair {
+  attribute: AttributeKey;
+  a: string;
+  b: string;
+  level: ExpectedLevel;
+}
+
+export interface Engagement {
+  /** The step the workspace shows, or 'all' for every tool. */
+  step: EngagementStep | 'all';
+  question: string;
+  sponsor: string;
+  boundary: string;
+  governance: {
+    /** Who will see the outputs prepared for each audience level. */
+    audiences: Partial<Record<AudienceLevel, string>>;
+    /** YYYY-MM-DD by which the data is to be deleted, or null. */
+    retention_date: string | null;
+  };
+  expectations: Expectation[];
+  intent: {
+    /** The layer ties are counted on; null is the layer whose role is connection. */
+    layer: string | null;
+    pairs: ExpectedPair[];
+  };
+  actions: EngagementAction[];
+  /** The client's criteria for judging outcomes. */
+  criteria: string[];
+  outcomes: EngagementOutcome[];
+  /** Checklist items the analyst ticked, by id. */
+  checks: string[];
 }
 
 /** Key that identifies one rating; unique within a project. */
