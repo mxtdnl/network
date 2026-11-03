@@ -705,5 +705,12 @@ test('anonymisation: no display name in the views of waves', async ({ page }) =>
   await expect(page.getByRole('dialog', { name: 'Repeat this survey as wave 3' })).toBeVisible();
   await check('repeat dialog');
   await page.keyboard.press('Escape');
+  // What changed between the two waves (build plan session 15): maps, sentences and tables.
+  await centreTab(page, 'Compare').click();
+  await page.getByRole('radio', { name: 'Two waves' }).check();
+  await expect(page.getByTestId('wave-comparison')).toBeVisible({ timeout: 60_000 });
+  await page.getByRole('button', { name: 'Show change per member' }).click();
+  await expect(page.getByTestId('change-per-member')).toBeVisible();
+  await check('two waves');
   expect(failures).toEqual([]);
 });

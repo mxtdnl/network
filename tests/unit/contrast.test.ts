@@ -134,6 +134,32 @@ describe('contrast of data marks and control boundaries', () => {
     expect(min).toBeGreaterThanOrEqual(8);
   });
 
+  it('ties gained and lost between two waves (build plan session 15) stand apart from the other ties and from each other', () => {
+    const gained = token('map-gained');
+    const lost = token('map-lost');
+    check('gained tie on paper', gained, paper, 3);
+    check('lost tie on paper', lost, paper, 3);
+    // Not the UI accent (D12).
+    expect(gained).not.toEqual(accent);
+    expect(lost).not.toEqual(accent);
+    // On the change maps every other tie is stone; members are outlined in ink; the
+    // accent marks controls beside them.
+    let others = Infinity;
+    let between = Infinity;
+    for (const c of ['normal', ...Object.keys(CVD)]) {
+      const f = (x: Rgb) => (c === 'normal' ? x : simulate(x, c as keyof typeof CVD));
+      for (const mark of [gained, lost])
+        for (const t of [stone, graphite, ink, accent])
+          others = Math.min(others, deltaE00(f(mark), f(t)));
+      between = Math.min(between, deltaE00(f(gained), f(lost)));
+    }
+    rows.push(
+      `gained and lost vs stone, graphite, ink and accent, worst ΔE00: ${others.toFixed(1)}; gained vs lost: ${between.toFixed(1)}`,
+    );
+    expect(others).toBeGreaterThanOrEqual(13);
+    expect(between).toBeGreaterThanOrEqual(13);
+  });
+
   it('nodes: the ink outline carries the boundary; the fills are listed', () => {
     check('node outline and selection ring (ink) on paper', ink, paper, 3);
     check('selection ring (ink) against its paper halo', ink, paper, 3);

@@ -44,6 +44,7 @@ import { networkReadouts, questionReadouts, type Readout } from '../state/readou
 import { reportSummary, type SummaryText } from './summary';
 import { readerNotes } from './methodNotes';
 import { summaryCopy } from '../copy/summary';
+import { changeSection } from './change';
 
 export type Block =
   | { kind: 'heading'; text: string }
@@ -658,7 +659,10 @@ export function buildReport(ctx: ExportContext, options: ReportOptions): ReportM
     null;
 
   const S = R.sections;
+  // What changed since the wave before (build plan session 15), after the views.
+  const change = changeSection(ctx);
   const sections: ReportSection[] = [
+    ...(change ? [change] : []),
     ...(ctx.policy.level === 'workshop'
       ? [{ title: audienceCopy.workshop.teamTies, blocks: teamSection(ctx) }]
       : []),

@@ -18,6 +18,7 @@ import {
 } from '../state/exportActions';
 import { setNamesHidden, useMemberNames } from '../state/names';
 import { useAppStore } from '../state/store';
+import { canCompareWaves } from '../state/change';
 import { allows, type ExportKind } from '../state/audience';
 import { audienceChoice } from '../state/audienceSettings';
 import { audienceCopy } from '../copy/audience';
@@ -43,6 +44,8 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       s.results.current.memberIds.length === scoped.members.length,
   );
   const anonymise = useAppStore((s) => s.ui.anonymise);
+  // What changed between two waves (build plan session 15).
+  const twoWaves = useAppStore((s) => canCompareWaves(s.data.project));
   const hasFormalInformal = useAppStore(
     (s) => s.results.current?.multiplex?.formalInformal != null,
   );
@@ -254,6 +257,12 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           E.tables.formalInformal,
           hasFormalInformal ? E.tables.formalInformalHelp : E.tables.formalInformalUnavailable,
           !hasFormalInformal,
+        )}
+        {tableButton(
+          'change',
+          E.tables.change,
+          twoWaves ? E.tables.changeHelp : E.tables.changeUnavailable,
+          !twoWaves,
         )}
       </section>
 

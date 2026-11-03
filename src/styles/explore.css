@@ -637,7 +637,8 @@ th[aria-sort] .data-table__sort {
 
 .compare__table {
   width: auto;
-  min-width: calc(var(--col-left) * 1.25);
+  /* Never wider than the column, so a phone does not scroll sideways (build plan session 15). */
+  min-width: min(calc(var(--col-left) * 1.25), 100%);
 }
 
 .compare__caption {
@@ -675,4 +676,93 @@ th[aria-sort] .data-table__sort {
 .compare__per-member .link-button:hover,
 .compare__per-member .link-button:focus-visible {
   text-decoration: underline;
+}
+
+/* Two waves (build plan session 15) */
+.change {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.change__key-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.change__key-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.change__line {
+  display: inline-block;
+  width: var(--map-legend-swatch);
+  border-top-width: calc(var(--line-width) * 2);
+  border-top-style: solid;
+}
+
+.change__line--dashed {
+  border-top-style: dashed;
+}
+
+.change__line--gained {
+  border-top-color: var(--map-gained);
+}
+
+.change__line--lost {
+  border-top-color: var(--map-lost);
+}
+
+.change__line--unchanged {
+  border-top-color: var(--stone);
+}
+
+.change__summary p,
+.change__observation p,
+.change__withheld {
+  max-width: var(--measure);
+}
+
+.change__subheading {
+  margin-top: var(--s-3);
+  font-weight: var(--weight-medium);
+}
+
+.change__observations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.change__question {
+  font-weight: var(--weight-medium);
+}
+
+.change__matrix {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.change__caption-help {
+  display: block;
+  font-weight: var(--weight-regular);
+}
+
+.change__cell {
+  min-width: var(--group-cell-width);
+  color: var(--ink);
+}
+
+.change__cell--none {
+  background-color: var(--field);
+  color: var(--graphite);
 }

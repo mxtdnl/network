@@ -72,6 +72,8 @@ const theme: MapTheme = {
   other: '#b4b9bf',
   bridge: '#e06800',
   bridgeMark: 5,
+  gained: '#008a5e',
+  lost: '#9a7d00',
   ramp: ['#6694a8', '#4c8098', '#336b85', '#195c79', '#004d6e'],
   nodeMin: 4,
   nodeMax: 16,

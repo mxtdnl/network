@@ -240,6 +240,7 @@ export const mapCopy = {
     withinCommunity: 'Within a community',
     betweenCommunities: 'Between communities',
     colourNone: 'Not used',
+    colourChange: 'Change between the two waves',
     colourUnavailable: 'Not used: the chosen layer is not enabled',
     colourExcluded: 'Not used: its layer is left out of this export',
     outlines: (layer: string) => `Community outline, detected on ${layer}`,

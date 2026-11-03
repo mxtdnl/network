@@ -49,6 +49,25 @@ export { buildAnalysisInput };
 export { FI_CLASS } from '../engine/types';
 // Pure helpers the linked views call on the weights a result already holds.
 export { OVERLAP, subgroupDensity, tieOverlap } from '../engine/metrics/subgroup';
+// What changed between two waves, read from two results (build plan session 15).
+export {
+  CHANGE_RULES,
+  changedGroupPairs,
+  changeObservations,
+  classifyTie,
+  compareWaves,
+} from '../engine/metrics/change';
+export type {
+  ChangeObservation,
+  ChangeObservations,
+  GroupCell,
+  GroupPairChange,
+  MemberChange,
+  TieChange,
+  TieChangeCounts,
+  TieChangeKind,
+  WaveChange,
+} from '../engine/metrics/change';
 
 export interface WorkerLike {
   postMessage(message: EngineRequest, transfer: Transferable[]): void;

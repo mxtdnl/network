@@ -8,14 +8,25 @@
 //   figures equal an analysis of the project without those layers.
 // The counter-checks (names shown, layers kept) prove each test can fail.
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parseProject } from '../../src/data/projectFile';
+import { changeCsv } from '../../src/ui/export/change';
+import { changeCopy } from '../../src/ui/copy/change';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { analyse } from '../../src/engine/analyse';
 import { buildAnalysisInput } from '../../src/engine/input';
 import { paintDocument, pngScale, type PaintContext } from '../../src/ui/export/canvas';
 import type { ExportContext } from '../../src/ui/export/context';
 import { documentColours, roughMeasure } from '../../src/ui/export/document';
-import { mapExport, pdfExport, svgExport, type ExportDeps } from '../../src/ui/export/files';
+import {
+  cardExport,
+  mapExport,
+  pdfExport,
+  svgExport,
+  type ExportDeps,
+} from '../../src/ui/export/files';
 import type { MapState } from '../../src/ui/export/mapScene';
 import { exportProject } from '../../src/ui/export/scope';
 import {
@@ -24,7 +35,7 @@ import {
   metricsTableCsv,
   networkMetricsCsv,
 } from '../../src/ui/export/tables';
-import { buildReport, type Block } from '../../src/ui/export/report';
+import { buildReport, reportText, type Block } from '../../src/ui/export/report';
 import { readExportTheme } from '../../src/ui/export/theme';
 import { exportCopy, reportCopy } from '../../src/ui/copy/export';
 import { insightsCopy } from '../../src/ui/copy/insights';
@@ -1042,5 +1053,110 @@ describe('waves in exports (build plan session 14)', () => {
     const out = await produce('svg', ctx);
     expect(out.text).not.toContain('Wave 1:');
     expect(networkMetricsCsv(ctx).fileName).not.toContain('-wave-');
+  });
+});
+
+describe('change between waves in exports (build plan session 15)', () => {
+  const scenario = parseProject(
+    readFileSync(
+      join(import.meta.dirname, '..', '..', 'src', 'demo', 'scenario-two-waves.ona.json'),
+      'utf8',
+    ),
+  );
+  const scenarioNames = scenario.members.map((m) => m.display_name);
+  const valence = scenario.layers.find((l) => l.key === 'valence')?.label ?? 'Valence';
+  const named = (text: string) => scenarioNames.filter((x) => text.includes(x));
+
+  describe.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])('names hidden %s, signed layers left out %s', (anonymise, excludeSigned) => {
+    it('carries the change into the CSV, the report and the card', async () => {
+      const ctx = await contextFor(scenario, { anonymise, excludeSigned, weights: HEALTH });
+      const run = ctx.change;
+      expect(run?.pair).toEqual({ before: 1, after: 2 });
+      if (!run) return;
+      // The composite of each wave equals an analysis of the project without the left-out layers.
+      const stripped = exportProject(scenario, excludeSigned);
+      const w = effectiveWeights(stripped, HEALTH);
+      const wave2 = await analyse(
+        buildAnalysisInput(
+          stripped,
+          {
+            view: 'directed',
+            symmetrise: 'mean',
+            weights: w.weights,
+            signedTreatment: w.signedTreatment,
+            wave: 2,
+          },
+          'w2',
+        ),
+      );
+      expect(run.change.after.density).toBe(wave2.refs.composite?.network.density);
+
+      const csv = changeCsv(ctx);
+      expect(csv?.fileName).toBe(
+        `graticule-change-wave-1-to-2-directed${anonymise ? '-codes' : ''}${excludeSigned ? '-no-signed' : ''}.csv`,
+      );
+      const text = csv?.text ?? '';
+      expect(text).toContain(changeCopy.kinds.gained);
+      expect(text).toContain(
+        `${changeCopy.csv.groups},${changeCopy.csv.measures.groupTies},Build,Support`,
+      );
+      if (anonymise) expect(named(text)).toEqual([]);
+      else expect(named(text).length).toBeGreaterThan(0);
+      expect(wordIn(text, valence)).toBe(false);
+
+      const report = buildReport(ctx, { notes: methodNotes(), now: deps.now, layerName: '' });
+      const section = report.sections.find((s) => s.title === changeCopy.report.heading(1, 2));
+      expect(section).toBeDefined();
+      const all = reportText(report).join('\n');
+      if (anonymise) expect(named(all)).toEqual([]);
+      if (excludeSigned) expect(wordIn(all, valence)).toBe(false);
+      const pdf = await pdfText((await pdfExport(ctx, mapState, deps, '')).bytes);
+      expect(pdf).toContain(changeCopy.report.heading(1, 2));
+      if (anonymise) expect(named(pdf)).toEqual([]);
+    }, 90_000);
+
+    it('shows a board groups only, and a one-to-one the member’s own change', async () => {
+      const board = await contextFor(scenario, {
+        anonymise,
+        excludeSigned,
+        audience: { level: 'board', team: null, member: null },
+      });
+      const text = changeCsv(board)?.text ?? '';
+      expect(text).not.toContain(`\r\n${changeCopy.csv.tie},`);
+      expect(text).not.toContain(`\r\n${changeCopy.csv.member},`);
+      expect(named(text)).toEqual([]);
+      for (const code of scenario.members.map((m) => board.policy.names.of(m.id)))
+        expect(wordIn(text, code)).toBe(false);
+      const report = reportText(
+        buildReport(board, { notes: methodNotes(), now: deps.now, layerName: '' }),
+      ).join('\n');
+      expect(report).toContain(changeCopy.report.heading(1, 2));
+      expect(named(report)).toEqual([]);
+
+      const one = await contextFor(scenario, {
+        anonymise,
+        excludeSigned,
+        audience: { level: 'oneToOne', team: null, member: 'SUP01' },
+      });
+      expect(() => changeCsv(one)).toThrow();
+      const card = await cardExport(one, deps);
+      const since = card.card.sections.find((s) => s.title === changeCopy.card.heading(1));
+      expect(since?.blocks.length).toBeGreaterThan(1);
+      const cardPdf = await pdfText(card.bytes);
+      expect(cardPdf).toContain(changeCopy.card.heading(1));
+    }, 90_000);
+  });
+
+  it('offers no change for a project with one wave', async () => {
+    const ctx = await contextFor(project, { anonymise: false, excludeSigned: false });
+    expect(ctx.change).toBeNull();
+    expect(changeCsv(ctx)).toBeNull();
+    const report = buildReport(ctx, { notes: methodNotes(), now: deps.now, layerName: '' });
+    expect(report.sections.some((s) => s.title.startsWith('What changed'))).toBe(false);
   });
 });

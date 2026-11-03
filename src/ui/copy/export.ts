@@ -8,12 +8,13 @@ const num = (value: number) => value.toLocaleString('en-GB');
 const count = (value: number, one: string, many: string) =>
   `${num(value)} ${value === 1 ? one : many}`;
 
-export type TableExportKind = 'members' | 'network' | 'formalInformal' | 'table';
+export type TableExportKind = 'members' | 'network' | 'formalInformal' | 'table' | 'change';
 const tableNoun: Record<TableExportKind, string> = {
   members: 'Member metrics',
   network: 'Network metrics',
   formalInformal: 'Formal and informal ties',
   table: 'Table',
+  change: 'Change between waves',
 };
 
 export const exportCopy = {
@@ -67,6 +68,10 @@ export const exportCopy = {
     formalInformalHelp: 'Every pair classified as formal only, informal only, both or neither.',
     formalInformalUnavailable:
       'Needs both the formal and the informal collaboration layers. Enable them in the layer list.',
+    change: 'Export change between waves',
+    changeHelp:
+      'What changed between the wave exported and the wave before it (or the waves chosen in Compare): the network, each pair of groups, and each tie and member as the audience allows.',
+    changeUnavailable: 'Needs two waves with ratings. Repeat the survey to collect a second wave.',
     // The status names what its button exported: "Export member metrics" → "Member metrics exported".
     exported: (kind: TableExportKind, file: string) => `${tableNoun[kind]} exported as ${file}.`,
     failed: (kind: TableExportKind, reason: string) =>
@@ -194,6 +199,8 @@ export const exportCopy = {
     formalInformal: (view: string) => `graticule-formal-informal-${view}.csv`,
     report: (date: string) => `graticule-report-${date}.pdf`,
     card: (date: string) => `graticule-network-card-${date}.pdf`,
+    change: (before: number, after: number, view: string) =>
+      `graticule-change-wave-${String(before)}-to-${String(after)}-${view}.csv`,
   },
   noMember: 'Choose the member the card is for.',
   groupsOnly: 'For a board or leadership team the map shows groups, not members.',

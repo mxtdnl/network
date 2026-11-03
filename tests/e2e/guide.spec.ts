@@ -631,6 +631,38 @@ test(
   },
 );
 
+test('screenshot of change between two waves, names hidden', NIGHTLY, async ({ page }) => {
+  // The two-wave scenario (build plan session 15), opened with names hidden.
+  const text = readFileSync(
+    join(import.meta.dirname, '..', '..', 'src', 'demo', 'scenario-two-waves.ona.json'),
+    'utf8',
+  );
+  const names = parseProject(text).members.map((m) => m.display_name);
+  const problems = await start(page);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
+  await page.getByRole('button', { name: 'Project' }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('menuitem', { name: 'Open project…' }).click();
+  await (
+    await chooser
+  ).setFiles({
+    name: 'two-waves.ona.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(text),
+  });
+  await page.getByRole('main').getByRole('tab', { name: 'Compare', exact: true }).click();
+  await page.getByRole('radio', { name: 'Two waves' }).check();
+  const view = page.getByTestId('wave-comparison');
+  await expect(view).toContainText('Ties from Build to Support rose', { timeout: 60_000 });
+  await page.waitForTimeout(500);
+  await shot(page, 'two-waves');
+  const shown = await page.evaluate(() => document.body.innerText);
+  expect(names.filter((n) => shown.includes(n))).toEqual([]);
+  await expectNoAxeViolations(page, 'two waves');
+  expect(problems).toEqual([]);
+});
+
 test(
   'the Help menu opens the user guide, method notes and respondent help, linked to each other',
   NIGHTLY,

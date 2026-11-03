@@ -12,6 +12,7 @@ import { alignNames, type MemberNames } from '../state/names';
 import { effectiveWeights, type WeightState } from '../state/presets';
 import type { Grouping, MapSettings } from '../state/store';
 import { exclusionApplies, exportProject } from './scope';
+import { runChange, wavePair, type ChangeRun, type WavePair } from '../state/change';
 import { analysisOptions } from '../state/remedies';
 import {
   audiencePolicy,
@@ -36,6 +37,10 @@ export interface ExportRequest {
   grouping?: Grouping | null;
   /** Who the export is for (build plan session 9); absent means the analyst, unrestricted. */
   audience?: AudienceChoice;
+  /** The waves the Two waves comparison shows (build plan session 15); absent follows the wave exported. */
+  wavePair?: WavePair | null;
+  /** Compare the waves (on by default); a saved view's page in the report does not need it. */
+  compareWaves?: boolean;
 }
 
 export interface ExportContext {
@@ -65,6 +70,12 @@ export interface ExportContext {
   weightsPreset: WeightState['preset'];
   /** The grouping the report's mixing table uses (D154). */
   grouping: Grouping | null;
+  /**
+   * What changed between the wave exported and the wave before it, or the pair
+   * chosen in the Compare tab (build plan session 15), on the exported layer and
+   * under the exclusion; null when fewer than two waves have ratings.
+   */
+  change: ChangeRun | null;
 }
 
 export async function exportContext(
@@ -110,13 +121,29 @@ export async function exportContext(
     request.audience ?? { level: 'analyst', team: null, member: null },
     anonymise,
   );
+  const settings = workshopMap(effectiveSettings(project, result, map), policy);
+  // Both waves of the comparison are analysed from the whole project under the
+  // exclusion, with the export's weights and options.
+  const pair =
+    request.compareWaves === false ? null : wavePair(full, wave, request.wavePair ?? null);
+  const change = pair
+    ? await runChange(
+        exportProject(full, excludeSigned),
+        { ...map, wave: null },
+        request.weights,
+        pair,
+        settings.layer,
+        analyse,
+        `export-change:${request.result.inputKey}`,
+      )
+    : null;
   return {
     source,
     wave: { wave, shown: isMultiWave(full) },
     project,
     result,
     // A team workshop shows the team only, without signed layers (build plan session 9).
-    settings: workshopMap(effectiveSettings(project, result, map), policy),
+    settings,
     // Names in the order of the exported wave's roster (build plan session 14).
     names: alignNames(policy.names, project),
     anonymised: policy.codes,
@@ -127,5 +154,6 @@ export async function exportContext(
     weights,
     weightsPreset: request.weights.preset,
     grouping: request.grouping ?? null,
+    change,
   };
 }

@@ -38,13 +38,13 @@ export type { AudienceChoice } from './audienceSettings';
 
 /** An output the Export dialog offers. */
 export type ExportKind =
-  'map' | 'members' | 'network' | 'formalInformal' | 'table' | 'report' | 'card';
+  'map' | 'members' | 'network' | 'formalInformal' | 'table' | 'report' | 'card' | 'change';
 
 const ALLOWED: Record<AudienceLevel, readonly ExportKind[]> = {
-  analyst: ['map', 'members', 'network', 'formalInformal', 'table', 'report'],
-  board: ['map', 'network', 'report'],
-  leadership: ['map', 'network', 'report'],
-  workshop: ['map', 'members', 'network', 'formalInformal', 'table', 'report'],
+  analyst: ['map', 'members', 'network', 'formalInformal', 'table', 'report', 'change'],
+  board: ['map', 'network', 'report', 'change'],
+  leadership: ['map', 'network', 'report', 'change'],
+  workshop: ['map', 'members', 'network', 'formalInformal', 'table', 'report', 'change'],
   oneToOne: ['card'],
 };
 

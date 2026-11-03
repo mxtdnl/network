@@ -40,6 +40,12 @@
      at least ΔE00 8 from every edge colour, ink and the accent under normal
      vision and the three simulations (tests/unit/contrast.test.ts). */
   --map-bridge: #e06800;
+  /* Change between two waves (build plan session 15): ties gained or strengthened
+     in teal, lost or weakened in ochre. Each 3.8:1 or more on paper, at least
+     ΔE00 13 from stone, graphite, ink and the accent and from each other under
+     normal vision and the three simulations (tests/unit/contrast.test.ts). */
+  --map-gained: #008a5e;
+  --map-lost: #9a7d00;
 
   /* 2.2 Diverging palettes the analyst may choose instead (D127): purple to green */
   --div-pg-n3: #701b98;

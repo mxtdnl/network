@@ -24,6 +24,9 @@ import { qualityCopy } from '../copy/quality';
 import { QualityStatement, useQuality } from './DataCheckPanel';
 import { MapLegend } from './MapLegend';
 import { MapCanvas, legendExtras } from './MapView';
+import { ChangeSection, useDefaultChange } from './ChangeView';
+import { changeCopy } from '../copy/change';
+import { audienceChange } from '../state/change';
 
 const NEXT = new Set(['ArrowRight', 'ArrowDown', 'PageDown', ' ']);
 const PREVIOUS = new Set(['ArrowLeft', 'ArrowUp', 'PageUp']);
@@ -52,6 +55,7 @@ export function PresentationView() {
   const timer = useRef(0);
   const instructionsId = useId();
   const titleId = useId();
+  const changeId = useId();
 
   const views = project?.saved_views ?? [];
   // Who the presentation is for (build plan session 9): the policy decides what each step shows.
@@ -80,6 +84,9 @@ export function PresentationView() {
   }, [level, choice?.team]);
   // The opening step (OPENING) shows the first view behind its statement.
   const view = views[Math.max(index, 0)];
+  // What changed since the wave before (build plan session 15): in the opening
+  // step, and the member's own change on a one-to-one card.
+  const change = useDefaultChange(data ? data.settings.layer : null);
 
   // The canvas reads its label sizes from the presentation's tokens.
   useLayoutEffect(() => {
@@ -168,7 +175,8 @@ export function PresentationView() {
   const coverage = data?.result.coverage;
   // A one-to-one shows the member's card alone, without the opening statement or the views.
   const opening = index === OPENING && !oneToOne;
-  const card = oneToOne && data ? buildCard(project, data.result, data.settings, policy) : null;
+  const card =
+    oneToOne && data ? buildCard(project, data.result, data.settings, policy, change) : null;
   const text = policy.names.text;
   const title = oneToOne
     ? (card?.title ?? audienceCopy.card.title)
@@ -240,9 +248,33 @@ export function PresentationView() {
           {card ? <PersonalCard card={card} /> : <p role="status">{mapCopy.calculating}</p>}
         </div>
       )}
-      {/* The opening step: the data-quality statement before the first view (session 4). */}
-      {opening && quality && (
+      {/* The opening step: the data-quality statement before the first view (session 4), then
+          what changed since the wave before (session 15). It scrolls when long. */}
+      {opening && !change && quality && (
         <QualityStatement quality={quality} className="presentation__statement" />
+      )}
+      {opening && change && (
+        <div
+          className="presentation__statement"
+          role="region"
+          aria-label={changeCopy.openingRegion}
+          // With the change section it can scroll, so it takes focus (as D114).
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+          tabIndex={0}
+        >
+          {quality && <QualityStatement quality={quality} />}
+          <section className="presentation__change" aria-labelledby={changeId}>
+            <h2 id={changeId} className="presentation__change-heading">
+              {changeCopy.report.heading(change.pair.before, change.pair.after)}
+            </h2>
+            <ChangeSection
+              run={change}
+              observations={audienceChange(change, policy)}
+              name={policy.names.of}
+              named={level === 'analyst'}
+            />
+          </section>
+        </div>
       )}
       {opening && (
         <p className="presentation__counter num" aria-live="polite">

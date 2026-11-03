@@ -21,6 +21,9 @@ export interface MapTheme {
   /** The diamond marking a bridge tie, and half its diagonal (build plan session 7). */
   bridge: string;
   bridgeMark: number;
+  /** Ties gained or strengthened, and lost or weakened, between two waves (build plan session 15). */
+  gained: string;
+  lost: string;
   /** Sequential ramp for edge colour by an unsigned layer, five steps from light to dark (D126). */
   ramp: string[];
   /** Node radius range in CSS pixels, and the radius of a member whose size metric is not defined. */
@@ -81,6 +84,8 @@ export function readMapTheme(source: Element | TokenSource = document.documentEl
     },
     other: text('--cat-other'),
     bridge: text('--map-bridge'),
+    gained: text('--map-gained'),
+    lost: text('--map-lost'),
     bridgeMark: number('--map-bridge-mark'),
     ramp: rampColours(text('--val-p3'), text('--paper'), number('--map-ramp-low')),
     nodeMin: number('--map-node-min'),

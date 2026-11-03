@@ -24,6 +24,8 @@ import type { Block, ReportSection } from '../export/report';
 import { groupSizes, type AudiencePolicy } from './audience';
 import { memberReadout } from './readouts';
 import type { MapSettings } from './store';
+import type { ChangeRun } from './change';
+import { changeCopy } from '../copy/change';
 
 const C = audienceCopy.card;
 
@@ -56,6 +58,8 @@ export function buildCard(
   result: AnalysisResult,
   settings: MapSettings,
   policy: AudiencePolicy,
+  /** What changed between two waves (build plan session 15), when the project has two with ratings. */
+  change: ChangeRun | null = null,
 ): CardModel | null {
   const id = policy.member;
   const index = project.members.findIndex((m) => m.id === id);
@@ -161,6 +165,26 @@ export function buildCard(
         },
       ],
     });
+
+  // Since the earlier wave (build plan session 15): counts only, on the comparison's layer.
+  if (change) {
+    const { before: wb, after: wa } = change.pair;
+    const m = change.change.perMember.find((x) => x.id === id);
+    const W = changeCopy.card;
+    sections.push({
+      title: W.heading(wb),
+      blocks: m
+        ? [
+            { kind: 'paragraph', text: W.received(m.received[0], m.received[1], wb, wa) },
+            ...(Number.isFinite(m.given[0])
+              ? [{ kind: 'paragraph' as const, text: W.given(m.given[0], m.given[1], wb, wa) }]
+              : []),
+            { kind: 'paragraph', text: W.ties(m.ties) },
+            { kind: 'paragraph', text: W.note, tone: 'graphite' },
+          ]
+        : [{ kind: 'paragraph', text: W.noChange(wb) }],
+    });
+  }
 
   // The colleagues the member rated: their own answers, on every scaled layer.
   const scaled = project.layers.filter((l) => l.enabled && !isCategorical(l));

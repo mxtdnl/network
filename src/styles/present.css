@@ -551,3 +551,15 @@
 .card__table .numeric {
   text-align: end;
 }
+
+/* What changed since the wave before (build plan session 15), in the opening step. */
+.presentation__change {
+  margin-top: var(--s-6);
+}
+
+.presentation__change-heading {
+  margin-bottom: var(--s-3);
+  font-size: var(--t-4-size);
+  line-height: var(--t-4-line);
+  font-weight: var(--weight-medium);
+}

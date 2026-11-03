@@ -95,7 +95,8 @@ export interface SizeScale {
 
 /** How edge colour is used, for the scene and the legend (D126). */
 export interface EdgeColourModel {
-  kind: 'signed' | 'unsigned' | 'groups' | 'none';
+  /** 'change': the Two waves comparison marks ties gained and lost (build plan session 15). */
+  kind: 'signed' | 'unsigned' | 'groups' | 'none' | 'change';
   /** The colour layer's label (signed and unsigned). */
   layerLabel: string;
   /** Signed: the full scale, or negative ratings only (D132). */

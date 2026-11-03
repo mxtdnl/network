@@ -12,6 +12,11 @@ import { parseProject } from '../../src/data/projectFile';
 import { analyse } from '../../src/engine/analyse';
 import { buildAnalysisInput } from '../../src/engine/input';
 import { INSIGHT_RULE_ORDER } from '../../src/engine/insights';
+import type { ChangeObservation } from '../../src/engine/metrics/change';
+import { changeCopy } from '../../src/ui/copy/change';
+import { runChange } from '../../src/ui/state/change';
+import { initialWeightState as startWeights } from '../../src/ui/state/presets';
+import { initialMapSettings } from '../../src/ui/state/store';
 import type { InsightRuleId, Observation } from '../../src/engine/types';
 import {
   insightsCopy,
@@ -449,4 +454,66 @@ describe('executive summary wording is neutral', () => {
       expect(findBanned(text, words), text).toEqual([]);
     expect(count).toBeGreaterThan(300);
   }, 300_000);
+});
+
+describe('change wording is neutral (build plan session 15)', () => {
+  /** Every string a value of changeCopy holds, called with sample arguments. */
+  function changeStrings(): string[] {
+    const out: string[] = [];
+    const visit = (v: unknown) => {
+      if (typeof v === 'string') out.push(v);
+      else if (Array.isArray(v)) v.forEach(visit);
+      else if (v && typeof v === 'object') Object.values(v).forEach(visit);
+    };
+    visit(changeCopy);
+    return out;
+  }
+
+  it('uses no banned word in any change sentence or question on the two-wave scenario', async () => {
+    const project = parseProject(
+      readFileSync(join(root, 'src', 'demo', 'scenario-two-waves.ona.json'), 'utf8'),
+    );
+    const texts = changeStrings();
+    const runs = [];
+    for (const [view, symmetrise] of [
+      ['directed', 'mean'],
+      ['symmetrised', 'mean'],
+      ['symmetrised', 'min'],
+    ] as const)
+      for (const ref of ['connection_strength', 'composite'])
+        runs.push(
+          await runChange(
+            project,
+            { ...initialMapSettings(), view, symmetrise },
+            startWeights(),
+            { before: 1, after: 2 },
+            ref,
+            (input) => analyse(input),
+          ),
+        );
+    const name = (id: string) => id;
+    for (const run of runs) {
+      const { change } = run;
+      texts.push(...changeCopy.summary(change, name), ...changeCopy.summary(change, null));
+      texts.push(changeCopy.withheld({ ...change, minCoverage: 0.99 }));
+      const constructed: ChangeObservation[] = [
+        { kind: 'ei', before: 0.1, after: 0.4 },
+        { kind: 'ei', before: 0.4, after: 0.1 },
+        { kind: 'load', before: 0.2, after: 0.4 },
+        { kind: 'load', before: 0.4, after: 0.2 },
+        { kind: 'bridges', gained: 1, lost: 2 },
+        { kind: 'cutPoint', member: 'X', wave: 'before', onRoster: true },
+        { kind: 'cutPoint', member: 'X', wave: 'before', onRoster: false },
+        { kind: 'cutPoint', member: 'X', wave: 'after', onRoster: true },
+      ];
+      for (const o of [...run.observations.observations, ...constructed]) {
+        texts.push(changeCopy.saw(o, change, name));
+        const q = changeCopy.question(o, change, name);
+        texts.push(q);
+        expect(q.endsWith('?'), q).toBe(true);
+      }
+    }
+    expect(texts.length).toBeGreaterThan(50);
+    expect(texts.flatMap((t) => findBanned(t, words).map((w) => `${w}: ${t}`))).toEqual([]);
+  }, 60_000);
 });

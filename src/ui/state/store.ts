@@ -31,7 +31,8 @@ import {
 export type CentreView = 'map' | 'matrix' | 'table' | 'groups' | 'compare' | 'members' | 'survey';
 export type RightPanel = 'member' | 'explore' | 'insights' | 'views' | 'coverage';
 export type MatrixMode = 'explore' | 'enter';
-export type CompareMode = 'layers' | 'formalInformal';
+/** 'waves': what changed between two waves (build plan session 15). */
+export type CompareMode = 'layers' | 'formalInformal' | 'waves';
 /** The Table tab shows the metrics table or the ranked bars of incoming ties (build plan session 7). */
 export type TableMode = 'metrics' | 'incoming';
 
@@ -45,6 +46,8 @@ export interface UiState {
   /** The Matrix tab shows the adjacency matrix (explore) or the rating grid (enter). */
   matrixMode: MatrixMode;
   compareMode: CompareMode;
+  /** The two waves the "Two waves" comparison shows; null follows the wave analysed (ui/state/change.ts). */
+  wavePair: { before: number; after: number } | null;
   /** Presentation mode: the saved view on screen, by position in the list; null in the workspace. */
   presentation: { index: number } | null;
   /** Compact layout (D125): the controls column is expanded rather than a rail. */
@@ -267,6 +270,7 @@ interface Actions {
 
   setMatrixMode: (mode: MatrixMode) => void;
   setCompareMode: (mode: CompareMode) => void;
+  setWavePair: (pair: { before: number; after: number } | null) => void;
   setPreset: (preset: Preset) => void;
   setLayerWeight: (key: LayerKey, value: number) => void;
   setTreatment: (key: LayerKey, treatment: SignedTreatment) => void;
@@ -396,6 +400,7 @@ export function initialUiState(noticeSeen: boolean): UiState {
     importOpen: false,
     matrixMode: 'explore',
     compareMode: 'layers',
+    wavePair: null,
     presentation: null,
     leftOpen: true,
     rightOpen: false,
@@ -676,6 +681,9 @@ export const useAppStore = create<AppState>()((set, get) => {
     },
     setCompareMode: (compareMode) => {
       setUi({ compareMode });
+    },
+    setWavePair: (wavePair) => {
+      setUi({ wavePair });
     },
     setPreset: (preset) => {
       set((s) => ({ weights: { ...s.weights, preset } }));

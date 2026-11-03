@@ -249,7 +249,7 @@ export async function cardExport(
   deps: Pick<ExportDeps, 'tokens' | 'loadFont' | 'inflate' | 'now'>,
 ): Promise<CardExport> {
   assertAllowed(ctx.policy, 'card');
-  const card = buildCard(ctx.project, ctx.result, ctx.settings, ctx.policy);
+  const card = buildCard(ctx.project, ctx.result, ctx.settings, ctx.policy, ctx.change);
   if (!card) throw new Error(exportCopy.noMember);
   const { cardPdf } = await import('./pdf');
   const out = await cardPdf({
