@@ -241,7 +241,7 @@ Once a project has more than one survey, the dashboard lists them under **Waves*
 
 Each wave has its own roster. Repeating a survey records who was on the roster of every wave, and people you add to the project afterwards join the latest wave only. **Rosters by wave** on the Members tab shows and changes who was on each wave's roster, for example to take off someone who left before a wave was run. Taking someone off a roster keeps their ratings in the file; removing them from the project deletes their ratings in every wave.
 
-**Which wave is shown.** Every result shows one wave: by default the latest wave with ratings, so new responses appear as soon as they are imported. Choose another under **Wave** at the top of the left column. Only members on that wave's roster are analysed and counted in its coverage, so a newcomer is not counted as not answering a wave they were never asked in. The top bar says which wave is shown ("Wave 2 of 2"), and so do the map legend, presentation mode and every export. **Check the data** lists coverage for every wave, with how many people joined and left since the wave before. A saved view keeps the wave it showed. Ratings entered in the matrix go into the wave shown. Comparing two waves side by side is not built yet; for now, save a view of each wave and step between them. The rules are in the [method notes](method-notes.md#22-waves).
+**Which wave is shown.** Every result shows one wave: by default the latest wave with ratings, so new responses appear as soon as they are imported. Choose another under **Wave** at the top of the left column. Only members on that wave's roster are analysed and counted in its coverage, so a newcomer is not counted as not answering a wave they were never asked in. The top bar says which wave is shown ("Wave 2 of 2"), and so do the map legend, presentation mode and every export. **Check the data** lists coverage for every wave, with how many people joined and left since the wave before. A saved view keeps the wave it showed. Ratings entered in the matrix go into the wave shown. To see what changed between two waves, use Compare → **Two waves** (see [Comparing two waves](#comparing-two-waves)). The rules are in the [method notes](method-notes.md#22-waves).
 
 ## Importing and validation
 
@@ -333,7 +333,7 @@ Selecting a member, a subgroup, a filter or an ego view applies to every view.
 - **Table → Metrics**: every member's metrics, sortable by any column. Export table saves it as CSV. Rank stability recalculates a metric many times, each time leaving out some members, and shows the range each rank falls in.
 - **Table → Incoming ties**: a ranked bar chart of how many colleagues name each member on a chosen layer (advice first, then workflow dependency, then Ties from), most first, with each member's share of all ties received. A line marks where the top 10 % of members ends (where several members receive the same number at that point, member order decides which are above the line; the share is the same either way), and a sentence above says what share of all ties they receive against an even spread. It is a table, so a screen reader reads it row by row; filters and the ego view choose who is listed.
 - **Groups**: ties within and between groups. Choose "Group by" (any category attribute, such as team, location or level, or Community, the groups detected on the layer) and "Ties from". The matrix shows, for each group and each pair of groups, the share of the ties possible that exist, shaded from fewer to more; in the directed view rows give and columns receive. Arrow keys move between cells and a sentence names the cell ("Finance to Sales: 4 of 64 possible ties, 6%"). Enter makes the row's group the subgroup in every view, and Shift and Enter makes it both groups of the cell. The group map draws one circle per group, sized by its members, with thicker lines between groups that share more of their possible ties; click a circle to choose that group. The table lists each group's members, ties inside, ties leaving and E-I index; press a group's name to choose it, and again to clear the subgroup. Every member and tie counts, whatever the map's range and filters. The PDF report's table of ties within and between groups uses the grouping chosen here.
-- **Compare**: two layers side by side on the same positions, with their overlap; or formal against informal collaboration, classifying each pair as formal only, informal only, both or neither.
+- **Compare**: two layers side by side on the same positions, with their overlap; or formal against informal collaboration, classifying each pair as formal only, informal only, both or neither; or, once two waves have ratings, two waves (below).
 
 ![The adjacency matrix, ordered by name, with the tie strength key](user-guide/adjacency-matrix.jpg)
 
@@ -344,6 +344,22 @@ Selecting a member, a subgroup, a filter or an ego view applies to every view.
 ![The Groups view by team: the share of possible ties within and between teams, the group map and the table per team](user-guide/groups-view.jpg)
 
 ![Formal and informal ties compared: three small maps and a table of counts](user-guide/compare-formal-informal.jpg)
+
+### Comparing two waves
+
+Once a project has ratings from two waves, Compare offers **Two waves**. It compares the wave shown with the wave before it; choose others under Earlier wave and Later wave. The comparison uses the map's "Ties from" layer, direction and weights.
+
+- **Maps.** Members sit in the same place on both maps. The earlier wave's map marks ties lost since then in ochre; the later wave's marks ties gained in teal. Ties that strengthened or weakened by two points or more on a 0 to 5 scale are dashed in the same colours. Members who left or joined appear on their own wave's map only.
+- **What changed.** Sentences give coverage in each wave, who was on both rosters, who left and who joined, and the ties gained, lost, strengthened and weakened among people on both rosters. Ties of people who left or joined are counted apart, never as lost or gained. Each change large enough to note becomes a question, such as "What brought Build closer to Support between the waves?". A pair of groups is noted when the share of possible ties between them moved by 10 percentage points or more.
+- **Coverage first.** If either wave's coverage is below the project's threshold (80 % by default), the figures are shown but no change is described, because a difference could come from who answered. A group below the threshold in either wave is left out of the questions.
+- **Change in ties between groups** is a matrix of the change in the share of possible ties, in percentage points, shaded on the diverging scale.
+- **Tables** give each wave's members, coverage, ties, density, E-I index, load and bridges, the count of each kind of change, and (under Show change per member) each member's ties received and given and their changes; choose a name to open their panel.
+
+Read change with care. Different people may have answered each wave. Ratings also vary from one survey to the next, so a tie rated unusually high one time tends to be rated nearer the usual the next. Look for changes shared by many ties between the same groups. The [method notes](method-notes.md#23-change-between-two-waves) explain the rules.
+
+The change also appears in presentation's opening step, on a one-to-one's network card ("Since wave 1"), in the report ("What changed between wave 1 and wave 2") and as a CSV (Export → Export change between waves). A board or leadership team sees groups only; a workshop sees its own team.
+
+![Two waves compared: the earlier wave's map with lost ties marked, the later wave's with gained ties marked, and the key](user-guide/two-waves.jpg)
 
 ### Explore
 

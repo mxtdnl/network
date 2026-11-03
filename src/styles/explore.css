@@ -637,7 +637,8 @@ th[aria-sort] .data-table__sort {
 
 .compare__table {
   width: auto;
-  min-width: calc(var(--col-left) * 1.25);
+  /* Never wider than the column, so a phone does not scroll sideways (build plan session 15). */
+  min-width: min(calc(var(--col-left) * 1.25), 100%);
 }
 
 .compare__caption {
