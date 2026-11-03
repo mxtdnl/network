@@ -39,7 +39,18 @@ function fitTransform(
 // be compared position for position. Pointer only; the tables beside it are
 // the keyboard and screen-reader route. Selection, hover and the subgroup
 // are the shared ones.
-export function MiniMap({ data, model, label }: { data: MapData; model: MapModel; label: string }) {
+export function MiniMap({
+  data,
+  model,
+  label,
+  positions: fixed,
+}: {
+  data: MapData;
+  model: MapModel;
+  label: string;
+  /** Positions by the model's member index, in place of the shared layout (the Two waves comparison). */
+  positions?: readonly Point[];
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0, dpr: 1 });
@@ -54,6 +65,7 @@ export function MiniMap({ data, model, label }: { data: MapData; model: MapModel
 
   // The same layout as the map, computed here if the map has not been shown.
   const positions = useMemo(() => {
+    if (fixed) return fixed;
     sharedLayout.update(
       layout.key,
       data.model.n,
@@ -62,7 +74,7 @@ export function MiniMap({ data, model, label }: { data: MapData; model: MapModel
       layout.spec,
     );
     return sharedLayout.settled.map((p) => ({ x: p.x, y: p.y }));
-  }, [layout, data.model]);
+  }, [layout, data.model, fixed]);
 
   useEffect(() => {
     const box = boxRef.current;

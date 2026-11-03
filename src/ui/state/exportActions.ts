@@ -6,6 +6,7 @@
 import { selectWaveProject } from './waves';
 import { EngineClient, type AnalysisInput } from '../engineClient';
 import { exportCopy } from '../copy/export';
+import { changeCsv } from '../export/change';
 import { exportContext, type ExportContext, type ExportRequest } from '../export/context';
 import type { FontRole, Measure } from '../export/document';
 import { browserInflate } from '../export/fonts';
@@ -32,7 +33,7 @@ import type { AudienceLevel, Project, SavedSummary } from '../../data/schema';
 
 export type MapFormat = 'png' | 'svg';
 export type Resolution = 'x1' | 'x2' | 'print';
-export type TableKind = 'members' | 'network' | 'formalInformal';
+export type TableKind = 'members' | 'network' | 'formalInformal' | 'change';
 
 /** The export settings saved in the project: the signed-layer exclusion (spec §10). */
 export function setExcludeSigned(on: boolean): void {
@@ -59,6 +60,7 @@ function request(): ExportRequest | null {
     grouping: s.ui.grouping,
     // The one-to-one's member is one on the exported wave's roster (build plan session 14).
     audience: audienceChoice(scoped, s.ui.audience),
+    wavePair: s.ui.wavePair,
   };
 }
 
@@ -185,8 +187,15 @@ export async function exportTableFile(kind: TableKind): Promise<string | null> {
         ? memberMetricsCsv(ctx)
         : kind === 'network'
           ? networkMetricsCsv(ctx)
-          : formalInformalCsv(ctx);
-    if (!file) throw new Error(exportCopy.tables.formalInformalUnavailable);
+          : kind === 'change'
+            ? changeCsv(ctx)
+            : formalInformalCsv(ctx);
+    if (!file)
+      throw new Error(
+        kind === 'change'
+          ? exportCopy.tables.changeUnavailable
+          : exportCopy.tables.formalInformalUnavailable,
+      );
     downloadCsv(file);
     status(exportCopy.tables.exported(kind, file.fileName));
     return file.fileName;

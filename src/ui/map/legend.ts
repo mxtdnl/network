@@ -328,6 +328,8 @@ function colourSection(model: MapModel): LegendSection {
           { colour: 'graphite', label: c.communities ? L.betweenCommunities : L.betweenGroups },
         ],
       };
+    case 'change':
+      return { ...base, variable: L.colourChange, ramp: null, items: [] };
     case 'none':
       return {
         ...base,

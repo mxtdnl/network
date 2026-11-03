@@ -59,7 +59,15 @@ export async function viewSources(
       );
     }
     const ctx = await exportContext(
-      { ...request, result, map, weights, grouping: viewGrouping(project, map) },
+      {
+        ...request,
+        result,
+        map,
+        weights,
+        grouping: viewGrouping(project, map),
+        // The report's change section reads the main context's comparison.
+        compareWaves: false,
+      },
       analyse,
     );
     // Saved positions are used as they are when every member has one; otherwise the layout runs.

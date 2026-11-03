@@ -14,7 +14,7 @@ import { parseProject } from '../src/data/projectFile';
 import { computeQuality } from '../src/data/quality';
 import { analyse } from '../src/engine/analyse';
 import { buildAnalysisInput } from '../src/engine/input';
-import { compareWaves } from '../src/engine/metrics/change';
+import { changeObservations, compareWaves } from '../src/engine/metrics/change';
 import type { SymmetriseRule, ViewKind } from '../src/engine/types';
 import { effectiveWeights, initialWeightState } from '../src/ui/state/presets';
 import { scenarioFile } from './scenario-kit';
@@ -22,7 +22,7 @@ import { scenarioFile } from './scenario-kit';
 const project = parseProject(
   readFileSync(join(import.meta.dirname, '..', 'src', 'demo', scenarioFile('two-waves')), 'utf8'),
 );
-const w = effectiveWeights(project, initialWeightState(project));
+const w = effectiveWeights(project, initialWeightState());
 const teamOf = new Map(project.members.map((m) => [m.id, m.attributes.team ?? null]));
 const pct = (x: number) => `${(100 * x).toFixed(1)}%`;
 
@@ -55,7 +55,7 @@ for (const [view, symmetrise] of VIEWS) {
   for (const ref of ['connection_strength', 'composite']) {
     console.log(`\n${view}${view === 'directed' ? '' : ` (${symmetrise})`}, ${ref}`);
     for (const t of THRESHOLDS) {
-      const c = compareWaves(r1, r2, ref, { group: 'team', strengthen: t });
+      const c = compareWaves(r1, r2, ref, { group: 'team', strengthen: t, minCoverage: 0.8 });
       const buildSupport = (from: string, to: string) => {
         const s = new Set([teamOf.get(from), teamOf.get(to)]);
         return s.has('Build') && s.has('Support');
@@ -70,7 +70,20 @@ for (const [view, symmetrise] of VIEWS) {
           `moved Build–Support ${String(real)}, elsewhere ${String(moved.length - real)}`,
       );
     }
-    const c = compareWaves(r1, r2, ref, { group: 'team' });
+    const c = compareWaves(r1, r2, ref, { group: 'team', minCoverage: 0.8 });
+    const obs = changeObservations(c);
+    console.log(
+      `  observations${obs.withheld ? ` withheld (${obs.withheld})` : ''}: ` +
+        obs.observations
+          .map((o) =>
+            o.kind === 'groupPair'
+              ? `${o.from}–${o.to} ${String(o.before.ties)}→${String(o.after.ties)}`
+              : o.kind === 'cutPoint'
+                ? `cut point ${o.member} (${o.wave})`
+                : o.kind,
+          )
+          .join('; '),
+    );
     for (const kind of ['gained', 'lost'] as const) {
       const all = c.ties.filter((x) => x.kind === kind);
       const real = all.filter((x) => {

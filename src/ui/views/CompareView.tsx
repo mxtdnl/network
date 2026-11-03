@@ -16,9 +16,12 @@ import { useMapData, type MapData } from '../map/useMapModel';
 import { useAppStore, type CompareMode } from '../state/store';
 import { EmptyState } from './EmptyState';
 import { MiniMap } from './MiniMap';
+import { WaveComparison } from './ChangeView';
+import { changeCopy } from '../copy/change';
+import { canCompareWaves } from '../state/change';
 
 const C = compareCopy;
-const MODES: readonly CompareMode[] = ['layers', 'formalInformal'];
+const MODES: readonly CompareMode[] = ['layers', 'formalInformal', 'waves'];
 
 // Side-by-side comparison (spec §8) and the formal–informal comparison
 // (spec §6): small maps on the map's own positions, with the counts beside
@@ -29,6 +32,10 @@ export function CompareView() {
   const setMode = useAppStore((s) => s.setCompareMode);
   const data = useMapData();
   const name = useId();
+  // Two waves is offered once two waves have ratings (build plan session 15).
+  const twoWaves = useAppStore((s) => canCompareWaves(s.data.project));
+  const modes = MODES.filter((m) => m !== 'waves' || twoWaves);
+  const shown = modes.includes(mode) ? mode : 'layers';
   if (!project || project.members.length === 0) return <EmptyState />;
   if (!data) return <p className="placeholder">{mapCopy.calculating}</p>;
   return (
@@ -36,23 +43,31 @@ export function CompareView() {
       <fieldset className="view-toolbar view-toolbar--modes">
         <legend className="visually-hidden">{C.mode}</legend>
         <div className="segmented">
-          {MODES.map((m) => (
+          {modes.map((m) => (
             <label key={m} className="segmented__option">
               <input
                 type="radio"
                 className="segmented__input"
                 name={`${name}-mode`}
-                checked={mode === m}
+                checked={shown === m}
                 onChange={() => {
                   setMode(m);
                 }}
               />
-              <span className="segmented__label">{C.modes[m]}</span>
+              <span className="segmented__label">
+                {m === 'waves' ? changeCopy.mode : C.modes[m]}
+              </span>
             </label>
           ))}
         </div>
       </fieldset>
-      {mode === 'layers' ? <LayerComparison data={data} /> : <FormalInformal data={data} />}
+      {shown === 'layers' ? (
+        <LayerComparison data={data} />
+      ) : shown === 'formalInformal' ? (
+        <FormalInformal data={data} />
+      ) : (
+        <WaveComparison data={data} />
+      )}
     </div>
   );
 }

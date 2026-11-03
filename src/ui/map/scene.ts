@@ -275,6 +275,10 @@ export function buildScene(
     switch (colour.kind) {
       case 'none':
         return theme.stone;
+      case 'change':
+        // Two waves (build plan session 15): ±2 gained or lost, ±1 strengthened
+        // or weakened (drawn dashed by their style), 0 unchanged.
+        return v > 0 ? theme.gained : v < 0 ? theme.lost : theme.stone;
       case 'groups':
         // Ties between groups in graphite stand out from ties within a group in stone.
         return v === 1 ? theme.graphite : theme.stone;
