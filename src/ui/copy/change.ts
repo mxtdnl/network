@@ -281,6 +281,8 @@ export const changeCopy = {
   },
 
   /** The report's and presentation's change section. */
+  /** The presentation's opening step, when it also gives what changed. */
+  openingRegion: 'About the data and what changed',
   report: {
     heading: (b: number, a: number) => `What changed between ${wave(b)} and ${wave(a)}`,
     layer: (layer: string, view: string) => `On ${layer}, ${view}.`,

@@ -250,29 +250,30 @@ export function PresentationView() {
       )}
       {/* The opening step: the data-quality statement before the first view (session 4), then
           what changed since the wave before (session 15). It scrolls when long. */}
-      {opening && (quality || change) && (
+      {opening && !change && quality && (
+        <QualityStatement quality={quality} className="presentation__statement" />
+      )}
+      {opening && change && (
         <div
           className="presentation__statement"
+          role="region"
+          aria-label={changeCopy.openingRegion}
           // With the change section it can scroll, so it takes focus (as D114).
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
-          role="region"
-          aria-labelledby={titleId}
         >
           {quality && <QualityStatement quality={quality} />}
-          {change && full && (
-            <section className="presentation__change" aria-labelledby={changeId}>
-              <h2 id={changeId} className="presentation__change-heading">
-                {changeCopy.report.heading(change.pair.before, change.pair.after)}
-              </h2>
-              <ChangeSection
-                run={change}
-                observations={audienceChange(change, policy)}
-                name={policy.names.of}
-                named={level === 'analyst'}
-              />
-            </section>
-          )}
+          <section className="presentation__change" aria-labelledby={changeId}>
+            <h2 id={changeId} className="presentation__change-heading">
+              {changeCopy.report.heading(change.pair.before, change.pair.after)}
+            </h2>
+            <ChangeSection
+              run={change}
+              observations={audienceChange(change, policy)}
+              name={policy.names.of}
+              named={level === 'analyst'}
+            />
+          </section>
         </div>
       )}
       {opening && (
