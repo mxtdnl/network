@@ -116,6 +116,8 @@ export function explainView(
     terms.add(TERMS.bridges);
   }
   if (m.highlighted && m.highlighted.size > 0) out.push(X.highlight(m.highlighted.size));
+  // Notes on the map (build plan session 17) are the analyst's, not the data's.
+  if (m.annotations.length > 0) out.push(X.notes(m.annotations.length));
   if (m.wave) out.push(X.wave(m.wave.wave));
   return { sentences: out, terms: [...terms] };
 }

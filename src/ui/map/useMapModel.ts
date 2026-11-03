@@ -199,7 +199,10 @@ export function useMapData(): MapData | null {
     const names = alignNames(allNames, project);
     const theme = mapTheme();
     const settings = effectiveSettings(project, result, raw);
-    const model = buildMapModel(project, result, settings, theme, names.byIndex, { wave });
+    const model = buildMapModel(project, result, settings, theme, names.byIndex, {
+      wave,
+      annotationText: names.text,
+    });
     const informal = roleLayer(project, 'informal');
     const overlay =
       settings.layout === 'hierarchy' && informal && result.refs[informal.key]
@@ -209,6 +212,7 @@ export function useMapData(): MapData | null {
       overlay || (removal && removal.length > 0)
         ? buildMapModel(project, result, settings, theme, names.byIndex, {
             wave,
+            annotationText: names.text,
             ...(overlay ? { edgeLayer: overlay } : {}),
             ...(removal ? { removed: new Set(removal) } : {}),
           })

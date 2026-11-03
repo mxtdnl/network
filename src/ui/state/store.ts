@@ -12,6 +12,7 @@ import type {
   LayerKey,
   MemberId,
   Project,
+  MapAnnotation,
 } from '../../data/schema';
 import type {
   AnalysisResult,
@@ -160,7 +161,7 @@ export interface MapSettings {
   /** Attribute for the grouped and circular layouts; null = team, else the first attribute. */
   groupBy: AttributeKey | null;
   /** Pointer mode on the map: pan (and click to select) or draw a lasso around members. */
-  tool: 'pan' | 'lasso';
+  tool: 'pan' | 'lasso' | 'note';
   /** Ego view: only the member and those within `depth` steps on the ties shown. */
   ego: { member: MemberId; depth: 1 | 2 } | null;
   /** Members highlighted by an insight or a saved view; the rest of the map is faded. */
@@ -184,6 +185,8 @@ export interface MapSettings {
    * the analyst's own settings. Changing "Ties from" drops it (setMap).
    */
   question: string | null;
+  /** Short notes drawn on the map (build plan session 17), saved with views. */
+  annotations: MapAnnotation[];
 }
 
 export type { EdgeColourChoice, EdgeWidthChoice };
@@ -352,6 +355,7 @@ export function initialMapSettings(): MapSettings {
     communityOutlines: false,
     markBridges: false,
     question: 'connected',
+    annotations: [],
   };
 }
 

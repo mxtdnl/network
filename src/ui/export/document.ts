@@ -172,6 +172,51 @@ export function scenePrimitives(scene: Scene): Primitive[] {
       alpha: 1,
     });
   }
+  // Notes (build plan session 17), as the canvas draws them.
+  for (const c of scene.callouts) {
+    const [x1, y1, x2, y2] = c.leader;
+    out.push({
+      kind: 'lines',
+      stroke: t.paper,
+      width: t.line * 3,
+      dash: [],
+      alpha: 1,
+      coords: [x1, y1, x2, y2],
+    });
+    out.push({
+      kind: 'lines',
+      stroke: t.ink,
+      width: t.line,
+      dash: [],
+      alpha: 1,
+      coords: [x1, y1, x2, y2],
+    });
+    if (c.dot)
+      out.push({
+        kind: 'circle',
+        x: c.dot.x,
+        y: c.dot.y,
+        r: t.focusWidth,
+        fill: t.ink,
+        stroke: null,
+        strokeWidth: 0,
+        dash: [],
+        alpha: 1,
+      });
+    for (const l of c.lines)
+      out.push({
+        kind: 'text',
+        x: l.x,
+        y: l.y,
+        text: l.text,
+        role: 'group',
+        size: t.groupSize,
+        fill: t.ink,
+        align: c.align,
+        halo: { colour: t.paper, width: t.focusWidth * 2 },
+        alpha: 1,
+      });
+  }
   return out;
 }
 

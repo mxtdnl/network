@@ -312,7 +312,35 @@ test('screenshots of the analyst workspace, names hidden', NIGHTLY, async ({ pag
   await right(page).getByLabel('Caption').nth(1).blur();
   await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
   await settled(page);
+  // The notes editor sits above the list (build plan session 17), so the list is scrolled into view.
+  await right(page).getByText('Saved views, in presentation order').scrollIntoViewIfNeeded();
   await panelShot(page, 'saved-views', /^Formal structure$/);
+
+  // Notes on the map (build plan session 17): written with names shown, shot with codes.
+  await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
+  await right(page).getByText('Notes on the map').first().scrollIntoViewIfNeeded();
+  await right(page).getByLabel('Text of the note').fill('Most ties with Sales run through here');
+  await right(page).getByLabel('Attach to').selectOption({ index: 12 });
+  await right(page).getByRole('button', { name: 'Add note' }).click();
+  await right(page).getByLabel('Text of the note').fill('A quiet corner of the map');
+  await right(page).getByRole('button', { name: 'Place note on the map' }).click();
+  {
+    const box = await page.locator('canvas.map__canvas').boundingBox();
+    if (!box) throw new Error('no canvas');
+    await page.mouse.click(box.x + box.width * 0.45, box.y + box.height * 0.5);
+  }
+  // The click places the note on a member or at the point: either way the map has two notes.
+  await expect(
+    page.getByRole('region', { name: 'Notes on the map' }).getByRole('listitem'),
+  ).toHaveCount(2);
+  await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
+  await settled(page);
+  await expectNoNames(page);
+  await shot(page, 'notes-on-map');
+  await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
+  await right(page).getByRole('button', { name: 'Remove every note' }).click();
+  await page.getByRole('banner').getByRole('switch', { name: 'Hide names' }).click();
+  await settled(page);
 
   await page.getByRole('banner').getByRole('button', { name: 'Present' }).click();
   await expect(page.locator('.presentation--opening')).toBeVisible();

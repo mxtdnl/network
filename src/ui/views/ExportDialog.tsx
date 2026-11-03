@@ -22,7 +22,10 @@ import { canCompareWaves } from '../state/change';
 import { allows, type ExportKind } from '../state/audience';
 import { audienceChoice } from '../state/audienceSettings';
 import { audienceCopy } from '../copy/audience';
-import { exportCardFile } from '../state/exportActions';
+import { exportCardFile, exportPackFile, exportSlidesFile } from '../state/exportActions';
+import { slidesCopy } from '../copy/slides';
+
+const SL = slidesCopy.dialog;
 import { AudienceSelect } from './AudienceSelect';
 import { SummaryEditor } from './SummaryEditor';
 import { summaryCopy } from '../copy/summary';
@@ -360,6 +363,45 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
             {notOffered}
           </p>
         )}
+      </section>
+
+      {/* Slides and the workshop pack (build plan session 17). */}
+      <section className="export__section" aria-labelledby={`${id}-slides`}>
+        <h3 id={`${id}-slides`} className="export__heading">
+          {SL.heading}
+        </h3>
+        <div className="export__item">
+          <button
+            type="button"
+            className="button button--secondary"
+            disabled={!ready || busy !== null || !offered('slides')}
+            aria-describedby={`${id}-slides-help`}
+            onClick={() => {
+              void run('slides', () => exportSlidesFile(caption));
+            }}
+          >
+            {SL.slides}
+          </button>
+          <p id={`${id}-slides-help`} className="field__help">
+            {offered('slides') ? SL.slidesHelp : notOffered}
+          </p>
+        </div>
+        <div className="export__item">
+          <button
+            type="button"
+            className="button button--secondary"
+            disabled={!ready || busy !== null || !offered('pack')}
+            aria-describedby={`${id}-pack-help`}
+            onClick={() => {
+              void run('pack', exportPackFile);
+            }}
+          >
+            {SL.pack}
+          </button>
+          <p id={`${id}-pack-help`} className="field__help">
+            {offered('pack') ? SL.packHelp : notOffered}
+          </p>
+        </div>
       </section>
 
       {offered('card') && (

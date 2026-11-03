@@ -179,6 +179,7 @@ The two were built for this scale, not taken from a published scheme: published 
 - **Group map (D154):** one `paper` disc with a 1 px `ink` outline per group, area proportional to members (radius `--group-node-min` to `--group-node-max`); one `graphite` line per pair of groups with ties, width linear in the share of possible ties between them from `--map-edge-min` to `--group-edge-max` at the largest share between any two groups, stated in the legend. The chosen group is filled with `field` and carries the map's selection ring. No hue: the group map shows structure, not categories.
 - **Bridge ties (build plan session 7):** with "Mark bridge ties" on, a diamond at the middle of each tie whose two members have no contact in common (a local bridge), half-diagonal `--map-bridge-mark` (5 px), filled `--map-bridge` (`#E06800`) on a `paper` halo one line wider. 3.3:1 on `paper`, and at least ΔE00 8.5 from every edge colour of the three diverging palettes, the unsigned ramp, `stone`, `graphite`, `ink` and the accent, under normal vision and the three simulations (`contrast.test.ts`). The shape carries the mark as much as the hue, so it is never read as a tie colour. Not the accent (D12) and not the shortest path's `ink`.
 - **Change between two waves (build plan session 15):** on the Compare tab's "Two waves" maps, ties gained since the earlier wave are drawn in `--map-gained` (`#008A5E`, teal) on the later wave's map, and ties lost in `--map-lost` (`#9A7D00`, ochre) on the earlier wave's map; ties strengthened or weakened by two scale points or more take the same colours, dashed (`--map-dash`, `--map-gap`); every other tie is `stone`. Gained 4.26:1 and lost 3.85:1 on `paper`; each at least ΔE00 13 from `stone`, `graphite`, `ink` and the accent, and from each other, under normal vision and the three simulations (`contrast.test.ts`). The two never share a map, and the key under the maps names both, so neither is read as a valence colour. Not the accent (D12). The change in the group matrix uses the diverging scale's 60 % shades (`shade-signed-*`, as the rating grid), stepped at 10, 25 and 50 percentage points.
+- **Notes on the map (build plan session 17):** a short `ink` leader line (`--line-width`, on a `paper` halo three lines wide) from the anchor's edge, `--map-callout-offset` (24 px) across and up or down, to the note's text in the group-name face (`--map-group-size`, Fira Sans 600) in `ink` on a `paper` halo, wrapped at `--map-callout-width` (160 px). A note at a point marks the point with an `ink` dot of `--focus-width` radius. No new colour: notes are text, drawn over everything else and never faded by a highlight.
 - **Selection and focus on the map:** 2 px `ink` ring outside a 2 px `paper` halo; non-selected members fade to 30 % opacity. No accent.
 
 ---
@@ -210,6 +211,9 @@ Weights used: 400 Regular, 500 Medium, 600 SemiBold. Nothing heavier; nothing li
 | Presentation caption | Fira Sans | 500 | `t-5` |
 | Presentation view title | Fira Sans | 600 | `t-6` |
 | Map node labels | Fira Sans Condensed | 500 | `t--1` (analyst), `t-1` (presentation) |
+| Notes on the map | Fira Sans | 600 | `t-0` (`--map-group-size`) |
+| Slide title (16:9 PDF deck) | Fira Sans | 500 | `t-5` (`--slide-title-size`) |
+| Slide sentences | Fira Sans | 400 | `t-2` (`--slide-body-size`); `t-0` (`--slide-small-size`) for what the map draws, the coverage warning, the footer, and sentences that do not fit |
 | Legend labels, help text, axis labels | Fira Sans | 400 | `t--1` |
 | Numeric data anywhere | same as its role | same | always `tabular-nums` |
 
@@ -229,6 +233,8 @@ Ratio 1.2 (minor third), base 14 px (analyst desktop), rounded to whole pixels. 
 | `t-4` | 29.03 | 29 px | 36 px | Empty-state headings |
 | `t-5` | 34.84 | 35 px | 44 px | Presentation caption |
 | `t-6` | 41.8 | 42 px | 52 px | Presentation title |
+
+Slides (build plan session 17) are 16:9 pages of `--slide-width` × `--slide-height` (1280 × 720 px, printed at 960 × 540 pt), with `--slide-margin` (`s-7`) all round, a text column `--slide-text-width` (400 px) wide at the left and `--slide-gap` (`s-6`) between it and the picture.
 
 Presentation mode keeps the same steps; the canvas scales to the display, and captions sit at `t-5`/`t-6`. At 1920 px width on a typical projected image, `t-5` is the smallest text that carries meaning in presentation mode; legend text is raised to `t-1` there.
 

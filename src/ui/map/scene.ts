@@ -96,6 +96,86 @@ export function labelAnchors(scene: Scene): Map<number, LabelAnchor> {
   return out;
 }
 
+/** A note on the map (build plan session 17): a leader line from its anchor to its text. */
+export interface CalloutMark {
+  /** From the anchor's edge to the text: x1, y1, x2, y2. */
+  leader: [number, number, number, number];
+  /** A dot marking a point anchor; null for a member, whose disc marks the anchor. */
+  dot: Point | null;
+  /** Lines of text, each with its baseline. */
+  lines: { x: number; y: number; text: string }[];
+  align: 'left' | 'right';
+}
+
+/** Distance between a note's lines: the group size plus one label gap. */
+export function calloutLine(theme: Pick<MapTheme, 'groupSize' | 'labelGap'>): number {
+  return theme.groupSize + theme.labelGap;
+}
+
+/** Breaks a note into lines no wider than `width`; a word wider than that stays whole. */
+export function wrapNote(text: string, width: number, measure: (s: string) => number): string[] {
+  const words = text.split(/\s+/).filter((w) => w !== '');
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const next = line === '' ? word : `${line} ${word}`;
+    if (line !== '' && measure(next) > width) {
+      lines.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line !== '') lines.push(line);
+  return lines;
+}
+
+/**
+ * Notes as callouts in screen space. `measure` is the member-label measure;
+ * notes are set in the group-name face, wider and larger, so widths are scaled
+ * up for wrapping (a conservative estimate, so a line never runs past the width).
+ */
+export function buildCallouts(
+  model: MapModel,
+  screen: readonly (Point | undefined)[],
+  t: Transform,
+  theme: MapTheme,
+  measure: (text: string) => number,
+): CalloutMark[] {
+  const out: CalloutMark[] = [];
+  const scale = (theme.groupSize / theme.labelSize) * CALLOUT_FACE_WIDTH;
+  const lh = calloutLine(theme);
+  for (const a of model.annotations) {
+    const p = a.member === null ? toScreen({ x: a.x, y: a.y }, t) : screen[a.member];
+    if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+    const right = a.side === 'aboveRight' || a.side === 'belowRight';
+    const above = a.side === 'aboveRight' || a.side === 'aboveLeft';
+    const dx = right ? 1 : -1;
+    const dy = above ? -1 : 1;
+    const r =
+      a.member === null
+        ? theme.focusWidth + theme.line
+        : (model.nodes[a.member]?.radius ?? 0) + theme.line * 2;
+    const off = theme.calloutOffset;
+    const ex = p.x + dx * off;
+    const ey = p.y + dy * off;
+    const lines = wrapNote(a.text, theme.calloutWidth, (x) => measure(x) * scale);
+    const x = ex + dx * theme.labelGap;
+    out.push({
+      leader: [p.x + (dx * r) / Math.SQRT2, p.y + (dy * r) / Math.SQRT2, ex, ey],
+      dot: a.member === null ? { x: p.x, y: p.y } : null,
+      lines: lines.map((text, k) => ({
+        x,
+        y: above ? ey - (lines.length - 1 - k) * lh : ey + theme.groupSize + k * lh,
+        text,
+      })),
+      align: right ? 'left' : 'right',
+    });
+  }
+  return out;
+}
+
+/** How much wider the group-name face is than the condensed label face, per unit of size. */
+const CALLOUT_FACE_WIDTH = 1.2;
+
 export interface Scene {
   width: number;
   height: number;
@@ -109,6 +189,8 @@ export interface Scene {
   labels: LabelMark[];
   /** Names of the groups in the grouped and circular layouts. */
   groupLabels: LabelMark[];
+  /** Notes on the map, drawn over everything else (build plan session 17). */
+  callouts: CalloutMark[];
   theme: MapTheme;
 }
 
@@ -787,6 +869,8 @@ export function buildScene(
     groupRings,
     labels,
     groupLabels,
+    // Notes stay at full strength, also over a faded picture.
+    callouts: buildCallouts(model, screen, t, theme, measure),
     theme,
   };
 }

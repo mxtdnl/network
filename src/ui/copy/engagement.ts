@@ -360,6 +360,10 @@ export const engagementCopy = {
         'Managers sit above the people who report to them; the lines between rows are informal collaboration.',
     },
     outlines: 'Grey outlines surround the clusters found in the ties.',
+    notes: (n: number) =>
+      n === 1
+        ? 'One note written by the analyst is drawn on the map.'
+        : `${String(n)} notes written by the analyst are drawn on the map.`,
     bridges: (n: number) =>
       `Diamonds mark ${count(n, 'bridge tie', 'bridge ties')}: ties whose two members have no contact in common.`,
     highlight: (n: number) =>

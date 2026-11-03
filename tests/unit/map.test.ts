@@ -93,6 +93,8 @@ const theme: MapTheme = {
   groupSize: 14,
   labelGap: 4,
   swatch: 24,
+  calloutOffset: 24,
+  calloutWidth: 160,
 };
 
 const results = new Map<string, AnalysisResult>();

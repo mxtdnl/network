@@ -49,7 +49,10 @@ import type { FontRole, MapDocument, Primitive } from './document';
 import { ROLE_FACE, fontFile, woffToSfnt, type Face, type FontLoader, type Inflate } from './fonts';
 import type { Block, ReportModel } from './report';
 import type { CardModel } from '../state/card';
-import type { ExportTheme, PrintTheme } from './theme';
+import type { ExportTheme, PrintTheme, SlideTheme, TextStyle } from './theme';
+import type { SlideDeck } from './slides';
+import type { WorkshopPack } from './workshop';
+import { packCopy, slidesCopy } from '../copy/slides';
 
 /** PDF points per CSS pixel (72 pt and 96 px to the inch). */
 const PT = 0.75;
@@ -924,6 +927,374 @@ export async function cardPdf(input: CardPdfInput): Promise<PdfOutput> {
     w.page = page;
     const baseline = w.pageHeight - P.margin / 2;
     w.text(card.title, P.margin, baseline, 'regular', P.small.size, P.colours.graphite);
+    w.text(
+      reportCopy.pageOf(k + 1, pages),
+      w.pageWidth - P.margin,
+      baseline,
+      'regular',
+      P.small.size,
+      P.colours.graphite,
+      'right',
+    );
+  });
+  const bytes = await doc.save();
+  return { bytes, pages: doc.getPageCount(), substituted: [...w.substituted] };
+}
+
+// ------------------------------------------------------------------- slides
+
+export interface SlidesPdfInput {
+  deck: SlideDeck;
+  /** One picture per slide after the opening one, in the same order. */
+  docs: MapDocument[];
+  exportTheme: ExportTheme;
+  slide: SlideTheme;
+  loadFont: FontLoader;
+  inflate: Inflate;
+  now: Date;
+}
+
+/**
+ * The slide deck (build plan session 17): 16:9 pages. The opening slide gives
+ * the title, who the deck is for and the data-quality statement; each view's
+ * slide has its title across the top, its sentences in a column at the left
+ * and the picture (map and legend) at the right, with the same fonts, colours
+ * and drawing as the report.
+ */
+export async function slidesPdf(input: SlidesPdfInput): Promise<PdfOutput> {
+  const { deck, slide: T } = input;
+  const doc = await PDFDocument.create();
+  doc.setTitle(slidesCopy.documentTitle(deck.title), { showInWindowTitleBar: true });
+  doc.setSubject(slidesCopy.subject);
+  doc.setCreator(reportCopy.creator);
+  doc.setProducer(`${reportCopy.creator} ${APP_VERSION}`);
+  doc.setLanguage('en-GB');
+  doc.setCreationDate(input.now);
+  doc.setModificationDate(input.now);
+  doc.setAuthor('');
+  doc.setKeywords([]);
+  const fonts = await loadFonts(doc, input);
+  // The writer's print theme is used only for its colours and line width.
+  const colours = {
+    ink: input.exportTheme.map.ink,
+    graphite: input.exportTheme.map.graphite,
+    stone: input.exportTheme.map.stone,
+    field: input.exportTheme.field,
+    paper: input.exportTheme.map.paper,
+  };
+  const P: PrintTheme = {
+    pageWidth: T.width,
+    pageHeight: T.height,
+    margin: T.margin,
+    title: T.title,
+    heading: T.title,
+    subheading: T.body,
+    body: T.body,
+    small: T.small,
+    measure: T.textWidth,
+    columnGap: T.gap,
+    space: [],
+    colours,
+    line: input.exportTheme.map.line,
+  };
+  const w = new Writer(doc, fonts, P);
+  const newSlide = () => {
+    w.page = doc.addPage([T.width * PT, T.height * PT]);
+    w.pageWidth = T.width;
+    w.pageHeight = T.height;
+    w.y = T.margin;
+    w.bodyPages.push(w.page);
+  };
+  /** Lines of text in a column from (x, w.y); returns false when they would pass `bottom`. */
+  const lines = (
+    text: string,
+    x: number,
+    width: number,
+    style: TextStyle,
+    weight: Weight,
+    fillHex: string,
+    bottom: number,
+    lead?: string,
+  ): boolean => {
+    const leadText = lead ? `${lead} ` : '';
+    const leadWidth = lead ? w.width(leadText, 'medium', style.size) : 0;
+    const rows = w.wrap(text, width, weight, style.size, leadWidth);
+    if (w.y + rows.length * style.line > bottom) return false;
+    rows.forEach((row, k) => {
+      const baseline = w.y + (style.line + style.size * 0.7) / 2;
+      if (k === 0 && lead) {
+        w.text(lead, x, baseline, 'medium', style.size, colours.ink);
+        w.text(row, x + leadWidth, baseline, weight, style.size, fillHex);
+      } else w.text(row, x, baseline, weight, style.size, fillHex);
+      w.y += style.line;
+    });
+    return true;
+  };
+  const title = (text: string) => {
+    lines(text, T.margin, T.width - T.margin * 2, T.title, 'medium', colours.ink, Infinity);
+  };
+
+  // The opening slide: what the deck is and the data it rests on.
+  newSlide();
+  w.y = T.height * 0.18;
+  title(deck.title);
+  const wide = T.width - T.margin * 2;
+  const opening = Math.min(wide, T.textWidth * 2);
+  lines(deck.subtitle, T.margin, wide, T.body, 'regular', colours.graphite, Infinity);
+  lines(deck.date, T.margin, wide, T.small, 'regular', colours.graphite, Infinity);
+  w.y += T.gap;
+  const bottom = T.height - T.margin;
+  for (const line of [deck.audience, ...deck.cover])
+    lines(line, T.margin, opening, T.small, 'regular', colours.ink, bottom);
+  w.y += T.gap / 2;
+  lines(deck.statementHeading, T.margin, opening, T.body, 'medium', colours.ink, bottom);
+  lines(deck.statement.join(' '), T.margin, opening, T.small, 'regular', colours.ink, bottom);
+
+  // One slide per view.
+  const pad = input.exportTheme.padding;
+  deck.slides.forEach((s, k) => {
+    newSlide();
+    title(s.title);
+    w.y += T.gap;
+    const top = w.y;
+    const x = T.margin;
+    const width = T.textWidth;
+    // The sentences at body size; at the small size when they do not fit; cut short as a last resort.
+    const column = (style: TextStyle): boolean => {
+      w.y = top;
+      let fits = true;
+      if (s.question)
+        fits = lines(
+          s.question,
+          x,
+          width,
+          style,
+          'regular',
+          colours.ink,
+          bottom,
+          slidesCopy.question,
+        );
+      if (fits && s.warning)
+        fits = lines(s.warning, x, width, T.small, 'regular', colours.ink, bottom);
+      for (const text of s.sentences) {
+        if (!fits) break;
+        w.y += T.small.line / 2;
+        fits = lines(text, x, width, style, 'regular', colours.ink, bottom);
+      }
+      if (fits) {
+        w.y += T.small.line / 2;
+        fits = lines(s.mapIntro, x, width, T.small, 'regular', colours.graphite, bottom);
+      }
+      return fits;
+    };
+    // Measured first, so a column that does not fit is not drawn twice.
+    const room = bottom - top;
+    if (columnHeight(w, s, T.body, T.small, width) <= room) column(T.body);
+    else if (columnHeight(w, s, T.small, T.small, width) <= room) column(T.small);
+    else {
+      // Cut short: the sentences that fit at the small size, then a pointer to the report.
+      w.y = top;
+      const end = bottom - T.small.line;
+      let fits =
+        !s.question ||
+        lines(s.question, x, width, T.small, 'regular', colours.ink, end, slidesCopy.question);
+      if (fits && s.warning)
+        fits = lines(s.warning, x, width, T.small, 'regular', colours.ink, end);
+      for (const text of s.sentences) {
+        if (!fits) break;
+        fits = lines(text, x, width, T.small, 'regular', colours.ink, end);
+      }
+      lines(slidesCopy.more, x, width, T.small, 'regular', colours.graphite, bottom);
+    }
+    const picture = input.docs[k];
+    const left = T.margin + T.textWidth + T.gap;
+    if (picture)
+      drawMap(w, picture, {
+        x: left - pad,
+        y: top - pad,
+        width: T.width - T.margin - left + pad * 2,
+        height: bottom - top + pad,
+      });
+    // Footer: the view's name and the slide's number.
+    const baseline = T.height - T.margin / 2;
+    w.text(s.name, T.margin, baseline, 'regular', T.small.size, colours.graphite);
+    w.text(
+      reportCopy.pageOf(k + 2, deck.slides.length + 1),
+      T.width - T.margin,
+      baseline,
+      'regular',
+      T.small.size,
+      colours.graphite,
+      'right',
+    );
+  });
+
+  const bytes = await doc.save();
+  return { bytes, pages: doc.getPageCount(), substituted: [...w.substituted] };
+}
+
+/** Height of a slide's text column with its sentences in `style`, laid out as slidesPdf lays it out. */
+function columnHeight(
+  w: Writer,
+  s: SlideDeck['slides'][number],
+  style: TextStyle,
+  small: TextStyle,
+  width: number,
+): number {
+  const rows = (text: string, st: TextStyle, lead = 0) =>
+    w.wrap(text, width, 'regular', st.size, lead).length * st.line;
+  let h = 0;
+  if (s.question)
+    h += rows(s.question, style, w.width(`${slidesCopy.question} `, 'medium', style.size));
+  if (s.warning) h += rows(s.warning, small);
+  for (const text of s.sentences) h += small.line / 2 + rows(text, style);
+  h += small.line / 2 + rows(s.mapIntro, small);
+  return h;
+}
+
+// --------------------------------------------------------------------- pack
+
+export interface PackPdfInput {
+  pack: WorkshopPack;
+  print: PrintTheme;
+  loadFont: FontLoader;
+  inflate: Inflate;
+  now: Date;
+  /** The pictures' own padding, which sits in the page margin. */
+  padding: number;
+}
+
+/**
+ * The workshop pack (build plan session 17): a cover with the contents, then
+ * for each group a landscape page of its own network, a page of its ties with
+ * other groups and questions for discussion, and a page of notes for the
+ * facilitator; type, tables and footer as the report.
+ */
+export async function packPdf(input: PackPdfInput): Promise<PdfOutput> {
+  const { pack, print: P } = input;
+  const doc = await PDFDocument.create();
+  doc.setTitle(packCopy.documentTitle(pack.title), { showInWindowTitleBar: true });
+  doc.setSubject(packCopy.subject);
+  doc.setCreator(reportCopy.creator);
+  doc.setProducer(`${reportCopy.creator} ${APP_VERSION}`);
+  doc.setLanguage('en-GB');
+  doc.setCreationDate(input.now);
+  doc.setModificationDate(input.now);
+  doc.setAuthor('');
+  doc.setKeywords([]);
+  const fonts = await loadFonts(doc, input);
+  const w = new Writer(doc, fonts, P);
+
+  // Cover: title, subtitle, date and what the pack holds; contents below.
+  w.addPage(false, false);
+  w.y = P.pageHeight * 0.28;
+  for (const line of w.wrap(pack.title, w.contentWidth, 'medium', P.title.size)) {
+    w.text(
+      line,
+      P.margin,
+      w.y + (P.title.line + P.title.size * 0.7) / 2,
+      'medium',
+      P.title.size,
+      P.colours.ink,
+    );
+    w.y += P.title.line;
+  }
+  w.y += P.space[1] ?? 0;
+  paragraph(w, { kind: 'paragraph', text: packCopy.title, tone: 'graphite' });
+  paragraph(w, { kind: 'paragraph', text: pack.subtitle });
+  paragraph(w, { kind: 'paragraph', text: pack.date, tone: 'graphite' });
+  w.y += P.space[3] ?? 0;
+  paragraph(w, { kind: 'paragraph', text: pack.intro });
+  for (const text of pack.cover) paragraph(w, { kind: 'paragraph', text, small: true });
+  const cover = w.page;
+  const contentsTop = w.y + (P.space[3] ?? 0);
+
+  const starts: number[] = [];
+  const pad = input.padding;
+  for (const s of pack.sections) {
+    // The group's own network, on a landscape page.
+    w.addPage(true);
+    starts.push(w.bodyPages.length);
+    sectionTitle(w, packCopy.groupHeading(s.group));
+    paragraph(w, {
+      kind: 'paragraph',
+      lead: packCopy.networkHeading,
+      text: s.named ? packCopy.named : packCopy.codes,
+      small: true,
+    });
+    drawMap(w, s.doc, {
+      x: P.margin - pad,
+      y: w.y - pad,
+      width: w.contentWidth + pad * 2,
+      height: w.bottom - w.y + pad,
+    });
+    // Its ties with other groups, and questions for discussion.
+    w.addPage();
+    sectionTitle(w, packCopy.discussTitle(s.group));
+    heading(w, packCopy.rowHeading);
+    for (const b of s.row) {
+      if (b.kind === 'table') table(w, b);
+      else if (b.kind === 'paragraph') paragraph(w, b);
+      else if (b.kind === 'heading') heading(w, b.text);
+      else warning(w, b.text);
+    }
+    heading(w, packCopy.promptsHeading);
+    paragraph(w, { kind: 'paragraph', text: packCopy.promptsIntro, tone: 'graphite', small: true });
+    list(w, s.prompts);
+    // A page of notes for the facilitator.
+    w.addPage();
+    sectionTitle(w, packCopy.notesTitle(s.group));
+    for (const b of s.notes) {
+      if (b.kind === 'heading') heading(w, b.text);
+      else if (b.kind === 'paragraph') paragraph(w, b);
+      else if (b.kind === 'warning') warning(w, b.text);
+      else table(w, b);
+    }
+  }
+
+  // Contents on the cover, with the page each group starts on.
+  const pages = w.bodyPages.length;
+  w.page = cover;
+  w.pageWidth = P.pageWidth;
+  w.pageHeight = P.pageHeight;
+  w.y = contentsTop;
+  const C = P.subheading;
+  if (w.y + C.line + pack.sections.length * P.body.line > w.bottom - P.small.line) {
+    w.page = doc.insertPage(1, [P.pageWidth * PT, P.pageHeight * PT]);
+    w.y = P.margin;
+  }
+  w.text(
+    packCopy.contents,
+    P.margin,
+    w.y + (C.line + C.size * 0.7) / 2,
+    'medium',
+    C.size,
+    P.colours.ink,
+  );
+  w.y += C.line + (P.space[0] ?? 0);
+  pack.sections.forEach((s, k) => {
+    const baseline = w.y + (P.body.line + P.body.size * 0.7) / 2;
+    w.text(s.group, P.margin, baseline, 'regular', P.body.size, P.colours.ink);
+    w.text(
+      String(starts[k] ?? ''),
+      P.margin + Math.min(P.measure, w.contentWidth),
+      baseline,
+      'regular',
+      P.body.size,
+      P.colours.graphite,
+      'right',
+    );
+    w.y += P.body.line;
+  });
+
+  // Running footer on every page after the cover.
+  w.bodyPages.forEach((page, k) => {
+    w.page = page;
+    const { width, height } = page.getSize();
+    w.pageWidth = width / PT;
+    w.pageHeight = height / PT;
+    const baseline = w.pageHeight - P.margin / 2;
+    w.text(pack.title, P.margin, baseline, 'regular', P.small.size, P.colours.graphite);
     w.text(
       reportCopy.pageOf(k + 1, pages),
       w.pageWidth - P.margin,
