@@ -1325,3 +1325,44 @@ describe('the engagement record in exports (build plan session 16)', () => {
     expect(model.cover.some((l) => l.startsWith('Business question:'))).toBe(false);
   });
 });
+
+describe('notes on the map in exports (build plan session 17)', () => {
+  const member = project.members[2];
+  const notes = [
+    {
+      id: 'n1',
+      text: `Notewordone ${NAMES[0] ?? ''}`,
+      anchor: { kind: 'member' as const, member: member?.id ?? '' },
+      side: 'aboveRight' as const,
+    },
+    {
+      id: 'n2',
+      text: 'Notewordtwo',
+      anchor: { kind: 'point' as const, x: 0, y: 0 },
+      side: 'belowLeft' as const,
+    },
+  ];
+  it.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])(
+    'are drawn in the PNG, SVG and PDF report: names hidden %s, signed layers left out %s',
+    async (anonymise, excludeSigned) => {
+      const ctx = await contextFor(project, {
+        anonymise,
+        excludeSigned,
+        map: { annotations: notes },
+      });
+      for (const type of ['png', 'svg', 'pdf'] as const) {
+        const { text } = await produce(type, ctx);
+        expect(text, type).toContain('Notewordone');
+        expect(text, type).toContain('Notewordtwo');
+        if (anonymise) expect(text, type).not.toContain(NAMES[0]);
+        else expect(text, type).toContain(NAMES[0]);
+      }
+    },
+    60_000,
+  );
+});

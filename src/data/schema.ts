@@ -239,6 +239,8 @@ export interface SavedMapSettings {
   standardise?: 'none' | 'rank';
   /** The wave the view shows (build plan session 14); absent means the latest wave with ratings. */
   wave?: number;
+  /** Short notes drawn on the map (build plan session 17); absent means none. Schema 4 in place. */
+  annotations?: MapAnnotation[];
   layerToggles: Record<LayerKey, boolean>;
   hideOffLayers: boolean;
   filters: AttributeFilter[];
@@ -257,6 +259,24 @@ export interface SavedMapSettings {
   sizeScale: 'value' | 'rank';
   /** An outline around each community on the "Ties from" layer (D136). */
   communityOutlines: boolean;
+}
+
+/** Longest note on the map, in characters, and most notes on one map (build plan session 17). */
+export const ANNOTATION_MAX_TEXT = 80;
+export const ANNOTATION_MAX = 12;
+/** Where a note's text sits from its anchor. */
+export const ANNOTATION_SIDES = ['aboveRight', 'aboveLeft', 'belowRight', 'belowLeft'] as const;
+export type AnnotationSide = (typeof ANNOTATION_SIDES)[number];
+
+/**
+ * A short note on the map (build plan session 17), anchored to a member or to
+ * a point in layout coordinates, so it moves with the map as members do.
+ */
+export interface MapAnnotation {
+  id: string;
+  text: string;
+  anchor: { kind: 'member'; member: MemberId } | { kind: 'point'; x: number; y: number };
+  side: AnnotationSide;
 }
 
 export interface SavedPosition {

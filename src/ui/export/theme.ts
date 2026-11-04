@@ -138,3 +138,33 @@ export function readPrintTheme(source: TokenSource): PrintTheme {
     line: len('--line-width'),
   };
 }
+
+/** The slide deck (build plan session 17): a 16:9 page, its margins and type. */
+export interface SlideTheme {
+  width: number;
+  height: number;
+  margin: number;
+  gap: number;
+  textWidth: number;
+  title: TextStyle;
+  body: TextStyle;
+  small: TextStyle;
+}
+
+export function readSlideTheme(source: TokenSource): SlideTheme {
+  const len = (name: string) => tokenLength(source, name);
+  const text = (role: string): TextStyle => ({
+    size: len(`--slide-${role}-size`),
+    line: len(`--slide-${role}-line`),
+  });
+  return {
+    width: len('--slide-width'),
+    height: len('--slide-height'),
+    margin: len('--slide-margin'),
+    gap: len('--slide-gap'),
+    textWidth: len('--slide-text-width'),
+    title: text('title'),
+    body: text('body'),
+    small: text('small'),
+  };
+}

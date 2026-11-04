@@ -5,6 +5,7 @@
 
 import { selectWaveProject } from './waves';
 import { EngineClient, type AnalysisInput } from '../engineClient';
+import { slidesCopy } from '../copy/slides';
 import { exportCopy } from '../copy/export';
 import { changeCsv } from '../export/change';
 import { actionLogCsv } from '../export/engagement';
@@ -254,6 +255,65 @@ export async function exportReportFile(caption: string): Promise<string | null> 
     return out.fileName;
   } catch (e) {
     status(exportCopy.report.failed(reason(e)), 'error');
+    return null;
+  }
+}
+
+/** The slide deck (build plan session 17): the saved views the report would show. */
+export async function exportSlidesFile(caption: string): Promise<string | null> {
+  try {
+    const r = request();
+    if (!r) throw new Error(exportCopy.noAnalysis);
+    const ctx = await exportContext(r, analyseSeparately);
+    const { tokens, measure } = await deps();
+    const [{ slidesExport }, { viewSources, chosenViews }] = await Promise.all([
+      import('../export/slides'),
+      import('../export/viewPages'),
+    ]);
+    const choice = useAppStore.getState().ui.report;
+    const views = await viewSources(r, chosenViews(r.project, choice.views), analyseSeparately);
+    const out = await slidesExport(
+      ctx,
+      mapState(),
+      { tokens, measure, loadFont: fetchFont, inflate: browserInflate, now: new Date(), notes: '' },
+      views,
+      caption,
+    );
+    download(
+      out.fileName,
+      new Blob([out.bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }),
+    );
+    status(slidesCopy.dialog.slidesExported(out.fileName));
+    return out.fileName;
+  } catch (e) {
+    status(slidesCopy.dialog.slidesFailed(reason(e)), 'error');
+    return null;
+  }
+}
+
+/** The workshop pack (build plan session 17): a section per group at the team-workshop level. */
+export async function exportPackFile(): Promise<string | null> {
+  try {
+    const r = request();
+    if (!r) throw new Error(exportCopy.noAnalysis);
+    const ctx = await exportContext(r, analyseSeparately);
+    const { tokens, measure } = await deps();
+    const { packExport } = await import('../export/workshop');
+    const out = await packExport(
+      r,
+      ctx,
+      mapState(),
+      { tokens, measure, loadFont: fetchFont, inflate: browserInflate, now: new Date(), notes: '' },
+      analyseSeparately,
+    );
+    download(
+      out.fileName,
+      new Blob([out.bytes as Uint8Array<ArrayBuffer>], { type: 'application/pdf' }),
+    );
+    status(slidesCopy.dialog.packExported(out.fileName));
+    return out.fileName;
+  } catch (e) {
+    status(slidesCopy.dialog.packFailed(reason(e)), 'error');
     return null;
   }
 }

@@ -158,6 +158,7 @@ function markEdges(
     outlines: null,
     markBridges: false,
     bridges: 0,
+    annotations: [],
   };
 }
 

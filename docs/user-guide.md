@@ -518,6 +518,14 @@ A saved view keeps the map as it is: the weights, filters, layout, node position
 
 ![The Views tab: two saved views in presentation order, each with a caption](user-guide/saved-views.jpg)
 
+#### Notes on the map
+
+A note is a short text on the map (at most 80 characters, and 12 notes per map), beside a member or at a point. In the Views tab, under **Notes on the map**, type the text, choose what to **Attach to** (a member, or **A point I click on the map**) and where the text sits, then **Add note**. For a point, select **Place note on the map** and click the map; Escape or **Cancel placing the note** stops. Each note can be edited, moved to another side or removed; **Remove every note** clears the map.
+
+Notes belong to the map as it is, so they are kept with a view when you save or update it, and come back when you show it. They appear wherever the view does: presentation, slides, the report and the map exports. They follow Hide names and the audience as captions do; a team workshop sees only notes on its own members or at points, and the group pictures for a board or a leadership team draw no notes. While names are hidden, notes are shown with codes and cannot be edited. Notes are not offered on a phone. Write notes as observations or questions about patterns, not about people.
+
+![Notes on the map: a note beside a member and one at a point, and the notes editor in the Views tab](user-guide/notes-on-map.jpg)
+
 A good presentation is a short sequence of views, each answering one question: for example the informal network, then the formal structure, then one insight shown on the map. Save an insight's view straight from the Insights tab with Save as view; its caption is the insight's question.
 
 Choose Present (top bar or Views tab) to show the views full screen, with the title, the map, the legend and the caption. A presentation opens with "About the data", the data-quality statement, so the audience hears what the data can bear before the first view. Use the right arrow, Page down or Space for the next view, the left arrow or Page up for the previous one, Home for the opening and End for the last view, and Escape to leave. Moving the pointer shows a small control bar, which includes Hide names.
@@ -563,8 +571,16 @@ Export (top bar) opens the export dialog. Under its settings it shows the data-q
 | Formal and informal ties (CSV) | Every pair classified as formal only, informal only, both or neither |
 | Table (CSV, from the Table tab) | The rows and columns shown, in their order |
 | Report (PDF) | A briefing built from your saved views: see "The report" below |
+| Slides (PDF, 16:9) | An opening slide about the data, then one slide per saved view chosen under Report: its caption (or question) as the title, the sentences that describe it at the left, and the map with its legend. For a board or a leadership team each slide shows the group picture. Ready to show from any PDF reader or to place in a deck |
+| Workshop pack (PDF) | For each team (the grouping of the insight rules), its own network as a team workshop sees it, its ties with each other group, questions for discussion and a page of notes for the facilitator. Prepared for a team workshop, the pack holds that team only |
 
-The dialog follows **Prepared for** (above): at board or leadership level the map export is the group map and the report shows groups, with roles for a leadership team; a team workshop's files hold its team only; a one-to-one offers **Export network card** (PDF) and nothing else. Exports a level does not offer are disabled with the reason.
+The dialog follows **Prepared for** (above): at board or leadership level the map export is the group map and the report and slides show groups, with roles for a leadership team; a team workshop's files hold its team only; a one-to-one offers **Export network card** (PDF) and nothing else. Exports a level does not offer are disabled with the reason.
+
+#### Slides and the workshop pack
+
+**Export slides** uses the views chosen under Report, in the same order. Each slide is calculated as the view asks and follows the dialog's settings and audience, as the report's view pages do. While coverage is below the threshold, every slide repeats the warning.
+
+**Export workshop pack** prepares one section per team with at least two members. Each section is exactly what a team workshop at that level sees: members appear as codes unless the team agreed to be named (in the Views tab, under the level), no one from another team appears, and valence, energy and friction are not drawn. The row of the group connection matrix gives the ties the team gave to and received from each other group and the share of possible pairs that are tied; smaller groups than the minimum are counted together or left out. The questions start from the team's own figures and the insight rules about it, then general ones. The page of notes for the facilitator repeats the purpose, coverage, who gave no ratings (as a count) and how to run the session. Hand each team its own section only.
 
 #### The report
 

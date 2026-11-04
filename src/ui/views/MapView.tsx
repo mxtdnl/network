@@ -23,6 +23,8 @@ import type { MapTheme } from '../map/theme';
 import { DRAWER_ID, useLayout } from '../state/layoutMode';
 import { useAppStore } from '../state/store';
 import { clearPath, endSimulation } from '../state/tools';
+import { cancelPlacing, placePending } from '../state/annotations';
+import { annotationsCopy } from '../copy/annotations';
 import { EmptyState } from './EmptyState';
 import { MapLegend } from './MapLegend';
 
@@ -155,6 +157,10 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
     },
     [model, setGroup, setRightPanel],
   );
+  const modelRef = useRef(model);
+  useEffect(() => {
+    modelRef.current = model;
+  }, [model]);
   const openRef = useRef({ open, toggle, lasso });
   useEffect(() => {
     openRef.current = { open, toggle, lasso };
@@ -180,6 +186,14 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
         },
         lasso: (indices, add) => {
           openRef.current.lasso(indices, add);
+        },
+        // The note tool (build plan session 17): a click places the waiting note.
+        placeNote: (at) => {
+          const model = modelRef.current;
+          if ('member' in at) {
+            const id = model.nodes[at.member]?.id;
+            if (id !== undefined) placePending({ member: id });
+          } else placePending(at);
         },
       },
       sharedLayout,
@@ -319,6 +333,20 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
   useEffect(() => {
     controllerRef.current?.setTool(settings.tool);
   }, [settings.tool]);
+  // Escape stops placing a note (build plan session 17).
+  useEffect(() => {
+    if (!analyst || settings.tool !== 'note') return;
+    // In the capture phase, so Escape stops the placing and does not also close the drawer.
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      cancelPlacing();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [analyst, settings.tool]);
   // An insight or saved view that highlights members adds a line to the
   // legend; the view is fitted again once the legend has grown, so no member
   // it names is left under the legend.
@@ -430,6 +458,18 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
 
   const selectionTools = (
     <>
+      {settings.tool === 'note' && (
+        <button
+          type="button"
+          className="map__tool"
+          aria-pressed="true"
+          onClick={() => {
+            cancelPlacing();
+          }}
+        >
+          {annotationsCopy.cancelPlacing}
+        </button>
+      )}
       <button
         type="button"
         className="map__tool"

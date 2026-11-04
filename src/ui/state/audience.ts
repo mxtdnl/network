@@ -46,13 +46,37 @@ export type ExportKind =
   | 'report'
   | 'card'
   | 'change'
-  | 'actions';
+  | 'actions'
+  | 'slides'
+  | 'pack';
 
 const ALLOWED: Record<AudienceLevel, readonly ExportKind[]> = {
-  analyst: ['map', 'members', 'network', 'formalInformal', 'table', 'report', 'change', 'actions'],
-  board: ['map', 'network', 'report', 'change', 'actions'],
-  leadership: ['map', 'network', 'report', 'change', 'actions'],
-  workshop: ['map', 'members', 'network', 'formalInformal', 'table', 'report', 'change', 'actions'],
+  analyst: [
+    'map',
+    'members',
+    'network',
+    'formalInformal',
+    'table',
+    'report',
+    'change',
+    'actions',
+    'slides',
+    'pack',
+  ],
+  board: ['map', 'network', 'report', 'change', 'actions', 'slides'],
+  leadership: ['map', 'network', 'report', 'change', 'actions', 'slides'],
+  workshop: [
+    'map',
+    'members',
+    'network',
+    'formalInformal',
+    'table',
+    'report',
+    'change',
+    'actions',
+    'slides',
+    'pack',
+  ],
   oneToOne: ['card'],
 };
 
@@ -411,6 +435,11 @@ export function workshopMap(map: MapSettings, policy: AudiencePolicy): MapSettin
     highlight: map.highlight.filter((id) => team.has(id)),
     edgeColour: map.edgeColour.kind === 'signed' ? { kind: 'none' } : map.edgeColour,
     negativeOutsideRange: false,
+    // Notes on members outside the team are left out, and anyone else a note names is
+    // "a colleague" (build plan session 17).
+    annotations: map.annotations
+      .filter((a) => a.anchor.kind === 'point' || team.has(a.anchor.member))
+      .map((a) => ({ ...a, text: policy.names.text(a.text) })),
   };
 }
 

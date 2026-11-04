@@ -390,6 +390,11 @@ test('anonymisation: no display name in the DOM or on the canvas in any view', a
   await start(page);
   await loadDemo(page);
   await rightTab(page, 'Views').click();
+  // A note on the map that names a member, attached to another (build plan session 17).
+  await page.getByLabel('Text of the note').fill(`Ask ${DISPLAY_NAMES[0] ?? ''} about this`);
+  await page.getByLabel('Attach to').selectOption({ label: DISPLAY_NAMES[2] ?? '' });
+  await page.getByRole('button', { name: 'Add note' }).click();
+  await expect(page.getByText('Note added to the map')).toBeVisible();
   await saveView(page, 'Everyone');
   // A caption that names two people, to check captions are anonymised too.
   await caption(

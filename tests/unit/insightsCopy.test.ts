@@ -374,6 +374,19 @@ describe('question and readout wording is neutral', () => {
       expect(findBanned(text, words), text).toEqual([]);
   });
 
+  it('uses no banned word in the slides, the workshop pack or notes on the map (session 17)', async () => {
+    const { slidesCopy, packCopy } = await import('../../src/ui/copy/slides');
+    const { annotationsCopy } = await import('../../src/ui/copy/annotations');
+    const strings = [
+      ...copyStrings(slidesCopy),
+      ...copyStrings(packCopy),
+      ...copyStrings(annotationsCopy),
+    ];
+    for (const text of strings) expect(findBanned(text, words), text).toEqual([]);
+    // The pack's questions for discussion end in a question mark.
+    for (const q of [...copyStrings(packCopy.prompts)]) expect(q.endsWith('?'), q).toBe(true);
+  });
+
   it('uses no banned word in the audience levels’ wording or the leadership roles (session 9)', async () => {
     const { audienceCopy } = await import('../../src/ui/copy/audience');
     const { audiencePolicy, roleSentences } = await import('../../src/ui/state/audience');

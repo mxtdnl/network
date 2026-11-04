@@ -77,6 +77,14 @@ export function mapToSaved(map: MapSettings): SavedMapSettings {
     communityOutlines: map.communityOutlines,
     markBridges: map.markBridges,
     question: map.question,
+    ...(map.annotations.length > 0
+      ? {
+          annotations: map.annotations.map((a) => ({
+            ...a,
+            anchor: { ...a.anchor },
+          })),
+        }
+      : {}),
   };
 }
 
@@ -108,6 +116,10 @@ export function savedToMap(saved: SavedMapSettings, full: Project): MapSettings 
     filters: saved.filters.map((f) => ({ key: f.key, values: [...f.values] })),
     ego: saved.ego && ids.has(saved.ego.member) ? { ...saved.ego } : null,
     highlight: saved.highlight.filter((id) => ids.has(id)),
+    // Notes on members no longer on the wave's roster are dropped (build plan session 17).
+    annotations: (saved.annotations ?? [])
+      .filter((a) => a.anchor.kind === 'point' || ids.has(a.anchor.member))
+      .map((a) => ({ ...a, anchor: { ...a.anchor } })),
     // A layer no longer enabled is corrected by the map (effectiveSettings).
     edgeColour: { ...saved.edgeColour },
     edgeWidth: { ...saved.edgeWidth },

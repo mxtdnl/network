@@ -47,6 +47,9 @@ export interface MapTheme {
   labelGap: number;
   /** Length of a legend line sample. */
   swatch: number;
+  /** Notes on the map (build plan session 17): distance of the text from its anchor, and its width. */
+  calloutOffset: number;
+  calloutWidth: number;
 }
 
 function mapRecord<K extends string>(
@@ -108,5 +111,7 @@ export function readMapTheme(source: Element | TokenSource = document.documentEl
     groupSize: number('--map-group-size'),
     labelGap: number('--s-1'),
     swatch: number('--map-legend-swatch'),
+    calloutOffset: number('--map-callout-offset'),
+    calloutWidth: number('--map-callout-width'),
   };
 }

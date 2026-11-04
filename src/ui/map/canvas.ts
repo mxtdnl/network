@@ -123,4 +123,36 @@ export function paint(
     ctx.fillStyle = theme.graphite;
     ctx.fillText(l.text, l.x, l.y);
   }
+
+  // Notes (build plan session 17): an ink leader from the anchor to ink text on a paper halo.
+  ctx.globalAlpha = 1;
+  ctx.font = theme.groupFont;
+  for (const c of scene.callouts) {
+    ctx.strokeStyle = theme.paper;
+    ctx.lineWidth = theme.line * 3;
+    ctx.beginPath();
+    ctx.moveTo(c.leader[0], c.leader[1]);
+    ctx.lineTo(c.leader[2], c.leader[3]);
+    ctx.stroke();
+    ctx.strokeStyle = theme.ink;
+    ctx.lineWidth = theme.line;
+    ctx.beginPath();
+    ctx.moveTo(c.leader[0], c.leader[1]);
+    ctx.lineTo(c.leader[2], c.leader[3]);
+    ctx.stroke();
+    if (c.dot) {
+      ctx.fillStyle = theme.ink;
+      ctx.beginPath();
+      ctx.arc(c.dot.x, c.dot.y, theme.focusWidth, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+    ctx.textAlign = c.align;
+    ctx.lineWidth = theme.focusWidth * 2;
+    for (const l of c.lines) {
+      ctx.strokeStyle = theme.paper;
+      ctx.strokeText(l.text, l.x, l.y);
+      ctx.fillStyle = theme.ink;
+      ctx.fillText(l.text, l.x, l.y);
+    }
+  }
 }

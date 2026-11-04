@@ -20,6 +20,7 @@ import { FI_CLASS, type AnalysisResult, type CompositeFormula } from '../engineC
 import { relationForRole } from '../../data/relations';
 import {
   isCategorical,
+  type AnnotationSide,
   type AttributeDefinition,
   type LayerDefinition,
   type Project,
@@ -181,6 +182,20 @@ export interface MapModel {
   composite: CompositeFormula | null;
   /** The wave analysed and its roster size, when the project has more than one wave (build plan session 14). */
   wave: { wave: number; roster: number } | null;
+  /** Notes drawn on the map (build plan session 17): members' notes only while the member is shown. */
+  annotations: ModelAnnotation[];
+}
+
+/** A note on the map: anchored to a member (by index) or to a point in layout coordinates. */
+export interface ModelAnnotation {
+  id: string;
+  /** The text, through the names layer. */
+  text: string;
+  member: number | null;
+  /** Layout coordinates of a point anchor; NaN for a member. */
+  x: number;
+  y: number;
+  side: AnnotationSide;
 }
 
 export interface Radii {
@@ -486,6 +501,8 @@ export interface ModelOptions {
   colourExcluded?: boolean;
   /** The wave analysed, named in the legend when the project has more than one (build plan session 14). */
   wave?: number | null;
+  /** Free text through the names layer, for notes on the map (build plan session 17). */
+  annotationText?: (s: string) => string;
 }
 
 /** Plain label of a layer reference: a layer, a signed sub-layer or the composite. */
@@ -771,6 +788,33 @@ export function buildMapModel(
       ? Array.from(communities.membership, (c) => c)
       : null;
 
+  // Notes (build plan session 17): a member's note only while the member is shown.
+  const memberIndex = new Map(project.members.map((m, i) => [m.id, i]));
+  const noteText = options.annotationText ?? ((x: string) => x);
+  const annotations: ModelAnnotation[] = [];
+  for (const a of settings.annotations) {
+    if (a.anchor.kind === 'member') {
+      const i = memberIndex.get(a.anchor.member);
+      if (i === undefined || !nodes[i]?.visible) continue;
+      annotations.push({
+        id: a.id,
+        text: noteText(a.text),
+        member: i,
+        x: NaN,
+        y: NaN,
+        side: a.side,
+      });
+    } else
+      annotations.push({
+        id: a.id,
+        text: noteText(a.text),
+        member: null,
+        x: a.anchor.x,
+        y: a.anchor.y,
+        side: a.side,
+      });
+  }
+
   return {
     n,
     directed,
@@ -831,6 +875,7 @@ export function buildMapModel(
     composite:
       settings.layer === 'composite' || edgeLayer === 'composite' ? result.composite : null,
     wave: options.wave != null ? { wave: options.wave, roster: n } : null,
+    annotations,
   };
 }
 

@@ -54,6 +54,15 @@ export function fitTransform(
     x1 = Math.max(x1, p.x);
     y1 = Math.max(y1, p.y);
   }
+  // A note at a point stays in the picture when members are fitted (build plan session 17).
+  if (Number.isFinite(x0))
+    for (const a of model.annotations) {
+      if (a.member !== null) continue;
+      x0 = Math.min(x0, a.x);
+      y0 = Math.min(y0, a.y);
+      x1 = Math.max(x1, a.x);
+      y1 = Math.max(y1, a.y);
+    }
   if (!Number.isFinite(x0)) return { x: size.width / 2, y: size.height / 2, k: 1 };
   const t = theme.map;
   const pad = t.nodeMax * 2 + t.labelSize * 2;
@@ -80,6 +89,8 @@ export function exportMap(
   const options = {
     colourExcluded: ctx.colourExcluded,
     wave: ctx.wave.shown ? ctx.wave.wave : null,
+    // Notes go through the names layer under the audience policy (build plan session 17).
+    annotationText: names.text,
   };
   const model = buildMapModel(project, result, settings, t, names.byIndex, options);
   // Over the formal hierarchy the map draws informal collaboration ties (D62).

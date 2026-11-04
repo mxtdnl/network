@@ -107,7 +107,8 @@ function modelFor(data: MapData, ref: string): MapModel {
   return buildMapModel(
     data.project,
     data.result,
-    { ...data.settings, layer: ref, sizeMetric },
+    // Notes belong to the main map, not to the comparison's small maps.
+    { ...data.settings, layer: ref, sizeMetric, annotations: [] },
     data.theme,
     // Names as the linked model has them, so anonymisation applies here too.
     data.model.nodes.map((node) => node.name),
@@ -396,6 +397,7 @@ function classModel(data: MapData, classes: Uint8Array, cls: number, style: Edge
     outlines: null,
     markBridges: false,
     bridges: 0,
+    annotations: [],
     styleShown: true,
     stylesPresent: [style],
     directions: {

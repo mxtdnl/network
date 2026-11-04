@@ -21,6 +21,9 @@ import {
   tieKey,
   type LayerDefinition,
   type Project,
+  ANNOTATION_MAX,
+  ANNOTATION_MAX_TEXT,
+  ANNOTATION_SIDES,
 } from './schema';
 
 export { ProjectFileError } from './migrations';
@@ -418,6 +421,18 @@ const isNumRecord = (v: unknown): v is Record<string, number> =>
   isObj(v) && Object.values(v).every(isNum);
 const isNullableStr = (v: unknown) => v === null || isStr(v);
 
+/** A note on the map (build plan session 17): an id, short text, an anchor and a side. */
+function isAnnotation(a: unknown): boolean {
+  if (!isObj(a) || !isStr(a.id) || a.id === '' || !isStr(a.text)) return false;
+  const text = a.text.trim();
+  if (text === '' || Array.from(a.text).length > ANNOTATION_MAX_TEXT) return false;
+  if (!(ANNOTATION_SIDES as readonly string[]).includes(a.side as string)) return false;
+  const anchor = a.anchor;
+  if (!isObj(anchor)) return false;
+  if (anchor.kind === 'member') return isStr(anchor.member) && anchor.member !== '';
+  return anchor.kind === 'point' && isNum(anchor.x) && isNum(anchor.y);
+}
+
 /** Problems with one saved view (schema version 4), each a sentence ending. */
 export function checkSavedView(v: Obj): string[] {
   const problems: string[] = [];
@@ -486,6 +501,14 @@ export function checkSavedView(v: Obj): string[] {
       'has an invalid standardisation setting.',
     );
     need(m.wave === undefined || (isInt(m.wave) && m.wave >= 1), 'has an invalid wave.');
+    need(
+      m.annotations === undefined ||
+        (Array.isArray(m.annotations) &&
+          m.annotations.length <= ANNOTATION_MAX &&
+          m.annotations.every(isAnnotation) &&
+          new Set(m.annotations.map((a: Obj) => a.id)).size === m.annotations.length),
+      'has invalid notes on the map.',
+    );
     need(
       isObj(m.layerToggles) && Object.values(m.layerToggles).every(isBool),
       'has invalid layer toggles.',

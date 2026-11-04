@@ -7,6 +7,7 @@ import { useReadOnly } from '../state/layoutMode';
 import { useMemberNames } from '../state/names';
 import { canPresent, startPresentation } from '../state/presentation';
 import { AudienceSelect } from './AudienceSelect';
+import { AnnotationTools } from './AnnotationTools';
 import {
   deleteView,
   moveView,
@@ -43,6 +44,8 @@ export function SavedViewsPanel() {
   return (
     <div className="views">
       <p className="views__intro">{V.intro}</p>
+      {/* Notes on the map (build plan session 17); not on a phone, where views cannot be saved. */}
+      {!phone && <AnnotationTools />}
       {!phone && (
         <form
           className="views__new"

@@ -46,7 +46,12 @@ export interface ControllerEvents {
   toggleGroup: (index: number) => void;
   /** A lasso was drawn round these members; `add` when Shift was held. */
   lasso: (indices: number[], add: boolean) => void;
+  /** With the note tool, a click places a note on a member or at a point in layout coordinates. */
+  placeNote?: (at: { member: number } | { x: number; y: number }) => void;
 }
+
+/** Pointer tools: pan and select, draw a lasso, or place a note (build plan session 17). */
+export type MapTool = 'pan' | 'lasso' | 'note';
 
 function reducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -108,7 +113,7 @@ export class MapController {
   private model: MapModel | null = null;
   private transform: Transform = { x: 0, y: 0, k: 1 };
   private highlight: Highlight = { ...NO_HIGHLIGHT };
-  private tool: 'pan' | 'lasso' = 'pan';
+  private tool: MapTool = 'pan';
   private lassoPath: Point[] | null = null;
   private layoutKind = '';
   private width = 0;
@@ -334,10 +339,11 @@ export class MapController {
     else this.requestPaint();
   }
 
-  setTool(tool: 'pan' | 'lasso'): void {
+  setTool(tool: MapTool): void {
     this.tool = tool;
     this.lassoPath = null;
     this.canvas.classList.toggle('map__canvas--lasso', tool === 'lasso');
+    this.canvas.classList.toggle('map__canvas--note', tool === 'note');
     this.requestPaint();
   }
 
@@ -689,7 +695,8 @@ export class MapController {
       return;
     }
     const index = this.hit(p.x, p.y);
-    if (index === null) {
+    // With the note tool, a press does not drag a member: a click places the note.
+    if (index === null || this.tool === 'note') {
       this.down = p;
       return;
     }
@@ -770,7 +777,15 @@ export class MapController {
       return;
     }
     if (this.down && e.type === 'pointerup') {
-      if (Math.hypot(p.x - this.down.x, p.y - this.down.y) < CLICK_SLOP) this.events.select(null);
+      if (Math.hypot(p.x - this.down.x, p.y - this.down.y) < CLICK_SLOP) {
+        if (this.tool === 'note' && this.events.placeNote) {
+          const index = this.hit(p.x, p.y);
+          const t = this.transform;
+          this.events.placeNote(
+            index !== null ? { member: index } : { x: (p.x - t.x) / t.k, y: (p.y - t.y) / t.k },
+          );
+        } else this.events.select(null);
+      }
     }
     this.down = null;
   };

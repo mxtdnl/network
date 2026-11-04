@@ -166,6 +166,8 @@
   --map-gap: 3px;
   --map-dot: 1px; /* ties that are neither formal nor informal: dotted */
   --map-bridge-mark: 5px; /* half the diagonal of the diamond marking a bridge tie */
+  --map-callout-offset: 24px; /* a note on the map: its text this far across and up or down from its anchor */
+  --map-callout-width: 160px; /* a note's text wraps at this width */
   --map-fade: 0.3; /* opacity of members outside a highlight (design-system §2.3) */
   --map-ramp-low: 0.6; /* edge colour by an unsigned layer: the lightest of five steps from paper to val-p3, at 3.3:1 on paper (D126) */
   --map-legend-swatch: 24px; /* legend line and colour samples */
@@ -206,6 +208,19 @@
   --print-small-line: var(--t--1-line);
   --print-measure: 150mm; /* longest line of running text; the page's full width is 170mm */
   --print-column-gap: var(--s-4); /* between table columns */
+
+  /* Build plan session 17: the slide deck, a 16:9 PDF (13.33 × 7.5 in, 960 × 540 pt). */
+  --slide-width: 1280px;
+  --slide-height: 720px;
+  --slide-margin: var(--s-7);
+  --slide-gap: var(--s-6); /* between the text column and the picture */
+  --slide-text-width: 400px; /* the text column at the left of each slide */
+  --slide-title-size: var(--t-5-size);
+  --slide-title-line: var(--t-5-line);
+  --slide-body-size: var(--t-2-size); /* sentences: readable from the back of a room */
+  --slide-body-line: var(--t-2-line);
+  --slide-small-size: var(--t-0-size); /* what the map draws, footer */
+  --slide-small-line: var(--t-0-line);
 
   /* Respondent mode (spec §15.4, CLAUDE.md D93). Mobile-first; wide layout from --respond-wide. */
   --respond-wide: 720px; /* read by script for matchMedia: the compact rating table starts here */

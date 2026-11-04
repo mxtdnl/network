@@ -584,7 +584,7 @@ function methodBriefSection(ctx: ExportContext, notes: string, appendices: boole
 }
 
 /** A view's page: the question, the caption and the sentences that read out its figures. */
-function viewPage(input: ReportViewInput): ReportView {
+export function viewPage(input: ReportViewInput): ReportView {
   const { ctx } = input;
   const { project, result, settings, policy } = ctx;
   const layer = settings.layer;
