@@ -448,6 +448,16 @@ export class MapController {
     this.zoomBehaviour.transform(this.selection, t);
   }
 
+  /**
+   * Keeps members where they are on screen when the canvas itself moves by `dy`
+   * screen pixels (the compact layout's tab row wrapping clear of the drawer):
+   * the view is panned by the opposite amount. Nothing happens before the first fit.
+   */
+  keepPlace(dy: number): void {
+    if (!this.fitted || dy === 0) return;
+    this.zoomBehaviour.translateBy(this.selection, 0, -dy / this.transform.k);
+  }
+
   zoomBy(direction: 1 | -1): void {
     this.zoomBehaviour.scaleBy(this.selection, direction > 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
   }
