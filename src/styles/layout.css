@@ -372,6 +372,13 @@
   );
 }
 
+/* The centre tabs share their row with the engagement steps (D201); where the
+   row is long enough to reach under the drawer, it wraps clear of it instead,
+   so every tab can still be clicked. The map keeps its members in place (MapView). */
+:root[data-layout='compact'] .workspace:has(.tabs__drawer) .workspace__centre .tabs__bar {
+  padding-inline-end: var(--col-right-compact);
+}
+
 :root[data-layout='compact'] .workspace:has(.tabs__drawer) .legend--beside {
   inset-inline-end: var(--col-right-compact);
 }

@@ -486,6 +486,39 @@ for (const size of COMPACT_SIZES) {
     });
     findings.push(...(await seriousViolations(page, 'map')));
 
+    // Opening the drawer leaves every centre tab clickable: where the engagement
+    // steps and the tabs share a row long enough to reach under the drawer, the
+    // row wraps clear of it (at 1536 × 864 the Survey tab was under it). The map
+    // moves down with the wrap but keeps its members where they were on screen.
+    const c = await page.locator('canvas.map__canvas').boundingBox();
+    if (!c) throw new Error('no canvas');
+    // A fixed region of the screen, left of where the drawer opens and above the
+    // legend (at the foot of the map, and allowed to reflow as the drawer opens).
+    const clip = {
+      x: c.x + c.width / 2 - 100,
+      y: c.y + c.height * 0.4 - 80,
+      width: 200,
+      height: 160,
+    };
+    const centre = () => page.screenshot({ clip });
+    const before = await centre();
+    await drawerToggle(page).click();
+    await expect(drawerToggle(page)).toHaveAttribute('aria-expanded', 'true');
+    await settled(page);
+    const covered = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('.workspace__centre [role=tab]')]
+        .filter((t) => {
+          const r = t.getBoundingClientRect();
+          return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) !== t;
+        })
+        .map((t) => t.textContent),
+    );
+    expect(covered).toEqual([]);
+    expect((await centre()).equals(before)).toBe(true);
+    await drawerToggle(page).click();
+    await expect(drawerToggle(page)).toHaveAttribute('aria-expanded', 'false');
+    await settled(page);
+
     // Selecting a member opens the drawer; fit to view then keeps clear of it.
     await nodes(page)
       .filter({ hasText: /^Lior Theodolite/ })

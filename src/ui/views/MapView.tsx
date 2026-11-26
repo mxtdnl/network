@@ -201,6 +201,7 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
     controller.setTool(useAppStore.getState().map.tool);
     controllerRef.current = controller;
     if (analyst) registerMapViewport(() => controller.viewport());
+    let lastTop: number | null = null;
     const measure = () => {
       // The legend stops short of the zoom group, whatever the selection tools and
       // the drawer make its width (D140): the distance from the map's right edge to
@@ -235,6 +236,11 @@ export function MapCanvas({ data, presentation }: MapCanvasProps) {
         top,
         end,
       );
+      // When the canvas moves down or up (the tab row wraps clear of the
+      // compact drawer, or unwraps when it closes), the members stay where they
+      // were on screen, so nothing moves under the pointer (D125).
+      if (lastTop !== null) controller.keepPlace(rect.top - lastTop);
+      lastTop = rect.top;
       controller.resize(rect.width, rect.height, window.devicePixelRatio || 1);
     };
     measureRef.current = measure;
